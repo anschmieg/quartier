@@ -1,0 +1,15 @@
+{
+  "style": "default",
+  "typescript": true,
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "src/assets/css/tailwind.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils"
+  }
+}
