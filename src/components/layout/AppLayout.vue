@@ -5,7 +5,7 @@
       <div class="p-4 border-b flex items-center justify-between">
         <span class="font-bold flex items-center gap-2">
           <FileText class="w-5 h-5" />
-          Quarto Editor
+          Quartier
         </span>
         <TooltipProvider>
           <Tooltip>
@@ -23,19 +23,19 @@
       
       <div class="flex-1 overflow-auto p-2">
         <div class="text-xs font-semibold text-muted-foreground mb-2 px-2">EXPLORER</div>
-        <FileTree :files="files" @select="selectFile" />
+        <FileTree 
+          :files="files" 
+          :selected-path="currentFile"
+          @select="selectFile" 
+          @create-file="handleCreateFile"
+          @create-folder="handleCreateFolder"
+          @rename="handleRename"
+          @delete="handleDelete"
+        />
       </div>
 
       <div class="p-4 border-t">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-            <User class="w-4 h-4 text-slate-500" />
-          </div>
-          <div class="text-sm">
-            <div class="font-medium">Guest User</div>
-            <div class="text-xs text-muted-foreground">Not logged in</div>
-          </div>
-        </div>
+        <UserMenu />
       </div>
     </aside>
 
@@ -46,6 +46,10 @@
            <span class="font-medium">{{ currentFile || 'No file selected' }}</span>
         </div>
         <div class="flex items-center gap-2">
+          <Button variant="ghost" size="icon" @click="showPreview = !showPreview" :class="{ 'bg-muted': showPreview }">
+            <PanelRight class="w-4 h-4" />
+          </Button>
+          <div class="w-px h-6 bg-border mx-1"></div>
           <Button variant="outline" size="sm" @click="saveFile">
             <Save class="w-4 h-4 mr-2" />
             Save
@@ -57,14 +61,25 @@
         </div>
       </header>
       
-      <div class="flex-1 overflow-hidden" v-if="currentFile">
-        <EditorWrapper 
-          :initial-content="fileContent" 
-          @update:content="updateContent" 
+      <div class="flex-1 flex overflow-hidden">
+        <div class="flex-1 overflow-hidden relative">
+          <div v-if="currentFile" class="h-full">
+            <EditorWrapper 
+              :initial-content="fileContent" 
+              @update:content="updateContent" 
+            />
+          </div>
+          <div v-else class="h-full flex items-center justify-center text-muted-foreground">
+            Select a file to start editing
+          </div>
+        </div>
+
+        <PreviewPanel 
+          v-if="showPreview" 
+          :repo="repo"
+          class="w-[400px] border-l"
+          @render="handleRender"
         />
-      </div>
-      <div v-else class="flex-1 flex items-center justify-center text-muted-foreground">
-        Select a file to start editing
       </div>
     </main>
 
@@ -74,12 +89,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { FileText, Keyboard, User, Save, GitBranch } from 'lucide-vue-next'
+import { FileText, Keyboard, Save, GitBranch, PanelRight } from 'lucide-vue-next'
+import UserMenu from './UserMenu.vue'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import EditorWrapper from '@/components/editor/EditorWrapper.vue'
 import FileTree from '@/components/file-tree/FileTree.vue'
 import CommandPalette from '@/components/command/CommandPalette.vue'
+import PreviewPanel from '@/components/preview/PreviewPanel.vue'
 import { fileSystem } from '@/services/storage'
 import { githubService } from '@/services/github'
 import { useMagicKeys, whenever } from '@vueuse/core'
@@ -88,10 +105,12 @@ const files = ref<string[]>([])
 const currentFile = ref<string | null>(null)
 const fileContent = ref('')
 const commandPaletteRef = ref()
+const showPreview = ref(false)
+const repo = ref('mock-owner/mock-repo')
 
 const { Meta_K, Ctrl_K } = useMagicKeys()
 
-whenever(() => Meta_K.value || Ctrl_K.value, () => {
+whenever(() => Meta_K?.value || Ctrl_K?.value, () => {
   openCommandPalette()
 })
 
@@ -119,16 +138,71 @@ async function saveFile() {
   }
 }
 
+async function handleRender() {
+  const [owner, name] = repo.value.split('/')
+  if (owner && name) {
+    await githubService.triggerWorkflow(owner, name)
+  }
+}
+
 async function commitChanges() {
   if (currentFile.value) {
+    const [owner, name] = repo.value.split('/')
     await githubService.commitChanges(
-      'mock-owner', 
-      'mock-repo', 
+      owner || 'mock-owner', 
+      name || 'mock-repo', 
       currentFile.value, 
       fileContent.value, 
-      'Update from Quarto Editor'
+      'Update from Quartier'
     )
     alert('Changes committed (Mock)')
+  }
+}
+
+async function handleCreateFile(parentPath: string) {
+  const name = window.prompt('Enter file name:')
+  if (name) {
+    const path = parentPath ? `${parentPath}/${name}` : name
+    await fileSystem.saveFile(path, '')
+    await loadFiles()
+    selectFile(path)
+  }
+}
+
+async function handleCreateFolder(parentPath: string) {
+  const name = window.prompt('Enter folder name:')
+  if (name) {
+    // Create a placeholder file to represent the folder
+    const path = parentPath ? `${parentPath}/${name}/.gitkeep` : `${name}/.gitkeep`
+    await fileSystem.saveFile(path, '')
+    await loadFiles()
+  }
+}
+
+async function handleRename(path: string) {
+  const oldName = path.split('/').pop()
+  const newName = window.prompt('Enter new name:', oldName)
+  if (newName && newName !== oldName) {
+    const parentPath = path.split('/').slice(0, -1).join('/')
+    const newPath = parentPath ? `${parentPath}/${newName}` : newName
+    const content = await fileSystem.readFile(path)
+    await fileSystem.saveFile(newPath, content)
+    // Note: In a real app, we'd delete the old file
+    await loadFiles()
+    if (currentFile.value === path) {
+      selectFile(newPath)
+    }
+  }
+}
+
+async function handleDelete(path: string) {
+  if (window.confirm(`Delete "${path}"?`)) {
+    await fileSystem.deleteFile(path)
+    await loadFiles()
+    if (currentFile.value === path) {
+      currentFile.value = null
+      fileContent.value = ''
+    }
   }
 }
 
