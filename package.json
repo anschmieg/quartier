@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "pages:dev": "wrangler pages dev dist --live-reload --config wrangler.dev.toml",
-    "pages:deploy": "bun run build && wrangler pages deploy dist",
+    "pages:dev": "wrangler pages dev dist --live-reload",
     "test": "vitest"
   },
   "dependencies": {
