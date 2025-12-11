@@ -1,6 +1,6 @@
 <template>
   <div class="h-screen w-full flex bg-background text-foreground overflow-hidden relative isolate">
-  <div class="h-screen w-full flex bg-background text-foreground overflow-hidden relative isolate">
+
     <!-- Sidebar -->
     <aside class="w-64 border-r flex flex-col bg-background/80 backdrop-blur-md border-border z-20">
       <div class="p-4 border-b flex items-center justify-between">
