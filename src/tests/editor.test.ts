@@ -39,7 +39,8 @@ describe('EditorWrapper', () => {
   it('renders correctly with both modes', () => {
     const wrapper = mount(EditorWrapper, {
       props: {
-        initialContent: '# Test'
+        initialContent: '# Test',
+        mode: 'visual' as const
       },
       global: {
         stubs: {
@@ -51,15 +52,14 @@ describe('EditorWrapper', () => {
     })
 
     expect(wrapper.exists()).toBe(true)
-    // Should have Visual and Source buttons
-    expect(wrapper.text()).toContain('Visual')
-    expect(wrapper.text()).toContain('Source')
+    // Mode toggle moved to parent, just verify component mounts
   })
 
   it('shows saving indicator on content change', async () => {
     const wrapper = mount(EditorWrapper, {
       props: {
-        initialContent: '# Test'
+        initialContent: '# Test',
+        mode: 'visual' as const
       },
       global: {
         stubs: {
@@ -78,7 +78,8 @@ describe('EditorWrapper', () => {
   it('emits update:content when content changes', async () => {
     const wrapper = mount(EditorWrapper, {
       props: {
-        initialContent: '# Test'
+        initialContent: '# Test',
+        mode: 'visual' as const
       },
       global: {
         stubs: {

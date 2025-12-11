@@ -14,10 +14,6 @@ vars = { ENVIRONMENT = "production" }
 [env.preview]
 vars = { ENVIRONMENT = "preview" }
 
-# Development environment
-[env.development]
-vars = { ENVIRONMENT = "development" }
-
 # =============================================================================
 # SECRETS (DO NOT COMMIT VALUES - SET VIA CLI)
 # =============================================================================
