@@ -1,5 +1,10 @@
 <template>
   <div class="h-screen w-full flex bg-background text-foreground overflow-hidden relative isolate">
+    <!-- Professional Ambient Gradients (Subtle) -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none select-none -z-10">
+      <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px] opacity-40 dark:opacity-20"></div>
+      <div class="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px] opacity-40 dark:opacity-20"></div>
+    </div>
 
     <!-- Sidebar -->
     <aside class="w-64 border-r flex flex-col bg-background/80 backdrop-blur-md border-border z-20">
@@ -111,7 +116,12 @@ import { fileSystem } from '@/services/storage'
 import { githubService } from '@/services/github'
 import { useMagicKeys, whenever, useDark, useToggle } from '@vueuse/core'
 
-const isDark = useDark()
+const isDark = useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: 'light',
+})
 const toggleDark = useToggle(isDark)
 
 const files = ref<string[]>([])
