@@ -4,11 +4,9 @@
 
 @layer base {
   :root {
-    /* Light Mode - Quartz Glass */
-    --background: 210 40% 98%;
-    /* slate-50 */
+    /* Light Mode - Professional Productivity */
+    --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-    /* slate-950 */
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -16,53 +14,44 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Vivid Indigo for Primary */
-    --primary: 243 75% 59%;
-    /* indigo-500 */
+    /* Professional Blue (Blue-600) */
+    --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 210 40% 90%;
-    /* Slightly darker for contrast */
+    --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 92%;
+    --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 88%;
-    /* Slightly darker border */
+    --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 243 75% 59%;
-    /* indigo-500 */
+    --ring: 221.2 83.2% 53.3%;
 
-    --radius: 0.75rem;
-    /* Rounder (xl) */
+    --radius: 0.5rem;
+    /* Standard, crisp */
   }
 
   .dark {
-    /* Dark Mode - Deep Slate Glass */
-    --background: 222.2 47.4% 11.2%;
-    /* slate-900/950 mix? slate-900 is 15 23 */
-    /* Let's use solid slate-950 for deep immersion */
+    /* Dark Mode - Deep Concentration */
     --background: 222.2 84% 4.9%;
-
+    /* Slate 950 */
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 6%;
-    /* Slightly lighter than bg */
+    --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
 
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    /* Neon Indigo for Dark Mode */
-    --primary: 243 100% 70%;
-    /* brighter indigo */
+    /* Lighter Blue for Dark Mode (Blue-500) */
+    --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -71,8 +60,7 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217.2 32.6% 22%;
-    /* Highlight on hover */
+    --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
@@ -80,7 +68,7 @@
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 243 100% 70%;
+    --ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -95,11 +83,19 @@
   }
 }
 
-/* Glass Utilities */
-.glass {
-  @apply bg-background/60 backdrop-blur-lg border-b border-border/50;
+/* Professional Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
 }
 
-.glass-panel {
-  @apply bg-card/50 backdrop-blur-md border border-border/50;
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full border-[2px] border-background;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
 }

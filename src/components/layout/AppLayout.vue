@@ -1,13 +1,8 @@
 <template>
   <div class="h-screen w-full flex bg-background text-foreground overflow-hidden relative isolate">
-    <!-- Ambient Gradients -->
-    <div class="absolute inset-0 overflow-hidden pointer-events-none select-none -z-10">
-      <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[120px] opacity-60 dark:opacity-30 mix-blend-saturation dark:mix-blend-screen"></div>
-      <div class="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[100px] opacity-60 dark:opacity-30 mix-blend-saturation dark:mix-blend-screen"></div>
-    </div>
-
+  <div class="h-screen w-full flex bg-background text-foreground overflow-hidden relative isolate">
     <!-- Sidebar -->
-    <aside class="w-64 border-r flex flex-col bg-background/60 backdrop-blur-xl border-border/50 z-20">
+    <aside class="w-64 border-r flex flex-col bg-background/80 backdrop-blur-md border-border z-20">
       <div class="p-4 border-b flex items-center justify-between">
         <span class="font-bold flex items-center gap-2">
           <FileText class="w-5 h-5" />
@@ -47,7 +42,7 @@
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col h-full min-w-0">
-      <header class="h-14 border-b flex items-center justify-between px-4 sticky top-0 z-50 bg-background/60 backdrop-blur-xl border-border/50">
+      <header class="h-14 border-b flex items-center justify-between px-4 sticky top-0 z-50 bg-background/80 backdrop-blur-md border-border">
         <div class="flex items-center gap-2">
            <span class="font-medium">{{ currentFile || 'No file selected' }}</span>
         </div>
