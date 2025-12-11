@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quartier — Neon Terminal Theme</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* Neon Terminal — Cyberpunk, High-contrast */
+            --void: #0A0A0F;
+            --surface: #12121A;
+            --surface-bright: #1A1A24;
+            --text: #E8E8F0;
+            --text-muted: #6E6E8A;
+            --neon-cyan: #00FFFF;
+            --neon-magenta: #FF00FF;
+            --neon-green: #00FF88;
+            --neon-yellow: #FFFF00;
+            --border: #2A2A3A;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--void);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--void);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .logo-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .section-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--neon-cyan);
+            padding: 20px 24px 12px;
+            opacity: 0.8;
+        }
+
+        .file-list {
+            padding: 0 12px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .file-item:hover {
+            background: var(--surface-bright);
+            color: var(--text);
+        }
+
+        .file-item.active {
+            background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+            color: var(--neon-cyan);
+            border-left: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+
+        .file-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .user-section {
+            margin-top: auto;
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background: var(--surface-bright);
+            border: 2px solid var(--neon-magenta);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
+        }
+
+        .user-info {
+            font-size: 13px;
+        }
+
+        .user-name {
+            font-weight: 600;
+        }
+
+        .user-action {
+            color: var(--neon-green);
+            font-size: 11px;
+            text-decoration: none;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .user-action:hover {
+            text-decoration: underline;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--void);
+        }
+
+        .header {
+            height: 52px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: var(--surface);
+        }
+
+        .breadcrumb {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .breadcrumb .path {
+            color: var(--neon-cyan);
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: transparent;
+            color: var(--text-muted);
+        }
+
+        .btn:hover {
+            background: var(--surface-bright);
+            color: var(--text);
+            border-color: var(--text-muted);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+            color: var(--void);
+            border: none;
+            font-weight: 700;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .editor {
+            flex: 1;
+            padding: 32px 48px;
+            overflow-y: auto;
+            background:
+                radial-gradient(ellipse at top left, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(255, 0, 255, 0.03) 0%, transparent 50%);
+        }
+
+        .editor-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .file-badge {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            padding: 4px 8px;
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--neon-green);
+            border-radius: 4px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .editor-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .code-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 16px 0;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+
+        .code-block .comment {
+            color: var(--text-muted);
+        }
+
+        .code-block .keyword {
+            color: var(--neon-magenta);
+        }
+
+        .code-block .string {
+            color: var(--neon-green);
+        }
+
+        .code-block .function {
+            color: var(--neon-cyan);
+        }
+
+        .code-block .number {
+            color: var(--neon-yellow);
+        }
+
+        .editor-content {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text);
+        }
+
+        .editor-content p {
+            margin-bottom: 1em;
+        }
+
+        .status-bar {
+            padding: 8px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            display: flex;
+            gap: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--neon-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .cursor-blink {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background: var(--neon-cyan);
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            50% {
+                opacity: 1;
+            }
+
+            51%,
+            100% {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">Q</div>
+                <span class="logo-text">QUARTIER</span>
+            </div>
+
+            <div class="section-title">> files</div>
+            <div class="file-list">
+                <div class="file-item active">
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                    <span>analysis.py</span>
+                </div>
+                <div class="file-item">
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    </svg>
+                    <span>index.qmd</span>
+                </div>
+                <div class="file-item">
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    </svg>
+                    <span>config.yml</span>
+                </div>
+            </div>
+
+            <div class="user-section">
+                <div class="avatar">G</div>
+                <div class="user-info">
+                    <div class="user-name">Guest</div>
+                    <a href="#" class="user-action">> sign_in()</a>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <div class="breadcrumb">
+                    <span>~/project</span>
+                    <span>/</span>
+                    <span class="path">analysis.py</span>
+                </div>
+                <div class="actions">
+                    <button class="btn">◐</button>
+                    <button class="btn">⌘ Preview</button>
+                    <button class="btn">⌘S Save</button>
+                    <button class="btn btn-primary">▲ Commit</button>
+                </div>
+            </header>
+
+            <div class="editor-container">
+                <div class="editor">
+                    <div class="editor-header">
+                        <span class="file-badge">.py</span>
+                        <h1 class="editor-title">analysis.py</h1>
+                    </div>
+
+                    <div class="code-block">
+                        <span class="comment"># Data Analysis Pipeline</span>
+                        <span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+                        <span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+                        <span class="keyword">def</span> <span class="function">load_data</span>(filepath: str) ->
+                        pd.DataFrame:
+                        <span class="string">"""Load and preprocess research data."""</span>
+                        df = pd.<span class="function">read_csv</span>(filepath)
+                        <span class="keyword">return</span> df.<span class="function">dropna</span>()
+
+                        <span class="comment"># Configuration</span>
+                        SAMPLE_SIZE = <span class="number">1000</span>
+                        RANDOM_SEED = <span class="number">42</span><span class="cursor-blink"></span>
+                    </div>
+
+                    <div class="editor-content">
+                        <p>This analysis module handles data processing for the research project. It includes functions
+                            for loading, cleaning, and transforming research datasets.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-dot"></span>
+                    CONNECTED
+                </div>
+                <div class="status-item">Python 3.12</div>
+                <div class="status-item">UTF-8</div>
+                <div class="status-item">Ln 15, Col 24</div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

@@ -1,10 +1,12 @@
 <template>
   <div class="h-screen w-full flex bg-background text-foreground overflow-hidden">
     <!-- Sidebar -->
-    <aside class="w-64 border-r flex flex-col bg-secondary border-border">
-      <div class="p-4 border-b flex items-center justify-between">
-        <span class="font-bold flex items-center gap-2">
-          <FileText class="w-5 h-5" />
+    <aside class="w-60 border-r flex flex-col bg-secondary/50 border-border">
+      <div class="p-5 border-b border-border/50 flex items-center justify-between">
+        <span class="font-semibold flex items-center gap-2.5 text-foreground">
+          <div class="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+            <span class="text-xs font-bold text-primary-foreground">Q</span>
+          </div>
           Quartier
         </span>
         <TooltipProvider>
@@ -21,8 +23,8 @@
         </TooltipProvider>
       </div>
       
-      <div class="flex-1 overflow-auto p-2">
-        <div class="text-xs font-medium text-muted-foreground mb-2 px-2 tracking-wide">Files</div>
+      <div class="flex-1 overflow-auto p-3">
+        <div class="text-[11px] font-medium text-muted-foreground mb-3 px-2 uppercase tracking-wider">Files</div>
         <FileTree 
           :files="files" 
           :selected-path="currentFile"
@@ -34,14 +36,14 @@
         />
       </div>
 
-      <div class="p-4 border-t">
+      <div class="p-4 border-t border-border/50">
         <UserMenu />
       </div>
     </aside>
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col h-full min-w-0">
-      <header class="h-12 border-b flex items-center justify-between px-3 bg-card border-border">
+      <header class="h-14 border-b flex items-center justify-between px-4 bg-background border-border">
         <div class="flex items-center gap-2">
            <span class="text-sm font-medium text-foreground/90">{{ currentFile || 'No file selected' }}</span>
         </div>

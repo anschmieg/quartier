@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quartier — Slate Studio</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* Slate Studio — Professional Dark + Blue Glow */
+            --bg: #0F1115;
+            --surface: #181B21;
+            --elevated: #1F232B;
+            --hover: #272C36;
+
+            --text: #EEEEF0;
+            --text-2: #9298A5;
+            --text-3: #5C6370;
+
+            --accent: #5B8DEF;
+            --accent-soft: rgba(91, 141, 239, 0.12);
+            --accent-glow: rgba(91, 141, 239, 0.25);
+
+            --border: #272C36;
+
+            --radius: 6px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 13px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            height: 48px;
+            padding: 0 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-mark {
+            width: 22px;
+            height: 22px;
+            background: linear-gradient(135deg, var(--accent), #7C5BEF);
+            border-radius: 5px;
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .logo-text {
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: -0.2px;
+        }
+
+        .section {
+            padding: 10px 6px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-3);
+            padding: 0 8px 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 8px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.12s ease;
+            color: var(--text-2);
+            font-size: 12px;
+        }
+
+        .file-item:hover {
+            background: var(--hover);
+            color: var(--text);
+        }
+
+        .file-item.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+            box-shadow: inset 0 0 0 1px var(--accent-glow);
+        }
+
+        .file-icon {
+            width: 14px;
+            height: 14px;
+            opacity: 0.6;
+        }
+
+        .file-item.active .file-icon {
+            opacity: 1;
+        }
+
+        .user-section {
+            margin-top: auto;
+            padding: 10px 14px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .avatar {
+            width: 26px;
+            height: 26px;
+            background: var(--elevated);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-2);
+        }
+
+        .user-name {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .user-action {
+            font-size: 10px;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+        }
+
+        .header {
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 14px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .file-tabs {
+            display: flex;
+            gap: 2px;
+        }
+
+        .file-tab {
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-3);
+            cursor: pointer;
+            transition: all 0.12s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .file-tab:hover {
+            color: var(--text-2);
+            background: var(--elevated);
+        }
+
+        .file-tab.active {
+            color: var(--text);
+            background: var(--elevated);
+        }
+
+        .file-tab .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.12s ease;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-2);
+        }
+
+        .btn-ghost:hover {
+            background: var(--elevated);
+            color: var(--text);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-icon {
+            width: 26px;
+            height: 26px;
+            padding: 0;
+        }
+
+        .editor-wrap {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .editor {
+            flex: 1;
+            padding: 28px 36px;
+            overflow-y: auto;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .editor-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            letter-spacing: -0.4px;
+        }
+
+        .editor-content {
+            font-size: 14px;
+            line-height: 1.75;
+            color: var(--text-2);
+        }
+
+        .editor-content p {
+            margin-bottom: 1em;
+        }
+
+        .editor-content strong {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .code-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            margin: 16px 0;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+
+        .code-block .kw {
+            color: #C678DD;
+        }
+
+        .code-block .fn {
+            color: var(--accent);
+        }
+
+        .code-block .str {
+            color: #98C379;
+        }
+
+        .code-block .cm {
+            color: var(--text-3);
+        }
+
+        .status-bar {
+            height: 22px;
+            padding: 0 14px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            font-size: 10px;
+            color: var(--text-3);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            background: #4ADE80;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-mark"></div>
+                <span class="logo-text">Quartier</span>
+            </div>
+
+            <div class="section">
+                <div class="section-label">Explorer</div>
+                <div class="file-item active">
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    </svg>
+                    <span>index.qmd</span>
+                </div>
+                <div class="file-item">
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                    <span>analysis.py</span>
+                </div>
+                <div class="file-item">
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    </svg>
+                    <span>_quarto.yml</span>
+                </div>
+            </div>
+
+            <div class="user-section">
+                <div class="avatar">G</div>
+                <div>
+                    <div class="user-name">Guest</div>
+                    <a href="#" class="user-action">Sign in</a>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <div class="file-tabs">
+                    <div class="file-tab active"><span class="dot"></span> index.qmd</div>
+                    <div class="file-tab">analysis.py</div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-ghost btn-icon">◐</button>
+                    <button class="btn btn-ghost">Preview</button>
+                    <button class="btn btn-ghost">Save</button>
+                    <button class="btn btn-primary">⌘ Commit</button>
+                </div>
+            </header>
+
+            <div class="editor-wrap">
+                <div class="editor">
+                    <h1 class="editor-title">Data Processing Pipeline</h1>
+                    <div class="editor-content">
+                        <p>This module handles <strong>data ingestion</strong> and preprocessing for the research
+                            project. It includes validation, transformation, and export utilities.</p>
+
+                        <div class="code-block">
+                            <span class="cm"># Load and preprocess data</span>
+                            <span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+                            <span class="kw">def</span> <span class="fn">process_data</span>(filepath: str):
+                            df = pd.<span class="fn">read_csv</span>(filepath)
+                            <span class="kw">return</span> df.<span class="fn">dropna</span>()
+                        </div>
+
+                        <p>The pipeline supports multiple input formats and can be extended with custom transformers.
+                            All operations are logged for reproducibility.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <div class="status-item"><span class="status-dot"></span> Synced</div>
+                <div class="status-item">Python 3.12</div>
+                <div class="status-item">UTF-8</div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

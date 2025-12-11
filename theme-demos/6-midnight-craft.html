@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quartier — Midnight Craft</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* Midnight Craft — Near-black + Warm Amber */
+            --bg: #0D0D0F;
+            --surface: #141416;
+            --elevated: #1A1A1D;
+            --hover: #222226;
+
+            --text: #FAFAFA;
+            --text-2: #A0A0A5;
+            --text-3: #606068;
+
+            --accent: #F5A623;
+            /* Warm amber/gold */
+            --accent-soft: rgba(245, 166, 35, 0.10);
+            --accent-muted: #B8860B;
+
+            --border: #27272A;
+
+            --success: #4ADE80;
+            --radius: 4px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 13px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 200px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            height: 44px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-mark {
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--bg);
+        }
+
+        .logo-text {
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: -0.2px;
+        }
+
+        .section {
+            padding: 8px 4px;
+            flex: 1;
+        }
+
+        .section-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-3);
+            padding: 4px 8px 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.1s ease;
+            color: var(--text-2);
+            font-size: 12px;
+        }
+
+        .file-item:hover {
+            background: var(--hover);
+            color: var(--text);
+        }
+
+        .file-item.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .file-icon {
+            width: 13px;
+            height: 13px;
+            opacity: 0.5;
+        }
+
+        .file-item.active .file-icon {
+            opacity: 1;
+        }
+
+        .user-section {
+            padding: 8px 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .avatar {
+            width: 24px;
+            height: 24px;
+            background: var(--elevated);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-3);
+        }
+
+        .user-name {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .user-action {
+            font-size: 10px;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+        }
+
+        .header {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .path {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            color: var(--text-3);
+        }
+
+        .path-sep {
+            opacity: 0.4;
+        }
+
+        .path-current {
+            color: var(--text);
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 5px 8px;
+            border: none;
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-3);
+        }
+
+        .btn-ghost:hover {
+            background: var(--hover);
+            color: var(--text-2);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg);
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-icon {
+            width: 24px;
+            height: 24px;
+            padding: 0;
+        }
+
+        .sep {
+            width: 1px;
+            height: 14px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        .editor-wrap {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .editor {
+            flex: 1;
+            padding: 20px 28px;
+            overflow-y: auto;
+            max-width: 700px;
+        }
+
+        .editor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .editor-title {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .editor-badge {
+            font-size: 9px;
+            font-weight: 600;
+            padding: 3px 6px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .editor-content {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-2);
+        }
+
+        .editor-content p {
+            margin-bottom: 0.9em;
+        }
+
+        .editor-content strong {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .highlight {
+            background: var(--accent-soft);
+            padding: 1px 4px;
+            border-radius: 2px;
+            color: var(--accent);
+        }
+
+        .code-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 14px;
+            margin: 12px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        .code-block .cm {
+            color: var(--text-3);
+        }
+
+        .code-block .kw {
+            color: #F472B6;
+        }
+
+        .code-block .fn {
+            color: #60A5FA;
+        }
+
+        .code-block .str {
+            color: var(--success);
+        }
+
+        .status-bar {
+            height: 20px;
+            padding: 0 12px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            font-size: 10px;
+            color: var(--text-3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            background: var(--success);
+            border-radius: 50%;
+        }
+
+        /* Preview panel */
+        .preview {
+            width: 340px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-header {
+            height: 32px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .preview-body {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-2);
+        }
+
+        .preview-body h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        .preview-body p {
+            margin-bottom: 0.8em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-mark">Q</div>
+                <span class="logo-text">Quartier</span>
+            </div>
+
+            <div class="section">
+                <div class="section-label">Files</div>
+                <div class="file-item active">
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    </svg>
+                    <span>index.qmd</span>
+                </div>
+                <div class="file-item">
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                    <span>analysis.py</span>
+                </div>
+            </div>
+
+            <div class="user-section">
+                <div class="avatar">G</div>
+                <div>
+                    <div class="user-name">Guest</div>
+                    <a href="#" class="user-action">Sign in</a>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <div class="path">
+                    <span>~/project</span>
+                    <span class="path-sep">/</span>
+                    <span class="path-current">index.qmd</span>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-ghost btn-icon">◐</button>
+                    <div class="sep"></div>
+                    <button class="btn btn-ghost">Save</button>
+                    <button class="btn btn-primary">Commit</button>
+                </div>
+            </header>
+
+            <div class="editor-wrap">
+                <div class="editor">
+                    <div class="editor-header">
+                        <h1 class="editor-title">Research Methodology</h1>
+                        <span class="editor-badge">Draft</span>
+                    </div>
+                    <div class="editor-content">
+                        <p>This document outlines our approach to <span class="highlight">reproducible research</span>
+                            using Quarto. The workflow integrates version control directly into the writing process.</p>
+
+                        <div class="code-block">
+                            <span class="cm"># Quick analysis</span>
+                            <span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+                            df = pd.<span class="fn">read_csv</span>(<span class="str">"data.csv"</span>)
+                            <span class="kw">print</span>(df.<span class="fn">describe</span>())
+                        </div>
+
+                        <p>By treating documents as code, we enable <strong>collaborative iteration</strong> with full
+                            history tracking.</p>
+                    </div>
+                </div>
+
+                <div class="preview">
+                    <div class="preview-header">
+                        <span>Preview</span>
+                        <button class="btn btn-ghost btn-icon" style="width:20px;height:20px;font-size:10px;">×</button>
+                    </div>
+                    <div class="preview-body">
+                        <h1>Research Methodology</h1>
+                        <p>This document outlines our approach to reproducible research using Quarto. The workflow
+                            integrates version control directly into the writing process.</p>
+                        <p>By treating documents as code, we enable collaborative iteration with full history tracking.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <div class="status-item"><span class="status-dot"></span> Saved</div>
+                <div class="status-item">Quarto</div>
+                <div class="status-item">247 words</div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quartier — Ink & Paper Theme</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Ink & Paper — Editorial, Print-inspired */
+      --paper: #FAF8F5;
+      --paper-aged: #F5F0E8;
+      --ink: #1A1A1A;
+      --ink-light: #4A4A4A;
+      --ink-muted: #8A8A8A;
+      --accent-red: #C41E3A;
+      --accent-gold: #B8860B;
+      --border: #E8E4DC;
+      --border-dark: #D4CFC4;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+
+    .app { display: flex; height: 100vh; }
+
+    .sidebar {
+      width: 280px;
+      background: var(--paper-aged);
+      border-right: 1px solid var(--border-dark);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(to right, rgba(0,0,0,0.03), transparent);
+    }
+
+    .logo {
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--ink);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--paper);
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--ink-muted);
+      padding: 20px 28px 12px;
+    }
+
+    .file-list { padding: 0 16px; }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 14px;
+    }
+
+    .file-item:hover { background: rgba(0,0,0,0.04); }
+    .file-item.active {
+      background: var(--paper);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .file-icon { width: 16px; height: 16px; opacity: 0.5; }
+
+    .user-section {
+      margin-top: auto;
+      padding: 20px 28px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      background: var(--border-dark);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--ink-light);
+    }
+
+    .user-info { font-size: 13px; }
+    .user-name { font-weight: 600; }
+    .user-action { color: var(--accent-red); font-size: 12px; text-decoration: none; }
+    .user-action:hover { text-decoration: underline; }
+
+    .main { flex: 1; display: flex; flex-direction: column; background: var(--paper); }
+
+    .header {
+      height: 56px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+
+    .breadcrumb {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+
+    .actions { display: flex; align-items: center; gap: 8px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Source Serif 4', serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-ghost { background: transparent; color: var(--ink-muted); }
+    .btn-ghost:hover { background: rgba(0,0,0,0.04); color: var(--ink); }
+    .btn-primary { background: var(--ink); color: var(--paper); }
+    .btn-primary:hover { background: #333; }
+
+    .divider { width: 1px; height: 20px; background: var(--border); margin: 0 8px; }
+
+    .editor-container { flex: 1; display: flex; overflow: hidden; }
+
+    .editor {
+      flex: 1;
+      padding: 48px;
+      max-width: 720px;
+      margin: 0 auto;
+      overflow-y: auto;
+    }
+
+    .editor-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 8px;
+      letter-spacing: -1px;
+    }
+
+    .editor-meta {
+      font-size: 14px;
+      color: var(--ink-muted);
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .editor-content { font-size: 17px; line-height: 1.75; }
+    .editor-content p { margin-bottom: 1.5em; }
+
+    .drop-cap::first-letter {
+      float: left;
+      font-family: 'Playfair Display', serif;
+      font-size: 72px;
+      line-height: 0.8;
+      padding-right: 12px;
+      padding-top: 4px;
+      color: var(--accent-red);
+    }
+
+    .status-bar {
+      padding: 12px 24px;
+      border-top: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--ink-muted);
+      display: flex;
+      gap: 24px;
+    }
+
+    .status-item { display: flex; align-items: center; gap: 6px; }
+    .status-dot { width: 6px; height: 6px; background: #22C55E; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-icon">Q</div>
+        <span class="logo-text">Quartier</span>
+      </div>
+      
+      <div class="section-title">Manuscripts</div>
+      <div class="file-list">
+        <div class="file-item active">
+          <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span>introduction.qmd</span>
+        </div>
+        <div class="file-item">
+          <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          </svg>
+          <span>methodology.qmd</span>
+        </div>
+        <div class="file-item">
+          <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          <span>analysis.py</span>
+        </div>
+      </div>
+
+      <div class="user-section">
+        <div class="avatar">G</div>
+        <div class="user-info">
+          <div class="user-name">Guest</div>
+          <a href="#" class="user-action">Sign in with GitHub</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <span class="breadcrumb">introduction.qmd</span>
+        <div class="actions">
+          <button class="btn btn-ghost">☀️</button>
+          <div class="divider"></div>
+          <button class="btn btn-ghost">Preview</button>
+          <button class="btn btn-ghost">Save</button>
+          <button class="btn btn-primary">Commit</button>
+        </div>
+      </header>
+
+      <div class="editor-container">
+        <div class="editor">
+          <h1 class="editor-title">On the Nature of Scientific Inquiry</h1>
+          <div class="editor-meta">Draft — Last edited December 11, 2025</div>
+          <div class="editor-content">
+            <p class="drop-cap">Research is the systematic investigation into materials and sources in order to establish facts and reach new conclusions. This document explores the fundamental principles that guide modern scientific methodology.</p>
+            <p>The pursuit of knowledge has been a defining characteristic of human civilization. From the ancient philosophers of Greece to the modern laboratories of today, we have sought to understand the world around us.</p>
+            <p>In this work, we present a comprehensive framework for conducting reproducible research using Quarto documents.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <div class="status-item"><span class="status-dot"></span>Saved</div>
+        <div class="status-item">342 words</div>
+        <div class="status-item">Markdown + Quarto</div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
