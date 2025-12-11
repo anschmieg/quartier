@@ -1,13 +1,7 @@
 <template>
-  <div class="h-screen w-full flex bg-background text-foreground overflow-hidden relative isolate">
-    <!-- Professional Ambient Gradients (Subtle) -->
-    <div class="absolute inset-0 overflow-hidden pointer-events-none select-none -z-10">
-      <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px] opacity-40 dark:opacity-20"></div>
-      <div class="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px] opacity-40 dark:opacity-20"></div>
-    </div>
-
+  <div class="h-screen w-full flex bg-background text-foreground overflow-hidden">
     <!-- Sidebar -->
-    <aside class="w-64 border-r flex flex-col bg-background/80 backdrop-blur-md border-border z-20">
+    <aside class="w-64 border-r flex flex-col bg-secondary border-border">
       <div class="p-4 border-b flex items-center justify-between">
         <span class="font-bold flex items-center gap-2">
           <FileText class="w-5 h-5" />
@@ -47,29 +41,29 @@
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col h-full min-w-0">
-      <header class="h-12 border-b flex items-center justify-between px-3 sticky top-0 z-50 bg-background/80 backdrop-blur-md border-border">
+      <header class="h-12 border-b flex items-center justify-between px-3 bg-card border-border">
         <div class="flex items-center gap-2">
            <span class="text-sm font-medium text-foreground/90">{{ currentFile || 'No file selected' }}</span>
         </div>
         <div class="flex items-center gap-1">
-          <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-foreground" @click="toggleDark()">
+          <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors" @click="toggleDark()">
              <Sun v-if="!isDark" class="w-4 h-4" />
              <Moon v-else class="w-4 h-4" />
           </Button>
           
           <div class="w-px h-4 bg-border mx-2"></div>
           
-          <Button variant="ghost" size="sm" class="h-8 px-2 text-muted-foreground hover:text-foreground" @click="showPreview = !showPreview" :class="{ 'bg-muted text-foreground': showPreview }">
+          <Button variant="ghost" size="sm" class="h-8 px-2 text-muted-foreground hover:text-foreground transition-colors" @click="showPreview = !showPreview" :class="{ 'bg-accent text-accent-foreground': showPreview }">
             <PanelRight class="w-4 h-4 mr-2" />
             <span class="text-xs">Preview</span>
           </Button>
 
-          <Button variant="ghost" size="sm" class="h-8 px-2 text-muted-foreground hover:text-foreground" @click="saveFile">
+          <Button variant="ghost" size="sm" class="h-8 px-2 text-muted-foreground hover:text-foreground transition-colors" @click="saveFile">
             <Save class="w-4 h-4 mr-2" />
             <span class="text-xs">Save</span>
           </Button>
           
-          <Button size="sm" class="h-8 px-3 ml-1 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm" @click="commitChanges">
+          <Button size="sm" class="h-8 px-3 ml-1 transition-colors" @click="commitChanges">
             <GitBranch class="w-3.5 h-3.5 mr-1.5" />
             <span class="text-xs font-medium">Commit</span>
           </Button>
