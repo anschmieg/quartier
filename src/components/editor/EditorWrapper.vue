@@ -1,75 +1,67 @@
 <template>
   <div class="h-full flex flex-col">
-    <!-- Main Toolbar (only in visual mode) -->
-    <EditorToolbar v-if="mode === 'visual'" :editor="tiptapRef?.editor" />
-    
-    <!-- Mode Toggle Bar -->
-    <div class="border-b p-2 flex items-center justify-between bg-muted/30">
-      <div class="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          :class="{ 'bg-muted': mode === 'visual' }"
-          @click="toggleMode('visual')"
-        >
-          <Eye class="w-4 h-4 mr-1" />
-          Visual
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          :class="{ 'bg-muted': mode === 'source' }"
-          @click="toggleMode('source')"
-        >
-          <Code class="w-4 h-4 mr-1" />
-          Source
-        </Button>
-      </div>
-      <div class="flex items-center gap-2">
+    <!-- Save Status (subtle indicator in corner) -->
+    <div class="absolute top-2 right-3 z-10">
+      <Transition
+        enter-active-class="transition-opacity duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-300"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
         <span v-if="saving" class="text-xs text-muted-foreground flex items-center gap-1">
           <Loader2 class="w-3 h-3 animate-spin" />
           Saving...
         </span>
-        <span v-else-if="saved" class="text-xs text-muted-foreground flex items-center gap-1">
+        <span v-else-if="saved" class="text-xs text-muted-foreground/70 flex items-center gap-1">
           <Check class="w-3 h-3" />
           Saved
         </span>
-      </div>
+      </Transition>
     </div>
 
     <!-- Editors -->
     <div class="flex-1 overflow-hidden relative">
-      <div v-show="mode === 'visual'" class="h-full overflow-auto">
-        <TiptapEditor 
-          ref="tiptapRef"
-          v-model="content" 
-          :editable="!saving"
-        />
-      </div>
-      <div v-show="mode === 'source'" class="h-full overflow-auto">
-        <CodeEditor 
-          v-model="content"
-        />
-      </div>
+      <Transition
+        enter-active-class="transition-opacity duration-150"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-100"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+        mode="out-in"
+      >
+        <div v-if="mode === 'visual'" key="visual" class="h-full overflow-auto">
+          <TiptapEditor 
+            ref="tiptapRef"
+            v-model="content" 
+            :editable="!saving"
+          />
+        </div>
+        <div v-else key="source" class="h-full overflow-auto">
+          <CodeEditor 
+            v-model="content"
+          />
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Eye, Code, Loader2, Check } from 'lucide-vue-next'
+import { Loader2, Check } from 'lucide-vue-next'
 import TiptapEditor from './TiptapEditor.vue'
 import CodeEditor from './CodeEditor.vue'
-import EditorToolbar from './EditorToolbar.vue'
-import { Button } from '@/components/ui/button'
 
 const props = defineProps<{
   initialContent: string
+  mode: 'visual' | 'source'
 }>()
 
 const emit = defineEmits(['update:content', 'save'])
 
-const mode = ref<'visual' | 'source'>('visual')
 const content = ref(props.initialContent)
 const saving = ref(false)
 const saved = ref(false)
@@ -98,7 +90,54 @@ watch(content, (newVal) => {
   }, 500)
 })
 
-function toggleMode(newMode: 'visual' | 'source') {
-  mode.value = newMode
+// Expose toolbar methods for parent to call
+function setHeading(level: 1 | 2 | 3) {
+  tiptapRef.value?.editor?.chain().focus().toggleHeading({ level }).run()
 }
+
+function setParagraph() {
+  tiptapRef.value?.editor?.chain().focus().setParagraph().run()
+}
+
+function toggleBulletList() {
+  tiptapRef.value?.editor?.chain().focus().toggleBulletList().run()
+}
+
+function toggleOrderedList() {
+  tiptapRef.value?.editor?.chain().focus().toggleOrderedList().run()
+}
+
+function toggleBlockquote() {
+  tiptapRef.value?.editor?.chain().focus().toggleBlockquote().run()
+}
+
+function toggleCodeBlock() {
+  tiptapRef.value?.editor?.chain().focus().toggleCodeBlock().run()
+}
+
+function setLink() {
+  const url = window.prompt('Enter URL')
+  if (url) {
+    tiptapRef.value?.editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+  }
+}
+
+function addImage() {
+  const url = window.prompt('Enter image URL')
+  if (url) {
+    tiptapRef.value?.editor?.chain().focus().setImage({ src: url }).run()
+  }
+}
+
+// Expose methods for parent component
+defineExpose({
+  setHeading,
+  setParagraph,
+  toggleBulletList,
+  toggleOrderedList,
+  toggleBlockquote,
+  toggleCodeBlock,
+  setLink,
+  addImage,
+})
 </script>
