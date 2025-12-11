@@ -1,0 +1,142 @@
+# Quartier GitHub Actions Workflow
+# This workflow is deployed to user repositories to render Quarto documents
+# and report status back to Quartier via webhooks.
+
+name: Quartier Render
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  QUARTIER_WEBHOOK_URL: ${{ secrets.QUARTIER_WEBHOOK_URL }}
+  QUARTIER_WEBHOOK_SECRET: ${{ secrets.QUARTIER_WEBHOOK_SECRET }}
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Notify Quartier - Started
+        if: env.QUARTIER_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$QUARTIER_WEBHOOK_URL" \
+            -H "Authorization: Bearer $QUARTIER_WEBHOOK_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "step": "build",
+              "status": "started",
+              "repo": "${{ github.repository }}",
+              "commit": "${{ github.sha }}",
+              "message": "Starting Quarto render..."
+            }'
+
+      - name: Setup Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: "1.4.554"
+
+      - name: Install R (if needed)
+        uses: r-lib/actions/setup-r@v2
+        if: hashFiles('**/*.Rmd', '**/*.qmd') != ''
+        with:
+          use-public-rspm: true
+
+      - name: Install R packages (if needed)
+        if: hashFiles('renv.lock') != ''
+        uses: r-lib/actions/setup-renv@v2
+
+      - name: Install Python (if needed)
+        uses: actions/setup-python@v5
+        if: hashFiles('requirements.txt', 'pyproject.toml') != ''
+        with:
+          python-version: "3.11"
+
+      - name: Install Python packages (if needed)
+        if: hashFiles('requirements.txt') != ''
+        run: pip install -r requirements.txt
+
+      - name: Notify Quartier - Linting
+        if: env.QUARTIER_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$QUARTIER_WEBHOOK_URL" \
+            -H "Authorization: Bearer $QUARTIER_WEBHOOK_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "step": "lint",
+              "status": "started",
+              "repo": "${{ github.repository }}"
+            }'
+
+      - name: Check Quarto project
+        id: check
+        run: |
+          quarto check
+
+      - name: Notify Quartier - Rendering
+        if: env.QUARTIER_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$QUARTIER_WEBHOOK_URL" \
+            -H "Authorization: Bearer $QUARTIER_WEBHOOK_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "step": "build",
+              "status": "started",
+              "repo": "${{ github.repository }}",
+              "message": "Rendering Quarto document..."
+            }'
+
+      - name: Render Quarto project
+        run: |
+          quarto render
+
+      - name: Upload rendered output
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-output
+          path: |
+            _site/
+            _book/
+            **/output/
+            **/*.html
+            **/*.pdf
+          retention-days: 7
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+
+      - name: Notify Quartier - Success
+        if: success() && env.QUARTIER_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$QUARTIER_WEBHOOK_URL" \
+            -H "Authorization: Bearer $QUARTIER_WEBHOOK_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "step": "deploy",
+              "status": "success",
+              "repo": "${{ github.repository }}",
+              "url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/",
+              "message": "Successfully deployed to GitHub Pages"
+            }'
+
+      - name: Notify Quartier - Failure
+        if: failure() && env.QUARTIER_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$QUARTIER_WEBHOOK_URL" \
+            -H "Authorization: Bearer $QUARTIER_WEBHOOK_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "step": "build",
+              "status": "failure",
+              "repo": "${{ github.repository }}",
+              "message": "Build failed. Check GitHub Actions logs for details."
+            }'
