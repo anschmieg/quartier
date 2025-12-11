@@ -1,34 +1,77 @@
 <template>
-  <editor-content :editor="editor" class="prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[500px]" />
+  <div class="tiptap-editor h-full">
+    <EditorBubbleMenu :editor="editor" />
+    <editor-content 
+      :editor="editor" 
+      class="prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[500px] p-4" 
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
-import { watch, onBeforeUnmount } from 'vue'
-import * as Y from 'yjs'
-import { WebrtcProvider } from 'y-webrtc'
+import Underline from '@tiptap/extension-underline'
+import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
+import Placeholder from '@tiptap/extension-placeholder'
+import { watch, computed } from 'vue'
 import Collaboration from '@tiptap/extension-collaboration'
+import EditorBubbleMenu from './EditorBubbleMenu.vue'
+import { useCollaboration } from '@/composables/useCollaboration'
 
 const props = defineProps<{
   modelValue: string
-  editable: boolean
+  editable?: boolean
+  documentId?: string
 }>()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'synced', 'connected'])
 
-// Y.js setup (mock room for now)
-const ydoc = new Y.Doc()
-// Random room name ensures isolation per refresh, strict string for persistent testing
-const roomName = 'quarto-editor-demo-room'
-const provider = new WebrtcProvider(roomName, ydoc)
+// Use collaboration composable for Yjs providers
+const { ydoc, isSynced, isConnected, providerType } = useCollaboration({
+  documentId: props.documentId || 'default',
+})
+
+// Emit synced event when IndexedDB sync completes
+watch(isSynced, (synced) => {
+  if (synced) emit('synced')
+})
+
+// Emit connected event when network provider connects
+watch(isConnected, (connected) => {
+  emit('connected', connected)
+})
+
+// Expose connection status
+const connectionStatus = computed(() => ({
+  synced: isSynced.value,
+  connected: isConnected.value,
+  provider: providerType.value,
+}))
 
 const editor = useEditor({
   content: props.modelValue,
+  editable: props.editable !== false,
   extensions: [
     StarterKit,
     Markdown,
+    Underline,
+    Link.configure({
+      openOnClick: false,
+      HTMLAttributes: {
+        class: 'text-primary underline',
+      },
+    }),
+    Image.configure({
+      HTMLAttributes: {
+        class: 'max-w-full rounded-lg',
+      },
+    }),
+    Placeholder.configure({
+      placeholder: 'Start writing...',
+    }),
     Collaboration.configure({
       document: ydoc,
     }),
@@ -39,32 +82,36 @@ const editor = useEditor({
     },
   },
   onUpdate: ({ editor }) => {
-    // We get markdown from the editor
-    const markdown = editor.storage.markdown.getMarkdown()
+    // @ts-expect-error - tiptap-markdown storage type
+    const markdown = editor.storage.markdown?.getMarkdown?.() ?? ''
     emit('update:modelValue', markdown)
   },
 })
 
+// Expose editor and connection status for parent components
+defineExpose({ editor, connectionStatus })
+
 // Watch for external changes (e.g. from CodeEditor)
 watch(() => props.modelValue, (newValue) => {
-  if (editor.value && editor.value.storage.markdown.getMarkdown() !== newValue) {
-    // Only update if content is different to avoid cursor jumps
-    // Note: In a real collaborative setting, we'd rely solely on Y.js updates, 
-    // but for the "Code View" toggle, we manually sync.
+  // @ts-expect-error - tiptap-markdown storage type
+  const currentMarkdown = editor.value?.storage.markdown?.getMarkdown?.() ?? ''
+  if (editor.value && currentMarkdown !== newValue) {
     editor.value.commands.setContent(newValue)
   }
-})
-
-onBeforeUnmount(() => {
-  provider.destroy()
-  editor.value?.destroy()
 })
 </script>
 
 <style>
-/* Basic prose styling is handled by Tailwind typography plugin (if added) or custom css */
 .ProseMirror {
   outline: none;
   min-height: 100%;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
 }
 </style>
