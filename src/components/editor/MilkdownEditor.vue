@@ -187,9 +187,13 @@ defineExpose({
 /* ============================================
    DRAG HANDLES & BLOCK CONTROLS
    ============================================ */
+/* ============================================
+   DRAG HANDLES & BLOCK CONTROLS
+   ============================================ */
 .crepe-editor :deep([data-drag-handle]),
 .crepe-editor :deep(.drag-handle) {
-  color: hsl(var(--muted-foreground)) !important;
+  /* Force high contrast foreground color */
+  color: hsl(var(--foreground)) !important;
   background-color: hsl(var(--background)) !important;
   border: 1px solid hsl(var(--border)) !important;
   cursor: grab !important;
@@ -214,7 +218,8 @@ defineExpose({
 /* Plus button for adding blocks */
 .crepe-editor :deep([data-block-menu-trigger]) {
   background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
+  /* Force high contrast foreground color */
+  color: hsl(var(--foreground)) !important;
   border: 1px solid hsl(var(--border)) !important;
   opacity: 0 !important;
   transition: opacity 0.2s ease !important;
