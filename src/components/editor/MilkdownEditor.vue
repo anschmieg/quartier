@@ -185,6 +185,14 @@ defineExpose({
   transition: opacity 0.2s ease !important;
 }
 
+/* Fix icon color inside drag handle */
+.crepe-editor :deep([data-drag-handle] svg),
+.crepe-editor :deep(.drag-handle svg) {
+  color: hsl(var(--foreground)) !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
 .crepe-editor :deep(.ProseMirror-selectednode [data-drag-handle]),
 .crepe-editor :deep(.has-focus [data-drag-handle]),
 .crepe-editor :deep([data-drag-handle]:hover) {
@@ -198,6 +206,13 @@ defineExpose({
   border: 1px solid hsl(var(--border)) !important;
   opacity: 0 !important;
   transition: opacity 0.2s ease !important;
+}
+
+/* Fix icon color inside plus button */
+.crepe-editor :deep([data-block-menu-trigger] svg) {
+  color: hsl(var(--foreground)) !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
 }
 
 .crepe-editor :deep(.ProseMirror-selectednode [data-block-menu-trigger]),
