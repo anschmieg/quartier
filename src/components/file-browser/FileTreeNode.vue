@@ -39,56 +39,55 @@
       <span class="truncate flex-1">{{ node.name }}</span>
     </div>
 
-    <!-- Children container with transition -->
-    <Transition
-      enter-active-class="transition-all duration-200 ease-out overflow-hidden"
-      enter-from-class="opacity-0 max-h-0"
-      enter-to-class="opacity-100 max-h-[1000px]"
-      leave-active-class="transition-all duration-150 ease-in overflow-hidden"
-      leave-from-class="opacity-100 max-h-[1000px]"
-      leave-to-class="opacity-0 max-h-0"
+    <!-- Children container -->
+    <div 
+      v-if="node.type === 'folder'"
+      class="grid transition-[grid-template-rows] duration-300 ease-out"
+      :class="isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
     >
-      <div v-if="node.type === 'folder' && isExpanded">
-        <!-- Loading indicator -->
-        <div 
-          v-if="loading"
-          class="flex items-center gap-2 text-xs text-muted-foreground py-1"
-          :style="{ paddingLeft: `${(level + 1) * 12 + 8}px` }"
+      <div class="overflow-hidden">
+        <!-- Staggered children with TransitionGroup -->
+        <TransitionGroup
+          tag="div"
+          @before-enter="onBeforeEnter"
+          @enter="onEnter"
+          @leave="onLeave"
         >
-          <Loader2 class="w-3 h-3 animate-spin" />
-          Loading...
-        </div>
-        
-        <!-- Children -->
-        <template v-else-if="node.children && node.children.length > 0">
           <FileTreeNode
-            v-for="child in node.children"
+            v-for="(child, index) in visibleChildren"
             :key="child.id"
             :node="child"
             :selected-path="selectedPath"
             :level="level + 1"
+            :data-index="index"
             @select="emit('select', $event)"
             @enter-folder="emit('enter-folder', $event)"
             @expand-folder="emit('expand-folder', $event)"
             @context-menu="emit('context-menu', $event)"
           />
-        </template>
+        </TransitionGroup>
         
-        <!-- Empty folder (only show after loading completes) -->
-        <div 
-          v-else
-          class="text-xs text-muted-foreground/70 italic py-1"
-          :style="{ paddingLeft: `${(level + 1) * 12 + 8}px` }"
+        <!-- Empty folder (only show after loading completes and no children) -->
+        <Transition
+          enter-active-class="transition-all duration-200"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
         >
-          Empty folder
-        </div>
+          <div 
+            v-if="isExpanded && !loading && (!node.children || node.children.length === 0)"
+            class="text-xs text-muted-foreground/70 italic py-1"
+            :style="{ paddingLeft: `${(level + 1) * 12 + 8}px` }"
+          >
+            Empty folder
+          </div>
+        </Transition>
       </div>
-    </Transition>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { ChevronRight, Loader2 } from 'lucide-vue-next'
 import FileIcon from './FileIcon.vue'
 import type { FileNode } from '@/types/files'
@@ -111,7 +110,16 @@ const loading = ref(false)
 let expandTimeout: ReturnType<typeof setTimeout> | null = null
 let loadingTimeout: ReturnType<typeof setTimeout> | null = null
 
-// Watch for children being loaded - clear loading when children array changes
+// Stagger delay per item (ms)
+const STAGGER_DELAY = 50
+
+// Visible children for staggered reveal
+const visibleChildren = computed(() => {
+  if (!isExpanded.value || !props.node.children) return []
+  return props.node.children
+})
+
+// Watch for children being loaded
 watch(() => props.node.children?.length, () => {
   loading.value = false
   if (loadingTimeout) {
@@ -120,28 +128,55 @@ watch(() => props.node.children?.length, () => {
   }
 }, { immediate: false })
 
+// Staggered animation hooks
+function onBeforeEnter(el: Element) {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.opacity = '0'
+  htmlEl.style.transform = 'translateY(-8px)'
+}
+
+function onEnter(el: Element, done: () => void) {
+  const htmlEl = el as HTMLElement
+  const index = Number(htmlEl.dataset.index) || 0
+  const delay = index * STAGGER_DELAY
+  
+  htmlEl.style.transition = `opacity 200ms ease ${delay}ms, transform 200ms ease ${delay}ms`
+  
+  // Trigger reflow
+  void htmlEl.offsetHeight
+  
+  htmlEl.style.opacity = '1'
+  htmlEl.style.transform = 'translateY(0)'
+  
+  setTimeout(done, delay + 200)
+}
+
+function onLeave(el: Element, done: () => void) {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.transition = 'opacity 150ms ease, transform 150ms ease'
+  htmlEl.style.opacity = '0'
+  htmlEl.style.transform = 'translateY(-4px)'
+  setTimeout(done, 150)
+}
+
 function handleClick() {
   if (props.node.type === 'file') {
     emit('select', props.node.path)
   } else {
-    // Use delayed expand to allow double-click detection
     handleDelayedExpand()
   }
 }
 
 function handleExpandClick() {
-  // Immediate toggle when clicking chevron directly
   toggleExpand()
 }
 
 function handleDelayedExpand() {
-  // Cancel any pending expand (in case of double-click)
   if (expandTimeout) {
     clearTimeout(expandTimeout)
     expandTimeout = null
   }
   
-  // Delay expand by 200ms to detect double-click
   expandTimeout = setTimeout(() => {
     toggleExpand()
     expandTimeout = null
@@ -152,10 +187,8 @@ function toggleExpand() {
   isExpanded.value = !isExpanded.value
   
   if (isExpanded.value) {
-    // Show loading if no children loaded yet
     if (!props.node.children || props.node.children.length === 0) {
       loading.value = true
-      // Timeout fallback: clear loading after 5s even if no response
       loadingTimeout = setTimeout(() => {
         loading.value = false
       }, 5000)
@@ -168,7 +201,6 @@ function toggleExpand() {
 
 function handleDoubleClick() {
   if (props.node.type === 'folder') {
-    // Cancel pending expand on double-click
     if (expandTimeout) {
       clearTimeout(expandTimeout)
       expandTimeout = null
