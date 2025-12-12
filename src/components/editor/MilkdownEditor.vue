@@ -1,6 +1,7 @@
 <template>
   <MilkdownProvider>
     <MilkdownInternal 
+      ref="internalRef"
       :modelValue="modelValue" 
       :editable="editable"
       @update:modelValue="emit('update:modelValue', $event)" 
@@ -9,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, watch } from 'vue'
+import { defineComponent, h, watch, ref } from 'vue'
 import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/preset-commonmark'
@@ -33,6 +34,12 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['update:modelValue'])
+
+const internalRef = ref<any>(null)
+
+defineExpose({
+  getEditor: () => internalRef.value?.getEditor?.()
+})
 
 // Internal component that uses useEditor (must be inside Provider)
 const MilkdownInternal = defineComponent({
