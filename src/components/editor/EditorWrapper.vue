@@ -33,8 +33,8 @@
         mode="out-in"
       >
         <div v-if="mode === 'visual'" key="visual" class="h-full overflow-auto">
-          <TiptapEditor 
-            ref="tiptapRef"
+          <MilkdownEditor 
+            ref="milkdownRef"
             v-model="content" 
             :editable="!saving"
           />
@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { Loader2, Check } from 'lucide-vue-next'
-import TiptapEditor from './TiptapEditor.vue'
+import MilkdownEditor from './MilkdownEditor.vue'
 import CodeEditor from './CodeEditor.vue'
 
 const props = defineProps<{
@@ -65,7 +65,7 @@ const emit = defineEmits(['update:content', 'save'])
 const content = ref(props.initialContent)
 const saving = ref(false)
 const saved = ref(false)
-const tiptapRef = ref<InstanceType<typeof TiptapEditor> | null>(null)
+const milkdownRef = ref<InstanceType<typeof MilkdownEditor> | null>(null)
 
 // Sync content when props change (e.g. file load)
 watch(() => props.initialContent, (newVal) => {
@@ -90,54 +90,8 @@ watch(content, (newVal) => {
   }, 500)
 })
 
-// Expose toolbar methods for parent to call
-function setHeading(level: 1 | 2 | 3) {
-  tiptapRef.value?.editor?.chain().focus().toggleHeading({ level }).run()
-}
-
-function setParagraph() {
-  tiptapRef.value?.editor?.chain().focus().setParagraph().run()
-}
-
-function toggleBulletList() {
-  tiptapRef.value?.editor?.chain().focus().toggleBulletList().run()
-}
-
-function toggleOrderedList() {
-  tiptapRef.value?.editor?.chain().focus().toggleOrderedList().run()
-}
-
-function toggleBlockquote() {
-  tiptapRef.value?.editor?.chain().focus().toggleBlockquote().run()
-}
-
-function toggleCodeBlock() {
-  tiptapRef.value?.editor?.chain().focus().toggleCodeBlock().run()
-}
-
-function setLink() {
-  const url = window.prompt('Enter URL')
-  if (url) {
-    tiptapRef.value?.editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-  }
-}
-
-function addImage() {
-  const url = window.prompt('Enter image URL')
-  if (url) {
-    tiptapRef.value?.editor?.chain().focus().setImage({ src: url }).run()
-  }
-}
-
-// Expose methods for parent component
+// Expose ref for parent component (toolbar will use Milkdown's API)
 defineExpose({
-  setHeading,
-  setParagraph,
-  toggleBulletList,
-  toggleOrderedList,
-  toggleBlockquote,
-  toggleCodeBlock,
-  setLink,
-  addImage,
+  milkdownRef,
 })
 </script>

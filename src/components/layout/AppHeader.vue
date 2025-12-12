@@ -112,7 +112,7 @@ defineProps<{
   sidebarVisible: boolean
   showPreview: boolean
   editorMode: 'visual' | 'source'
-  editorInstance?: Editor
+  editorInstance?: Editor | null
 }>()
 
 const emit = defineEmits<{

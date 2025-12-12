@@ -95,9 +95,9 @@ const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 
 // Computed editor instance from EditorWrapper ref
 const editorInstance = computed(() => {
-  // EditorWrapper exposes TiptapEditor via tiptapRef, which exposes editor
+  // EditorWrapper exposes MilkdownEditor via milkdownRef, which exposes editor
   // @ts-ignore - accessing nested ref
-  return editorWrapperRef.value?.tiptapRef?.editor
+  return editorWrapperRef.value?.milkdownRef?.editor
 })
 
 // Keyboard shortcuts
