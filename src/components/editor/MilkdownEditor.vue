@@ -1,6 +1,6 @@
 <template>
   <div class="milkdown-editor-container h-full w-full">
-    <div ref="editorRef" class="prose prose-slate dark:prose-invert max-w-none h-full outline-none"></div>
+    <Milkdown class="prose prose-slate dark:prose-invert max-w-none h-full outline-none" />
   </div>
 </template>
 
@@ -14,7 +14,7 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { math } from '@milkdown/plugin-math'
 import { diagram } from '@milkdown/plugin-diagram'
 import { nord } from '@milkdown/theme-nord'
-import { useEditor } from '@milkdown/vue'
+import { useEditor, Milkdown } from '@milkdown/vue'
 import { replaceAll } from '@milkdown/kit/utils'
 
 // Import base styles for structure (optional, but nord helps with complex nodes)
