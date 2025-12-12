@@ -113,7 +113,7 @@ const loading = ref(false)
 let expandTimeout: ReturnType<typeof setTimeout> | null = null
 let loadingTimeout: ReturnType<typeof setTimeout> | null = null
 
-// Adjusted stagger delay to create a deliberate "unroll" effect
+// Adjusted stagger settings
 const STAGGER_DELAY = 30 // ms per item
 
 // Visible children
@@ -122,13 +122,21 @@ const visibleChildren = computed(() => {
   return props.node.children
 })
 
-// Watch for children being loaded
+// Watch for specific node update to clear loading (covers empty folder case)
+// When AppLayout updates 'files', the tree is rebuilt and 'node' prop changes reference
+watch(() => props.node, () => {
+  if (loading.value) {
+    loading.value = false
+    if (loadingTimeout) {
+      clearTimeout(loadingTimeout)
+      loadingTimeout = null
+    }
+  }
+})
+
+// Also watch children length as backup
 watch(() => props.node.children?.length, () => {
   loading.value = false
-  if (loadingTimeout) {
-    clearTimeout(loadingTimeout)
-    loadingTimeout = null
-  }
 }, { immediate: false })
 
 // Animation Hooks
@@ -143,23 +151,23 @@ function onEnter(el: Element, done: () => void) {
   const index = Number(htmlEl.dataset.index) || 0
   const delay = index * STAGGER_DELAY
   
-  // Slower transition for "unroll" feel
-  htmlEl.style.transition = `opacity 300ms ease-out ${delay}ms, transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1) ${delay}ms`
+  // Faster transition (200ms)
+  htmlEl.style.transition = `opacity 200ms ease-out ${delay}ms, transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1) ${delay}ms`
   
   void htmlEl.offsetHeight // trigger reflow
   
   htmlEl.style.opacity = '1'
   htmlEl.style.transform = 'translateY(0)'
   
-  setTimeout(done, delay + 300)
+  setTimeout(done, delay + 200)
 }
 
 function onLeave(el: Element, done: () => void) {
   const htmlEl = el as HTMLElement
-  htmlEl.style.transition = 'opacity 200ms ease, transform 200ms ease'
+  htmlEl.style.transition = 'opacity 150ms ease, transform 150ms ease'
   htmlEl.style.opacity = '0'
   htmlEl.style.transform = 'translateY(-5px)'
-  setTimeout(done, 200)
+  setTimeout(done, 150)
 }
 
 function handleClick() {
@@ -171,12 +179,12 @@ function handleClick() {
        loading.value = true
        emit('expand-folder', props.node.path)
        
-       // Fallback timeout
+       // Fallback timeout (reduced to 3s)
        if (loadingTimeout) clearTimeout(loadingTimeout)
-       loadingTimeout = setTimeout(() => { loading.value = false }, 5000)
+       loadingTimeout = setTimeout(() => { loading.value = false }, 3000)
     }
     
-    // VISUAL DELAY: Wait 200ms to expand UI (double-click guard)
+    // VISUAL DELAY: Reduced to 150ms
     handleDelayedExpand()
   }
 }
@@ -192,11 +200,12 @@ function handleDelayedExpand() {
     expandTimeout = null
   }
   
+  // Reduced delay to 150ms
   expandTimeout = setTimeout(() => {
     // Only toggle visual state here
     toggleExpandVisual()
     expandTimeout = null
-  }, 200)
+  }, 150)
 }
 
 function toggleExpand() {
