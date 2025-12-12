@@ -85,20 +85,22 @@ watch(() => props.initialContent, (newVal) => {
   saved.value = false
 })
 
-// Auto-save with debounce and status indicator
-let saveTimeout: ReturnType<typeof setTimeout> | null = null
+// Debounced content update and save indicator
+let debounceTimeout: ReturnType<typeof setTimeout> | null = null
 
 watch(content, (newVal) => {
-  emit('update:content', newVal)
+  // Clear any pending debounce
+  if (debounceTimeout) clearTimeout(debounceTimeout)
+  
+  // Show saving indicator immediately for feedback
+  saving.value = true
   saved.value = false
   
-  // Debounced save indicator
-  if (saveTimeout) clearTimeout(saveTimeout)
-  saving.value = true
-  
-  saveTimeout = setTimeout(() => {
+  // Debounce the actual emit and save completion
+  debounceTimeout = setTimeout(() => {
+    emit('update:content', newVal)
     saving.value = false
     saved.value = true
-  }, 500)
+  }, 300) // 300ms debounce
 })
 </script>
