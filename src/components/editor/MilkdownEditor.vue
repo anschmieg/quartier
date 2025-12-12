@@ -1,11 +1,16 @@
 <template>
-  <div class="milkdown-editor-container h-full w-full">
-    <Milkdown class="prose prose-slate dark:prose-invert max-w-none h-full outline-none" />
-  </div>
+  <MilkdownProvider>
+    <MilkdownInternal 
+      :modelValue="modelValue" 
+      :editable="editable"
+      @update:modelValue="emit('update:modelValue', $event)" 
+    />
+  </MilkdownProvider>
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
+import { defineComponent, h, watch } from 'vue'
+import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
@@ -14,11 +19,10 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { math } from '@milkdown/plugin-math'
 import { diagram } from '@milkdown/plugin-diagram'
 import { nord } from '@milkdown/theme-nord'
-import { useEditor, Milkdown } from '@milkdown/vue'
 import { replaceAll } from '@milkdown/kit/utils'
 
 // Import base styles for structure (optional, but nord helps with complex nodes)
-// import '@milkdown/theme-nord/style.css' -- REMOVED: Causes PostCSS error, using custom styles instead
+// import '@milkdown/theme-nord/style.css' -- REMOVED: Custom styles used
 
 // Katex styles for math
 import 'katex/dist/katex.min.css'
@@ -30,44 +34,51 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue'])
 
-const { get } = useEditor((root) => {
-  return Editor.make()
-    .config((ctx) => {
-      ctx.set(rootCtx, root)
-      ctx.set(defaultValueCtx, props.modelValue)
-      
-      // Configure editor view options
-      ctx.update(editorViewOptionsCtx, (prev) => ({
-        ...prev,
-        editable: () => props.editable ?? true,
-      }))
-      
-      // Setup listener for v-model
-      ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
-        if (markdown !== prevMarkdown) {
-          emit('update:modelValue', markdown)
-        }
-      })
+// Internal component that uses useEditor (must be inside Provider)
+const MilkdownInternal = defineComponent({
+  name: 'MilkdownInternal',
+  props: ['modelValue', 'editable'],
+  emits: ['update:modelValue'],
+  setup(props, { emit }) {
+    const { get } = useEditor((root) => {
+      return Editor.make()
+        .config((ctx) => {
+          ctx.set(rootCtx, root)
+          ctx.set(defaultValueCtx, props.modelValue)
+          
+          // Configure editor view options
+          ctx.update(editorViewOptionsCtx, (prev) => ({
+            ...prev,
+            editable: () => props.editable ?? true,
+          }))
+          
+          // Setup listener for v-model
+          ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
+            if (markdown !== prevMarkdown) {
+              emit('update:modelValue', markdown)
+            }
+          })
+        })
+        .config(nord)
+        .use(commonmark)
+        .use(gfm)
+        .use(history)
+        .use(listener)
+        .use(math)
+        .use(diagram)
     })
-    .config(nord)
-    .use(commonmark)
-    .use(gfm)
-    .use(history)
-    .use(listener)
-    .use(math)
-    .use(diagram)
-})
 
-// Update content when modelValue changes externally
-watch(() => props.modelValue, (newValue) => {
-  const editor = get()
-  if (!editor) return
-  
-  // Only update if content is different to avoid cursor jumping
-  // This is a naive check; ideally we'd compare state. 
-  // But for fast switching, this works.
-  // We use replaceAll utility from kit/utils
-  editor.action(replaceAll(newValue))
+    // Update content when modelValue changes externally
+    watch(() => props.modelValue, (newValue) => {
+      const editor = get()
+      if (!editor) return
+      editor.action(replaceAll(newValue))
+    })
+
+    return () => h(Milkdown, { 
+      class: 'prose prose-slate dark:prose-invert max-w-none h-full outline-none' 
+    })
+  }
 })
 </script>
 
