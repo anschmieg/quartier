@@ -101,6 +101,7 @@ const MilkdownInternal = defineComponent({
   background: transparent !important;
   font-family: var(--font-sans);
   line-height: 1.6;
+  white-space: pre-wrap !important;
 }
 
 /* Headings */
