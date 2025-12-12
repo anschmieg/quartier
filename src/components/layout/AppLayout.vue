@@ -46,8 +46,8 @@
           <div class="flex items-center justify-between mb-3 px-2">
             <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Files</span>
             <label v-if="repo" class="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-              <input type="checkbox" v-model="showHiddenFiles" class="w-3 h-3 rounded border-muted-foreground/50" />
-              Hidden
+              <input type="checkbox" v-model="showAllFiles" class="w-3 h-3 rounded border-muted-foreground/50" />
+              All
             </label>
           </div>
           <div v-if="!repo" class="text-sm text-muted-foreground px-2 py-4 text-center">
@@ -315,13 +315,29 @@ const showSidebar = ref(true)
 const editorMode = ref<'visual' | 'source'>('visual')
 const repo = ref<string | undefined>(undefined)
 const showRepoSelector = ref(false)
-const showHiddenFiles = ref(false)
+const showAllFiles = ref(false)
+
+// Quarto-relevant file extensions (whitelist)
+const QUARTO_EXTENSIONS = new Set([
+  '.qmd', '.md', '.rmd', '.ipynb',  // Document files
+  '.yml', '.yaml',                   // Config files
+  '.bib', '.csl',                    // Bibliography
+  '.r', '.py', '.jl',                // Code files
+  '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp',  // Images
+  '.pdf', '.html',                   // Outputs (for reference)
+  '.css', '.scss', '.lua',           // Styling/filters
+])
 
 const filteredFiles = computed(() => {
-  if (showHiddenFiles.value) return files.value
+  if (showAllFiles.value) return files.value
   return files.value.filter(f => {
+    // Always hide hidden files/folders unless showAllFiles
     const parts = f.split('/')
-    return !parts.some(part => part.startsWith('.'))
+    if (parts.some(part => part.startsWith('.'))) return false
+    
+    // Check extension whitelist
+    const ext = '.' + f.split('.').pop()?.toLowerCase()
+    return QUARTO_EXTENSIONS.has(ext)
   })
 })
 
