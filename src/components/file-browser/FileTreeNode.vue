@@ -109,13 +109,16 @@ const emit = defineEmits<{
 const isExpanded = ref(false)
 const loading = ref(false)
 let expandTimeout: ReturnType<typeof setTimeout> | null = null
+let loadingTimeout: ReturnType<typeof setTimeout> | null = null
 
-// Watch for children being loaded
-watch(() => props.node.children, (newChildren) => {
-  if (newChildren && newChildren.length > 0) {
-    loading.value = false
+// Watch for children being loaded - clear loading when children array changes
+watch(() => props.node.children?.length, () => {
+  loading.value = false
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout)
+    loadingTimeout = null
   }
-})
+}, { immediate: false })
 
 function handleClick() {
   if (props.node.type === 'file') {
@@ -152,8 +155,14 @@ function toggleExpand() {
     // Show loading if no children loaded yet
     if (!props.node.children || props.node.children.length === 0) {
       loading.value = true
+      // Timeout fallback: clear loading after 5s even if no response
+      loadingTimeout = setTimeout(() => {
+        loading.value = false
+      }, 5000)
     }
     emit('expand-folder', props.node.path)
+  } else {
+    loading.value = false
   }
 }
 
