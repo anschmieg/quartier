@@ -12,7 +12,7 @@
 <script setup lang="ts">
 import { defineComponent, h, watch, ref } from 'vue'
 import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
-import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx } from '@milkdown/kit/core'
+import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { history } from '@milkdown/plugin-history'
@@ -20,7 +20,9 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { math } from '@milkdown/plugin-math'
 import { diagram } from '@milkdown/plugin-diagram'
 import { nord } from '@milkdown/theme-nord'
-import { replaceAll } from '@milkdown/kit/utils'
+import { replaceAll, $prose } from '@milkdown/utils'
+import { keymap } from '@milkdown/prose/keymap'
+
 
 // Import base styles for structure (optional, but nord helps with complex nodes)
 // import '@milkdown/theme-nord/style.css' -- REMOVED: Custom styles used
@@ -47,6 +49,19 @@ const MilkdownInternal = defineComponent({
   props: ['modelValue', 'editable'],
   emits: ['update:modelValue', 'ready'],
   setup(props, { emit, expose }) {
+    // Plugin to handle Escape key -> Blur
+    const escapePlugin = $prose((_ctx) => {
+      return keymap({
+        Escape: (_state, _dispatch, view) => {
+          if (view && view.dom) {
+            view.dom.blur()
+            return true
+          }
+          return false
+        }
+      })
+    })
+
     const { get } = useEditor((root) => {
       return Editor.make()
         .config((ctx) => {
@@ -73,6 +88,7 @@ const MilkdownInternal = defineComponent({
         .use(listener)
         .use(math)
         .use(diagram)
+        .use(escapePlugin)
     })
 
     // Expose the editor instance getter
@@ -87,8 +103,18 @@ const MilkdownInternal = defineComponent({
       editorInstance.action(replaceAll(newValue))
     })
 
+    // Focus helper for container click
+    const focusEditor = () => {
+      const editorInstance = get()
+      if (!editorInstance) return
+      editorInstance.action((ctx) => {
+        ctx.get(editorViewCtx).focus()
+      })
+    }
+
     return () => h(Milkdown, { 
-      class: 'prose prose-slate dark:prose-invert max-w-none h-full outline-none' 
+      class: 'prose prose-slate dark:prose-invert max-w-none h-full outline-none',
+      onClick: focusEditor
     })
   }
 })
