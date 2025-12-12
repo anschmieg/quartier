@@ -263,6 +263,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { 
   Keyboard, Save, GitBranch, PanelRight, PanelLeft, Sun, Moon,
   Eye, Code as CodeIcon, Heading, ChevronDown, List, ListOrdered, 
   Quote, Code, Link, ImageIcon, BookMarked, Loader2, Check
