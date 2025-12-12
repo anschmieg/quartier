@@ -18,22 +18,21 @@ const emit = defineEmits(['update:modelValue'])
 
 const editorRef = ref<HTMLElement>()
 let crepeInstance: Crepe | null = null
+let observer: MutationObserver | null = null
+let lastMarkdown = ''
 
-onMounted(async () => {
-  if (!editorRef.value) return
+// Setup mutation observer to track changes
+function setupObserver() {
+  if (!editorRef.value || !crepeInstance) return
   
-  crepeInstance = new Crepe({
-    root: editorRef.value,
-    defaultValue: props.modelValue,
-  })
+  // Cleanup existing observer
+  if (observer) {
+    observer.disconnect()
+  }
   
-  await crepeInstance.create()
+  lastMarkdown = crepeInstance.getMarkdown()
   
-  // Use MutationObserver to watch for content changes
-  // Since Crepe doesn't expose a direct onChange
-  let lastMarkdown = props.modelValue
-  
-  const observer = new MutationObserver(() => {
+  observer = new MutationObserver(() => {
     const currentMarkdown = crepeInstance?.getMarkdown() ?? ''
     if (currentMarkdown !== lastMarkdown) {
       lastMarkdown = currentMarkdown
@@ -46,36 +45,51 @@ onMounted(async () => {
     subtree: true,
     characterData: true,
   })
+}
+
+onMounted(async () => {
+  if (!editorRef.value) return
   
-  // Store observer for cleanup
-  ;(editorRef.value as any).__observer = observer
+  crepeInstance = new Crepe({
+    root: editorRef.value,
+    defaultValue: props.modelValue,
+  })
+  
+  await crepeInstance.create()
+  setupObserver()
 })
 
 // Watch for external changes (from source mode)
-watch(() => props.modelValue, (newValue) => {
+watch(() => props.modelValue, async (newValue) => {
   if (!crepeInstance) return
   
   const currentMarkdown = crepeInstance.getMarkdown()
   if (newValue !== currentMarkdown) {
     // Recreate editor with new value
     // This is the only way to update content in Crepe
+    if (observer) {
+      observer.disconnect()
+    }
     crepeInstance.destroy()
+    
     if (editorRef.value) {
       crepeInstance = new Crepe({
         root: editorRef.value,
         defaultValue: newValue,
       })
-      crepeInstance.create()
+      await crepeInstance.create()
+      setupObserver() // Re-setup observer after recreate
     }
   }
 })
 
 onBeforeUnmount(() => {
-  const observer = (editorRef.value as any)?.__observer
   if (observer) {
     observer.disconnect()
+    observer = null
   }
   crepeInstance?.destroy()
+  crepeInstance = null
 })
 
 defineExpose({

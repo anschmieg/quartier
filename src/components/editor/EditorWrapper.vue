@@ -52,17 +52,12 @@
 <script setup lang="ts">
 import { ref, watch, defineAsyncComponent } from 'vue'
 import { Loader2, Check } from 'lucide-vue-next'
+import CodeEditor from './CodeEditor.vue'
 
-// Lazy load editors - only load when needed
+// Lazy load Milkdown editor (large bundle ~900KB)
 const MilkdownEditor = defineAsyncComponent({
   loader: () => import('./MilkdownEditor.vue'),
-  loadingComponent: { template: '<div class="flex items-center justify-center h-full"><div class="text-muted-foreground">Loading editor...</div></div>' },
-  delay: 200
-})
-
-const CodeEditor = defineAsyncComponent({
-  loader: () => import('./CodeEditor.vue'),
-  loadingComponent: { template: '<div class="flex items-center justify-center h-full"><div class="text-muted-foreground">Loading editor...</div></div>' },
+  loadingComponent: { template: '<div class="flex items-center justify-center h-full"><div class="text-muted-foreground">Loading visual editor...</div></div>' },
   delay: 200
 })
 
