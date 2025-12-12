@@ -48,31 +48,37 @@ class ProxyGitHubService {
   async readFile(owner: string, repo: string, path: string): Promise<string> {
     const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`
     console.log('[ProxyGitHubService] Reading file:', { owner, repo, path })
-    
+
     try {
       const response = await fetch(url)
-      
+
       if (!response.ok) {
         const text = await response.text()
         console.error('[ProxyGitHubService] readFile error:', text)
         throw new Error(`Failed to read file: ${response.status} ${response.statusText}`)
       }
-      
+
       const data = await response.json()
-      
+
       // GitHub API returns directory as array, file as object with 'content' field
       if (Array.isArray(data)) {
         throw new Error('Path is a directory, not a file')
       }
-      
+
       if (!data.content) {
         throw new Error('No content field in response')
       }
-      
-      // Decode base64 content
+
+      // Decode base64 content with proper UTF-8 handling
       const base64Content = data.content.replace(/\n/g, '') // Remove newlines from base64
-      const decoded = atob(base64Content)
-      
+      // atob() returns Latin-1, need to convert to UTF-8
+      const binaryString = atob(base64Content)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      const decoded = new TextDecoder('utf-8').decode(bytes)
+
       console.log('[ProxyGitHubService] File loaded, size:', decoded.length)
       return decoded
     } catch (e) {
