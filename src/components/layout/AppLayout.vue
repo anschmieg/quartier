@@ -403,10 +403,21 @@ async function handleDelete(path: string) {
   }
 }
 
-function handleRepoSelect(selectedRepo: { full_name: string }) {
+async function handleRepoSelect(selectedRepo: { owner: string, name: string, full_name: string }) {
   repo.value = selectedRepo.full_name
-  // TODO: Load repo files
   console.log('Selected repo:', selectedRepo.full_name)
+  
+  try {
+    const contents = await githubService.loadRepo(selectedRepo.owner, selectedRepo.name)
+    // Transform GitHub API response to file paths
+    const filePaths = contents.map((item: { path: string }) => item.path)
+    files.value = filePaths
+    currentFile.value = null
+    fileContent.value = ''
+  } catch (error) {
+    console.error('Failed to load repo contents:', error)
+    alert('Failed to load repository contents')
+  }
 }
 
 onMounted(() => {

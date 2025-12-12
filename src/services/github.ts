@@ -36,10 +36,13 @@ class ProxyGitHubService {
     }
   }
 
-  async loadRepo(_owner: string, _repo: string) {
-    // TODO: Implement /api/github/content endpoint
-    console.warn('loadRepo via proxy not implemented yet')
-    return []
+  async loadRepo(owner: string, repo: string, path: string = '') {
+    const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Failed to load repo: ${response.statusText}`)
+    }
+    return await response.json()
   }
 
   async readFile(_owner: string, _repo: string, _path: string) {
