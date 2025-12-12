@@ -1,16 +1,9 @@
 <template>
-  <Transition
-    enter-active-class="transition-transform duration-150 ease-out"
-    enter-from-class="-translate-x-full"
-    enter-to-class="translate-x-0"
-    leave-active-class="transition-transform duration-150 ease-in"
-    leave-from-class="translate-x-0"
-    leave-to-class="-translate-x-full"
+  <aside 
+    class="border-r border-border/50 flex flex-col bg-sidebar/50 flex-shrink-0 overflow-hidden transition-all duration-150 ease-out"
+    :class="visible ? 'w-64' : 'w-0 border-r-0'"
   >
-    <aside 
-      v-if="visible"
-      class="w-64 border-r border-border/50 flex flex-col bg-sidebar/50 flex-shrink-0"
-    >
+    <div class="w-64 flex flex-col h-full">
       <!-- Repo Selector -->
       <div class="p-3 border-b border-border/50">
         <Button 
@@ -40,8 +33,8 @@
       <div class="p-4 border-t border-border/50">
         <UserMenu />
       </div>
-    </aside>
-  </Transition>
+    </div>
+  </aside>
 </template>
 
 <script setup lang="ts">
