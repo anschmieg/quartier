@@ -48,7 +48,7 @@ const MilkdownInternal = defineComponent({
   name: 'MilkdownInternal',
   props: ['modelValue', 'editable'],
   emits: ['update:modelValue', 'ready'],
-  setup(props, { emit, expose }) {
+  setup(props, ctx) {
     // Plugin to handle Escape key -> Blur
     const escapePlugin = $prose((_ctx) => {
       return keymap({
@@ -62,22 +62,27 @@ const MilkdownInternal = defineComponent({
       })
     })
 
+    // Track internal content to avoid infinite loops
+    const localValue = ref(props.modelValue)
+
     const { get } = useEditor((root) => {
       return Editor.make()
-        .config((ctx) => {
-          ctx.set(rootCtx, root)
-          ctx.set(defaultValueCtx, props.modelValue)
+        .config((configCtx) => {
+          configCtx.set(rootCtx, root)
+          configCtx.set(defaultValueCtx, props.modelValue)
           
           // Configure editor view options
-          ctx.update(editorViewOptionsCtx, (prev) => ({
+          configCtx.update(editorViewOptionsCtx, (prev) => ({
             ...prev,
             editable: () => props.editable ?? true,
           }))
           
           // Setup listener for v-model
-          ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
+          configCtx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
+            // Check if update is echo
             if (markdown !== prevMarkdown) {
-              emit('update:modelValue', markdown)
+              localValue.value = markdown
+              ctx.emit('update:modelValue', markdown)
             }
           })
         })
@@ -92,14 +97,17 @@ const MilkdownInternal = defineComponent({
     })
 
     // Expose the editor instance getter
-    expose({
+    ctx.expose({
       getEditor: get
     })
 
     // Update content when modelValue changes externally
     watch(() => props.modelValue, (newValue) => {
+      if (newValue === localValue.value) return // content is same, ignore
+      
       const editorInstance = get()
       if (!editorInstance) return
+      localValue.value = newValue // update local to match external
       editorInstance.action(replaceAll(newValue))
     })
 
