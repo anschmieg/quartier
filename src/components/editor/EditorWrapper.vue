@@ -50,10 +50,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, defineAsyncComponent } from 'vue'
 import { Loader2, Check } from 'lucide-vue-next'
-import MilkdownEditor from './MilkdownEditor.vue'
-import CodeEditor from './CodeEditor.vue'
+
+// Lazy load editors - only load when needed
+const MilkdownEditor = defineAsyncComponent({
+  loader: () => import('./MilkdownEditor.vue'),
+  loadingComponent: { template: '<div class="flex items-center justify-center h-full"><div class="text-muted-foreground">Loading editor...</div></div>' },
+  delay: 200
+})
+
+const CodeEditor = defineAsyncComponent({
+  loader: () => import('./CodeEditor.vue'),
+  loadingComponent: { template: '<div class="flex items-center justify-center h-full"><div class="text-muted-foreground">Loading editor...</div></div>' },
+  delay: 200
+})
 
 const props = defineProps<{
   initialContent: string
@@ -65,7 +76,6 @@ const emit = defineEmits(['update:content', 'save'])
 const content = ref(props.initialContent)
 const saving = ref(false)
 const saved = ref(false)
-const milkdownRef = ref<InstanceType<typeof MilkdownEditor> | null>(null)
 
 // Sync content when props change (e.g. file load)
 watch(() => props.initialContent, (newVal) => {
@@ -88,10 +98,5 @@ watch(content, (newVal) => {
     saving.value = false
     saved.value = true
   }, 500)
-})
-
-// Expose ref for parent component (toolbar will use Milkdown's API)
-defineExpose({
-  milkdownRef,
 })
 </script>
