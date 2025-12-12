@@ -36,6 +36,7 @@
             variant="ghost" 
             size="icon"
             :class="{ 'bg-muted': isActive('strong') }"
+            @mousedown.prevent
             @click="toggleBold"
           >
             <Bold class="w-4 h-4" />
