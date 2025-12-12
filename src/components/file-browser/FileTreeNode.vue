@@ -16,7 +16,7 @@
         @click.stop="handleExpandClick"
       >
         <Loader2 
-          v-if="loading"
+          v-if="loading && isExpanded && (!node.children || node.children.length === 0)"
           class="w-3 h-3 animate-spin text-muted-foreground" 
         />
         <ChevronRight 
@@ -42,7 +42,7 @@
     <!-- Children container -->
     <div 
       v-if="node.type === 'folder'"
-      class="grid transition-[grid-template-rows] duration-300 ease-out"
+      class="grid transition-[grid-template-rows] duration-500 ease-out"
       :class="isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
     >
       <div class="overflow-hidden">
@@ -67,20 +67,23 @@
           />
         </TransitionGroup>
         
-        <!-- Empty folder (only show after loading completes and no children) -->
-        <Transition
-          enter-active-class="transition-all duration-200"
-          enter-from-class="opacity-0 -translate-y-1"
-          enter-to-class="opacity-100 translate-y-0"
+        <!-- Loading / Empty messages -->
+        <div 
+          v-if="isExpanded && loading && (!node.children || node.children.length === 0)"
+          key="loading-indicator"
+          class="flex items-center gap-2 text-xs text-muted-foreground py-1 animate-pulse"
+          :style="{ paddingLeft: `${(level + 1) * 12 + 8}px` }"
         >
-          <div 
-            v-if="isExpanded && !loading && (!node.children || node.children.length === 0)"
-            class="text-xs text-muted-foreground/70 italic py-1"
-            :style="{ paddingLeft: `${(level + 1) * 12 + 8}px` }"
-          >
-            Empty folder
-          </div>
-        </Transition>
+          Loading...
+        </div>
+        <div 
+          v-else-if="isExpanded && !loading && (!node.children || node.children.length === 0)"
+          key="empty-indicator"
+          class="text-xs text-muted-foreground/70 italic py-1"
+          :style="{ paddingLeft: `${(level + 1) * 12 + 8}px` }"
+        >
+          Empty folder
+        </div>
       </div>
     </div>
   </div>
@@ -110,10 +113,10 @@ const loading = ref(false)
 let expandTimeout: ReturnType<typeof setTimeout> | null = null
 let loadingTimeout: ReturnType<typeof setTimeout> | null = null
 
-// Stagger delay per item (ms)
-const STAGGER_DELAY = 50
+// Adjusted stagger delay to create a deliberate "unroll" effect
+const STAGGER_DELAY = 30 // ms per item
 
-// Visible children for staggered reveal
+// Visible children
 const visibleChildren = computed(() => {
   if (!isExpanded.value || !props.node.children) return []
   return props.node.children
@@ -128,11 +131,11 @@ watch(() => props.node.children?.length, () => {
   }
 }, { immediate: false })
 
-// Staggered animation hooks
+// Animation Hooks
 function onBeforeEnter(el: Element) {
   const htmlEl = el as HTMLElement
   htmlEl.style.opacity = '0'
-  htmlEl.style.transform = 'translateY(-8px)'
+  htmlEl.style.transform = 'translateY(-10px)'
 }
 
 function onEnter(el: Element, done: () => void) {
@@ -140,34 +143,46 @@ function onEnter(el: Element, done: () => void) {
   const index = Number(htmlEl.dataset.index) || 0
   const delay = index * STAGGER_DELAY
   
-  htmlEl.style.transition = `opacity 200ms ease ${delay}ms, transform 200ms ease ${delay}ms`
+  // Slower transition for "unroll" feel
+  htmlEl.style.transition = `opacity 300ms ease-out ${delay}ms, transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1) ${delay}ms`
   
-  // Trigger reflow
-  void htmlEl.offsetHeight
+  void htmlEl.offsetHeight // trigger reflow
   
   htmlEl.style.opacity = '1'
   htmlEl.style.transform = 'translateY(0)'
   
-  setTimeout(done, delay + 200)
+  setTimeout(done, delay + 300)
 }
 
 function onLeave(el: Element, done: () => void) {
   const htmlEl = el as HTMLElement
-  htmlEl.style.transition = 'opacity 150ms ease, transform 150ms ease'
+  htmlEl.style.transition = 'opacity 200ms ease, transform 200ms ease'
   htmlEl.style.opacity = '0'
-  htmlEl.style.transform = 'translateY(-4px)'
-  setTimeout(done, 150)
+  htmlEl.style.transform = 'translateY(-5px)'
+  setTimeout(done, 200)
 }
 
 function handleClick() {
   if (props.node.type === 'file') {
     emit('select', props.node.path)
   } else {
+    // PREFETCH: Start loading immediately
+    if (!isExpanded.value && (!props.node.children || props.node.children.length === 0)) {
+       loading.value = true
+       emit('expand-folder', props.node.path)
+       
+       // Fallback timeout
+       if (loadingTimeout) clearTimeout(loadingTimeout)
+       loadingTimeout = setTimeout(() => { loading.value = false }, 5000)
+    }
+    
+    // VISUAL DELAY: Wait 200ms to expand UI (double-click guard)
     handleDelayedExpand()
   }
 }
 
 function handleExpandClick() {
+  // Chevron click: Immediate visual toggle + fetch
   toggleExpand()
 }
 
@@ -178,24 +193,30 @@ function handleDelayedExpand() {
   }
   
   expandTimeout = setTimeout(() => {
-    toggleExpand()
+    // Only toggle visual state here
+    toggleExpandVisual()
     expandTimeout = null
   }, 200)
 }
 
 function toggleExpand() {
+  // Logic for immediate toggle (e.g. chevron click)
+  if (!isExpanded.value) {
+     // Trigger fetch if needed
+     if (!props.node.children || props.node.children.length === 0) {
+       loading.value = true
+       emit('expand-folder', props.node.path)
+       if (loadingTimeout) clearTimeout(loadingTimeout)
+       loadingTimeout = setTimeout(() => { loading.value = false }, 5000)
+     }
+  }
+  toggleExpandVisual()
+}
+
+function toggleExpandVisual() {
   isExpanded.value = !isExpanded.value
-  
-  if (isExpanded.value) {
-    if (!props.node.children || props.node.children.length === 0) {
-      loading.value = true
-      loadingTimeout = setTimeout(() => {
-        loading.value = false
-      }, 5000)
-    }
-    emit('expand-folder', props.node.path)
-  } else {
-    loading.value = false
+  if (!isExpanded.value) {
+     loading.value = false // Reset loading if collapsed
   }
 }
 
