@@ -32,3 +32,4 @@ dist-ssr
 wrangler*ml
 wrangler.dev.toml
 wrangler.toml
+.wrangler/
