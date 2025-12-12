@@ -80,7 +80,11 @@ class ProxyGitHubService {
         throw new Error(`Failed to fetch repos: ${response.status} ${response.statusText}`)
       }
 
-      const data = await response.json()
+      const text = await response.text()
+      console.log('[ProxyGitHubService] Response body text length:', text.length)
+      console.log('[ProxyGitHubService] Response body snippet:', text.substring(0, 100))
+
+      const data = JSON.parse(text)
       console.log('[ProxyGitHubService] Repos loaded:', Array.isArray(data) ? data.length : data)
       return data
     } catch (e) {
