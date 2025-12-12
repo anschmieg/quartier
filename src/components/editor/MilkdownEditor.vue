@@ -102,9 +102,9 @@ defineExpose({
 
 <style>
 /* 
-  CRITICAL: Do NOT import Crepe theme CSS files
-  They override our dark mode and use their own colors
-  We implement everything ourselves for full control
+  CRITICAL: Override Crepe's CSS variables to use our Tailwind theme
+  Crepe defines --crepe-* variables that control colors
+  We override them to ensure dark mode compatibility
 */
 
 .crepe-editor {
@@ -112,6 +112,18 @@ defineExpose({
   height: 100%;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  
+  /* Override ALL Crepe color variables */
+  --crepe-color-bg: hsl(var(--background));
+  --crepe-color-text: hsl(var(--foreground));
+  --crepe-color-outline: hsl(var(--border));
+  --crepe-color-surface: hsl(var(--muted));
+  --crepe-color-hover: hsl(var(--accent));
+  --crepe-color-active: hsl(var(--accent));
+  --crepe-color-primary: hsl(var(--primary));
+  --crepe-color-secondary: hsl(var(--muted-foreground));
+  --crepe-color-divider: hsl(var(--border));
+  --crepe-color-border: hsl(var(--border));
 }
 
 /* ============================================
