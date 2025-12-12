@@ -107,12 +107,25 @@ const MilkdownInternal = defineComponent({
 
     // Update content when modelValue changes externally
     watch(() => props.modelValue, (newValue) => {
-      if (newValue === localValue.value) return // content is same, ignore
+      console.log('[MilkdownEditor] modelValue changed:', { 
+        newValue: newValue?.substring(0, 50), 
+        localValue: localValue.value?.substring(0, 50) 
+      })
+      
+      if (newValue === localValue.value) {
+        console.log('[MilkdownEditor] Same value, skipping replaceAll')
+        return // content is same, ignore
+      }
       
       const editorInstance = get()
-      if (!editorInstance) return
+      if (!editorInstance) {
+        console.log('[MilkdownEditor] No editor instance yet')
+        return
+      }
+      
       localValue.value = newValue // update local to match external
       editorInstance.action(replaceAll(newValue))
+      console.log('[MilkdownEditor] Called replaceAll with new content')
     })
 
     // Focus helper for container click
