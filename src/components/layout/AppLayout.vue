@@ -6,6 +6,7 @@
       :sidebar-visible="showSidebar"
       :show-preview="showPreview"
       :editor-mode="editorMode"
+      :editor-instance="editorInstance"
       @command-palette="openCommandPalette"
       @save="saveFile"
       @toggle-sidebar="showSidebar = !showSidebar"
@@ -33,6 +34,7 @@
             class="h-full overflow-hidden transition-all duration-150"
           >
             <EditorWrapper 
+              ref="editorWrapperRef"
               :initial-content="fileContent"
               :mode="editorMode"
               @update:content="updateContent"
@@ -66,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useStorage } from '@vueuse/core'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
@@ -89,6 +91,14 @@ const fileContent = ref('')
 const fileLoading = ref(false)
 const commandPaletteRef = ref()
 const showRepoSelector = ref(false)
+const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
+
+// Computed editor instance from EditorWrapper ref
+const editorInstance = computed(() => {
+  // EditorWrapper exposes TiptapEditor via tiptapRef, which exposes editor
+  // @ts-ignore - accessing nested ref
+  return editorWrapperRef.value?.tiptapRef?.editor
+})
 
 // Keyboard shortcuts
 const { Meta_K, Ctrl_K } = useMagicKeys()

@@ -55,8 +55,20 @@ const editor = useEditor({
   content: props.modelValue,
   editable: props.editable !== false,
   extensions: [
-    StarterKit,
-    Markdown,
+    StarterKit.configure({
+      // Disable conflicting extensions from StarterKit
+      // that we'll configure separately or via Markdown
+    }),
+    Markdown.configure({
+      html: true,                  // HTML tags allowed in markdown
+      tightLists: false,            // Add <p> tags inside <li>
+      tightListClass: 'tight',     // Apply class to tight lists
+      bulletListMarker: '-',       // Use - for bullet lists
+      linkify: true,               // Convert URLs to links
+      breaks: true,                // Convert line breaks
+      transformPastedText: true,   // Auto-convert pasted markdown
+      transformCopiedText: true,   // Convert to markdown on copy
+    }),
     Underline,
     Link.configure({
       openOnClick: false,
@@ -91,11 +103,16 @@ const editor = useEditor({
 // Expose editor and connection status for parent components
 defineExpose({ editor, connectionStatus })
 
-// Watch for external changes (e.g. from CodeEditor)
+// Watch for external changes (e.g. from CodeEditor or file load)
 watch(() => props.modelValue, (newValue) => {
+  if (!editor.value) return
+  
   // @ts-expect-error - tiptap-markdown storage type
-  const currentMarkdown = editor.value?.storage.markdown?.getMarkdown?.() ?? ''
-  if (editor.value && currentMarkdown !== newValue) {
+  const currentMarkdown = editor.value.storage.markdown?.getMarkdown?.() ?? ''
+  
+  // Only update if content actually changed (avoid infinite loops)
+  if (currentMarkdown !== newValue) {
+    // Set content as markdown string, let the Markdown extension parse it
     editor.value.commands.setContent(newValue)
   }
 })
