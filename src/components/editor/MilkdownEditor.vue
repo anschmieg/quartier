@@ -62,14 +62,18 @@ const MilkdownInternal = defineComponent({
       })
     })
 
+    // Capture initial value ONCE to prevent useEditor from being reactive
+    const initialValue = props.modelValue
+    
     // Track internal content to avoid infinite loops
-    const localValue = ref(props.modelValue)
+    const localValue = ref(initialValue)
 
     const { get } = useEditor((root) => {
       return Editor.make()
         .config((configCtx) => {
           configCtx.set(rootCtx, root)
-          configCtx.set(defaultValueCtx, props.modelValue)
+          // Use captured initial value, NOT reactive props
+          configCtx.set(defaultValueCtx, initialValue)
           
           // Configure editor view options
           configCtx.update(editorViewOptionsCtx, (prev) => ({
