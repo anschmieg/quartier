@@ -6,6 +6,12 @@
 import { Crepe } from '@milkdown/crepe'
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 
+// CRITICAL: Import base Crepe styles for core functionality
+// These provide essential layout and structure
+import '@milkdown/crepe/theme/common/style.css'
+
+// We override colors via CSS variables below for dark mode support
+
 const props = defineProps<{
   modelValue: string
   editable?: boolean
