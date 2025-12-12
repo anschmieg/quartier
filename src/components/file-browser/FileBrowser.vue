@@ -24,9 +24,11 @@
       v-else
       :files="filteredFiles" 
       :selected-path="selectedPath"
+      :expanded-folders="currentExpandedFolders"
       @select="handleSelect"
       @enter-folder="handleEnterFolder"
       @expand-folder="handleExpandFolder"
+      @collapse-folder="handleCollapseFolder"
       @create-file="emit('create-file', $event)"
       @create-folder="emit('create-folder', $event)"
       @rename="emit('rename', $event)"
@@ -37,6 +39,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useStorage } from '@vueuse/core'
 import FileTree from './FileTree.vue'
 import PathBreadcrumbs from './PathBreadcrumbs.vue'
 import FileFilters from './FileFilters.vue'
@@ -64,6 +67,14 @@ const emit = defineEmits<{
 const files = ref<FileItem[]>([])
 const currentPath = ref('')
 const showAllFiles = ref(false)
+
+// Persisted expanded folders (per repo)
+const expandedFolders = useStorage<Record<string, string[]>>('quartier:expandedFolders', {})
+
+// Get expanded folders for current repo
+const currentExpandedFolders = computed(() => {
+  return props.repo ? (expandedFolders.value[props.repo] || []) : []
+})
 
 // Quarto-relevant file extensions (whitelist)
 const QUARTO_EXTENSIONS = new Set([
@@ -127,6 +138,9 @@ async function handleEnterFolder(folderPath: string) {
 async function handleExpandFolder(folderPath: string) {
   if (!props.repo) return
   
+  // Track expansion
+  addExpandedFolder(folderPath)
+  
   // Check if already loaded
   const existingChildren = files.value.some(f => 
     f.path.startsWith(folderPath + '/') && f.path !== folderPath
@@ -145,6 +159,31 @@ async function handleExpandFolder(folderPath: string) {
     files.value = [...files.value, ...newItems]
   } catch (error) {
     console.error('Failed to expand folder:', error)
+  }
+}
+
+function handleCollapseFolder(folderPath: string) {
+  if (!props.repo) return
+  removeExpandedFolder(folderPath)
+}
+
+function addExpandedFolder(folderPath: string) {
+  if (!props.repo) return
+  const current = expandedFolders.value[props.repo] || []
+  if (!current.includes(folderPath)) {
+    expandedFolders.value = {
+      ...expandedFolders.value,
+      [props.repo]: [...current, folderPath]
+    }
+  }
+}
+
+function removeExpandedFolder(folderPath: string) {
+  if (!props.repo) return
+  const current = expandedFolders.value[props.repo] || []
+  expandedFolders.value = {
+    ...expandedFolders.value,
+    [props.repo]: current.filter(p => p !== folderPath)
   }
 }
 

@@ -58,11 +58,13 @@
             :key="child.id"
             :node="child"
             :selected-path="selectedPath"
+            :expanded-folders="expandedFolders"
             :level="level + 1"
             :data-index="index"
             @select="emit('select', $event)"
             @enter-folder="emit('enter-folder', $event)"
             @expand-folder="emit('expand-folder', $event)"
+            @collapse-folder="emit('collapse-folder', $event)"
             @context-menu="emit('context-menu', $event)"
           />
         </TransitionGroup>
@@ -98,6 +100,7 @@ import type { FileNode } from '@/types/files'
 const props = defineProps<{
   node: FileNode
   selectedPath?: string | null
+  expandedFolders?: string[]
   level: number
 }>()
 
@@ -105,10 +108,12 @@ const emit = defineEmits<{
   select: [path: string]
   'enter-folder': [path: string]
   'expand-folder': [path: string]
+  'collapse-folder': [path: string]
   'context-menu': [event: { node: FileNode; x: number; y: number }]
 }>()
 
-const isExpanded = ref(false)
+// Initialize expansion state from persisted data
+const isExpanded = ref(props.expandedFolders?.includes(props.node.path) ?? false)
 const loading = ref(false)
 let expandTimeout: ReturnType<typeof setTimeout> | null = null
 let loadingTimeout: ReturnType<typeof setTimeout> | null = null
@@ -238,6 +243,7 @@ function toggleExpand() {
 function toggleExpandVisual() {
   isExpanded.value = !isExpanded.value
   if (!isExpanded.value) {
+     emit('collapse-folder', props.node.path)
      clearLoading() // Reset loading if collapsed
   }
 }

@@ -5,10 +5,12 @@
       :key="node.id"
       :node="node"
       :selected-path="selectedPath"
+      :expanded-folders="expandedFolders"
       :level="0"
       @select="emit('select', $event)"
       @enter-folder="emit('enter-folder', $event)"
       @expand-folder="emit('expand-folder', $event)"
+      @collapse-folder="emit('collapse-folder', $event)"
       @context-menu="handleContextMenu"
     />
 
@@ -56,12 +58,14 @@ import { buildFileTree, type FileNode, type FileItem } from '@/types/files'
 const props = defineProps<{
   files: FileItem[]
   selectedPath?: string | null
+  expandedFolders?: string[]
 }>()
 
 const emit = defineEmits<{
   select: [path: string]
   'enter-folder': [path: string]
   'expand-folder': [path: string]
+  'collapse-folder': [path: string]
   'create-file': [parentPath: string]
   'create-folder': [parentPath: string]
   rename: [path: string]

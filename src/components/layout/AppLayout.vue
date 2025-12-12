@@ -66,7 +66,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useStorage } from '@vueuse/core'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import EditorWrapper from '@/components/editor/EditorWrapper.vue'
@@ -76,20 +77,30 @@ import RepoSelector from '@/components/github/RepoSelector.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
 
-// State
-const currentFile = ref<string | null>(null)
+// Persisted State (localStorage)
+const repo = useStorage<string | undefined>('quartier:repo', undefined)
+const currentFile = useStorage<string | null>('quartier:currentFile', null)
+const showSidebar = useStorage('quartier:showSidebar', true)
+const showPreview = useStorage('quartier:showPreview', false)
+const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visual')
+
+// Transient State (not persisted)
 const fileContent = ref('')
 const fileLoading = ref(false)
 const commandPaletteRef = ref()
-const showPreview = ref(false)
-const showSidebar = ref(true)
-const editorMode = ref<'visual' | 'source'>('visual')
-const repo = ref<string | undefined>(undefined)
 const showRepoSelector = ref(false)
 
 // Keyboard shortcuts
 const { Meta_K, Ctrl_K } = useMagicKeys()
 whenever(() => Meta_K?.value || Ctrl_K?.value, () => openCommandPalette())
+
+// Restore file content on mount
+onMounted(async () => {
+  if (repo.value && currentFile.value) {
+    console.log('[AppLayout] Restoring file on mount:', currentFile.value)
+    await selectFile(currentFile.value)
+  }
+})
 
 function openCommandPalette() {
   commandPaletteRef.value?.open()
