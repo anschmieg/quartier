@@ -53,6 +53,7 @@
             variant="ghost" 
             size="icon"
             :class="{ 'bg-muted': isActive('emphasis') }"
+            @mousedown.prevent
             @click="toggleItalic"
           >
             <Italic class="w-4 h-4" />
@@ -69,6 +70,7 @@
             variant="ghost" 
             size="icon"
             :class="{ 'bg-muted': isActive('inline_code') }"
+            @mousedown.prevent
             @click="toggleInlineCode"
           >
             <Code2 class="w-4 h-4" />
@@ -88,6 +90,7 @@
             variant="ghost" 
             size="icon"
             :class="{ 'bg-muted': isActive('bullet_list') }"
+            @mousedown.prevent
             @click="toggleBulletList"
           >
             <List class="w-4 h-4" />
@@ -104,6 +107,7 @@
             variant="ghost" 
             size="icon"
             :class="{ 'bg-muted': isActive('ordered_list') }"
+            @mousedown.prevent
             @click="toggleOrderedList"
           >
             <ListOrdered class="w-4 h-4" />
@@ -123,6 +127,7 @@
             variant="ghost" 
             size="icon"
             :class="{ 'bg-muted': isActive('blockquote') }"
+            @mousedown.prevent
             @click="toggleBlockquote"
           >
             <Quote class="w-4 h-4" />
@@ -139,6 +144,7 @@
             variant="ghost" 
             size="icon"
             :class="{ 'bg-muted': isActive('code_block') }"
+            @mousedown.prevent
             @click="toggleCodeBlock"
           >
             <Code class="w-4 h-4" />
@@ -158,6 +164,7 @@
             variant="ghost" 
             size="icon"
             :class="{ 'bg-muted': isActive('link') }"
+            @mousedown.prevent
             @click="handleSetLink"
           >
             <Link class="w-4 h-4" />
@@ -170,7 +177,7 @@
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" @click="addImage">
+          <Button variant="ghost" size="icon" @mousedown.prevent @click="addImage">
             <Image class="w-4 h-4" />
           </Button>
         </TooltipTrigger>
@@ -188,6 +195,7 @@
             variant="ghost" 
             size="icon"
             :disabled="!can().undo()"
+            @mousedown.prevent
             @click="undo"
           >
             <Undo class="w-4 h-4" />
@@ -204,6 +212,7 @@
             variant="ghost" 
             size="icon"
             :disabled="!can().redo()"
+            @mousedown.prevent
             @click="redo"
           >
             <Redo class="w-4 h-4" />
