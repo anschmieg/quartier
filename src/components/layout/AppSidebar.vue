@@ -1,9 +1,9 @@
 <template>
   <Transition
-    enter-active-class="transition-transform duration-300 ease-out"
+    enter-active-class="transition-transform duration-150 ease-out"
     enter-from-class="-translate-x-full"
     enter-to-class="translate-x-0"
-    leave-active-class="transition-transform duration-300 ease-in"
+    leave-active-class="transition-transform duration-150 ease-in"
     leave-from-class="translate-x-0"
     leave-to-class="-translate-x-full"
   >

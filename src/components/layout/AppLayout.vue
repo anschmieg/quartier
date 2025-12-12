@@ -5,10 +5,12 @@
       :can-save="!!currentFile"
       :sidebar-visible="showSidebar"
       :show-preview="showPreview"
+      :editor-mode="editorMode"
       @command-palette="openCommandPalette"
       @save="saveFile"
       @toggle-sidebar="showSidebar = !showSidebar"
       @update:show-preview="showPreview = $event"
+      @update:editor-mode="editorMode = $event"
     />
 
     <!-- Main Layout -->
@@ -24,50 +26,6 @@
 
       <!-- Main Content -->
       <main class="flex-1 flex flex-col h-full min-w-0 bg-background/50">
-        <!-- Editor Toolbar -->
-        <div class="h-9 flex items-center px-4 border-b border-border/50 bg-background">
-          <!-- Sliding Toggle: Visual | Source -->
-          <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <button 
-                    @click="editorMode = 'visual'"
-                    class="p-1.5 rounded-md transition-all"
-                    :class="editorMode === 'visual' 
-                      ? 'bg-background text-foreground shadow-sm' 
-                      : 'text-muted-foreground hover:text-foreground'"
-                  >
-                    <Eye class="w-3.5 h-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Visual Mode</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <button 
-                    @click="editorMode = 'source'"
-                    class="p-1.5 rounded-md transition-all"
-                    :class="editorMode === 'source'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'"
-                  >
-                    <Code class="w-3.5 h-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Source Mode</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
-
         <!-- Editor/Preview Split -->
         <div class="flex-1 flex overflow-hidden">
           <div :class="showPreview ? 'w-1/2' : 'w-full'" class="h-full overflow-hidden">
@@ -77,11 +35,22 @@
               @update:content="updateContent"
             />
           </div>
-          <PreviewPanel 
-            v-if="showPreview" 
-            :content="fileContent"
-            class="w-1/2 border-l border-border/50"
-          />
+          
+          <!-- Preview Panel with Fade Animation -->
+          <Transition
+            enter-active-class="transition-opacity duration-200"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity duration-150"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <PreviewPanel 
+              v-if="showPreview" 
+              :content="fileContent"
+              class="w-1/2 border-l border-border/50"
+            />
+          </Transition>
         </div>
       </main>
     </div>
@@ -94,8 +63,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Eye, Code } from 'lucide-vue-next'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import EditorWrapper from '@/components/editor/EditorWrapper.vue'

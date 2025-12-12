@@ -1,8 +1,8 @@
 <template>
-  <TooltipProvider>
+  <TooltipProvider :delay-duration="0">
     <Tooltip>
       <TooltipTrigger as-child>
-        <Button variant="ghost" size="icon" @click="toggleTheme">
+        <Button variant="ghost" size="icon" @click="toggleTheme()">
           <Sun v-if="isDark" class="w-4 h-4" />
           <Moon v-else class="w-4 h-4" />
         </Button>

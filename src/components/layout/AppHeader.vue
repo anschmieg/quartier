@@ -4,7 +4,7 @@
     <div class="flex items-center gap-2">
       <SidebarToggle :visible="sidebarVisible" @toggle="emit('toggle-sidebar')" />
       <div class="w-px h-4 bg-border/50 mx-1" />
-      <TooltipProvider>
+      <TooltipProvider :delay-duration="0">
         <Tooltip>
           <TooltipTrigger as-child>
             <Button variant="ghost" size="icon" @click="emit('command-palette')">
@@ -13,6 +13,50 @@
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <p>Command Palette <kbd class="ml-1 px-1 py-0.5 bg-muted rounded text-xs">⌘K</kbd></p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+    
+    <!-- Center: Editor Mode Toggle (aligned with editor area) -->
+    <div 
+      class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg"
+      :style="{ marginLeft: sidebarVisible ? 'calc((256px - 1rem) - (4rem + 2.5rem))' : '0' }"
+    >
+      <TooltipProvider :delay-duration="0">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button 
+              @click="emit('update:editorMode', 'visual')"
+              class="p-1.5 rounded-md transition-all"
+              :class="editorMode === 'visual' 
+                ? 'bg-background text-foreground shadow-sm' 
+                : 'text-muted-foreground hover:text-foreground'"
+            >
+              <Eye class="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Visual Mode</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider :delay-duration="0">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button 
+              @click="emit('update:editorMode', 'source')"
+              class="p-1.5 rounded-md transition-all"
+              :class="editorMode === 'source'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'"
+            >
+              <Code class="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Source Mode</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -27,7 +71,7 @@
       <ThemeToggle />
       <div class="w-px h-4 bg-border/50 mx-1" />
       <!-- Preview toggle -->
-      <TooltipProvider>
+      <TooltipProvider :delay-duration="0">
         <Tooltip>
           <TooltipTrigger as-child>
             <Button 
@@ -49,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { Keyboard, PanelRightOpen } from 'lucide-vue-next'
+import { Eye, Code, Keyboard, PanelRightOpen } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ThemeToggle, SidebarToggle, SaveButton } from '@/components/toolbar'
@@ -58,6 +102,7 @@ defineProps<{
   canSave: boolean
   sidebarVisible: boolean
   showPreview: boolean
+  editorMode: 'visual' | 'source'
 }>()
 
 const emit = defineEmits<{
@@ -65,5 +110,6 @@ const emit = defineEmits<{
   'save': []
   'toggle-sidebar': []
   'update:showPreview': [show: boolean]
+  'update:editorMode': [mode: 'visual' | 'source']
 }>()
 </script>
