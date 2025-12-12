@@ -4,10 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npx wrangler pages dev --config wrangler.dev.toml -- bun vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "pages:dev": "npx wrangler pages dev --config wrangler.dev.toml -- bun run dev",
     "test": "vitest"
   },
   "dependencies": {
