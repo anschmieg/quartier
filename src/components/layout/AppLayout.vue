@@ -305,7 +305,12 @@ const isDark = useDark({
 })
 const toggleDark = useToggle(isDark)
 
-const files = ref<string[]>([])
+interface FileItem {
+  path: string
+  type: 'file' | 'dir'
+}
+
+const files = ref<FileItem[]>([])
 const currentFile = ref<string | null>(null)
 const fileContent = ref('')
 const commandPaletteRef = ref()
@@ -329,16 +334,21 @@ const QUARTO_EXTENSIONS = new Set([
 ])
 
 const filteredFiles = computed(() => {
-  if (showAllFiles.value) return files.value
-  return files.value.filter(f => {
-    // Always hide hidden files/folders unless showAllFiles
-    const parts = f.split('/')
-    if (parts.some(part => part.startsWith('.'))) return false
-    
-    // Check extension whitelist
-    const ext = '.' + f.split('.').pop()?.toLowerCase()
-    return QUARTO_EXTENSIONS.has(ext)
-  })
+  if (showAllFiles.value) return files.value.map(f => f.path)
+  return files.value
+    .filter(f => {
+      // Always hide hidden files/folders unless showAllFiles
+      const parts = f.path.split('/')
+      if (parts.some(part => part.startsWith('.'))) return false
+      
+      // Always include directories
+      if (f.type === 'dir') return true
+      
+      // Check extension whitelist for files
+      const ext = '.' + f.path.split('.').pop()?.toLowerCase()
+      return QUARTO_EXTENSIONS.has(ext)
+    })
+    .map(f => f.path)
 })
 
 const { Meta_K, Ctrl_K } = useMagicKeys()
@@ -352,7 +362,8 @@ function openCommandPalette() {
 }
 
 async function loadFiles() {
-  files.value = await fileSystem.listFiles()
+  const paths = await fileSystem.listFiles()
+  files.value = paths.map(path => ({ path, type: 'file' as const }))
 }
 
 async function selectFile(filename: string) {
@@ -444,9 +455,11 @@ async function handleRepoSelect(selectedRepo: { owner: string, name: string, ful
   
   try {
     const contents = await githubService.loadRepo(selectedRepo.owner, selectedRepo.name)
-    // Transform GitHub API response to file paths
-    const filePaths = contents.map((item: { path: string }) => item.path)
-    files.value = filePaths
+    // Transform GitHub API response to file items with type info
+    files.value = contents.map((item: { path: string, type: string }) => ({
+      path: item.path,
+      type: item.type as 'file' | 'dir'
+    }))
     currentFile.value = null
     fileContent.value = ''
   } catch (error) {
