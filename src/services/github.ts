@@ -45,10 +45,40 @@ class ProxyGitHubService {
     return await response.json()
   }
 
-  async readFile(_owner: string, _repo: string, _path: string) {
-    // TODO: Implement /api/github/content endpoint
-    console.warn('readFile via proxy not implemented yet')
-    return ""
+  async readFile(owner: string, repo: string, path: string): Promise<string> {
+    const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`
+    console.log('[ProxyGitHubService] Reading file:', { owner, repo, path })
+    
+    try {
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        const text = await response.text()
+        console.error('[ProxyGitHubService] readFile error:', text)
+        throw new Error(`Failed to read file: ${response.status} ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      
+      // GitHub API returns directory as array, file as object with 'content' field
+      if (Array.isArray(data)) {
+        throw new Error('Path is a directory, not a file')
+      }
+      
+      if (!data.content) {
+        throw new Error('No content field in response')
+      }
+      
+      // Decode base64 content
+      const base64Content = data.content.replace(/\n/g, '') // Remove newlines from base64
+      const decoded = atob(base64Content)
+      
+      console.log('[ProxyGitHubService] File loaded, size:', decoded.length)
+      return decoded
+    } catch (e) {
+      console.error('[ProxyGitHubService] readFile error:', e)
+      throw e
+    }
   }
 
   async commitChanges(_owner: string, _repo: string, _path: string, _content: string, _message: string) {

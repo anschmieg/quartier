@@ -74,10 +74,12 @@ import PreviewPanel from '@/components/preview/PreviewPanel.vue'
 import CommandPalette from '@/components/command/CommandPalette.vue'
 import RepoSelector from '@/components/github/RepoSelector.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
+import { githubService } from '@/services/github'
 
 // State
 const currentFile = ref<string | null>(null)
 const fileContent = ref('')
+const fileLoading = ref(false)
 const commandPaletteRef = ref()
 const showPreview = ref(false)
 const showSidebar = ref(true)
@@ -100,12 +102,20 @@ async function selectFile(path: string) {
   if (!owner || !name) return
   
   try {
-    // TODO: Implement file reading from GitHub
+    fileLoading.value = true
     currentFile.value = path
-    fileContent.value = `// Loading ${path}...`
-    console.log('Selected file:', path)
+    fileContent.value = 'Loading...'
+    
+    console.log('Loading file:', path)
+    const content = await githubService.readFile(owner, name, path)
+    
+    fileContent.value = content
+    console.log('File loaded successfully, length:', content.length)
   } catch (error) {
     console.error('Failed to load file:', error)
+    fileContent.value = `# Error loading file\n\nFailed to load ${path}:\n${error instanceof Error ? error.message : 'Unknown error'}`
+  } finally {
+    fileLoading.value = false
   }
 }
 
