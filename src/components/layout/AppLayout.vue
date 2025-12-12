@@ -27,19 +27,23 @@
         <!-- Editor Toolbar -->
         <div class="h-9 flex items-center px-4 border-b border-border/50 bg-background">
           <!-- Sliding Toggle: Visual | Source -->
-          <div class="flex items-center p-0.5 bg-muted/50 rounded-lg">
+          <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
                   <button 
                     @click="editorMode = 'visual'"
-                    class="p-1 px-2 rounded-md transition-all text-muted-foreground hover:text-foreground"
-                    :class="{ 'bg-background text-foreground shadow-sm': editorMode === 'visual' }"
+                    class="p-1.5 rounded-md transition-all"
+                    :class="editorMode === 'visual' 
+                      ? 'bg-background text-foreground shadow-sm' 
+                      : 'text-muted-foreground hover:text-foreground'"
                   >
                     <Eye class="w-3.5 h-3.5" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom"><p>Visual Mode</p></TooltipContent>
+                <TooltipContent side="bottom">
+                  <p>Visual Mode</p>
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
@@ -48,31 +52,37 @@
                 <TooltipTrigger as-child>
                   <button 
                     @click="editorMode = 'source'"
-                    class="p-1 px-2 rounded-md transition-all text-muted-foreground hover:text-foreground"
-                    :class="{ 'bg-background text-foreground shadow-sm': editorMode === 'source' }"
+                    class="p-1.5 rounded-md transition-all"
+                    :class="editorMode === 'source'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'"
                   >
-                    <CodeIcon class="w-3.5 h-3.5" />
+                    <Code class="w-3.5 h-3.5" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom"><p>Source Mode</p></TooltipContent>
+                <TooltipContent side="bottom">
+                  <p>Source Mode</p>
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         </div>
 
         <!-- Editor/Preview Split -->
-        <div class="flex-1 flex overflow-hidden relative">
-          <EditorWrapper 
-            :initial-content="fileContent"
-            :mode="editorMode"
-            @update:content="updateContent"
+        <div class="flex-1 flex overflow-hidden">
+          <div :class="showPreview ? 'w-1/2' : 'w-full'" class="h-full overflow-hidden">
+            <EditorWrapper 
+              :initial-content="fileContent"
+              :mode="editorMode"
+              @update:content="updateContent"
+            />
+          </div>
+          <PreviewPanel 
+            v-if="showPreview" 
+            :content="fileContent"
+            class="w-1/2 border-l border-border/50"
           />
         </div>
-        <PreviewPanel 
-          v-if="showPreview" 
-          :content="fileContent"
-          class="w-1/2 border-l border-border/50"
-        />
       </main>
     </div>
 
@@ -84,6 +94,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Eye, Code } from 'lucide-vue-next'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import EditorWrapper from '@/components/editor/EditorWrapper.vue'
