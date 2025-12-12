@@ -66,20 +66,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         // Set secure HttpOnly cookie with the token
         // The token is encrypted and only accessible server-side
         const redirectUrl = state || '/'
+        
+        const headers = new Headers()
+        headers.set('Location', redirectUrl)
+        headers.append('Set-Cookie', `gh_token=${tokenData.access_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`)
+        headers.append('Set-Cookie', `gh_user=${encodeURIComponent(JSON.stringify({
+            login: userData.login,
+            name: userData.name,
+            avatar_url: userData.avatar_url,
+        }))}; Secure; SameSite=Lax; Path=/; Max-Age=2592000`)
 
         return new Response(null, {
             status: 302,
-            headers: {
-                'Location': redirectUrl,
-                'Set-Cookie': [
-                    `gh_token=${tokenData.access_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000`,
-                    `gh_user=${encodeURIComponent(JSON.stringify({
-                        login: userData.login,
-                        name: userData.name,
-                        avatar_url: userData.avatar_url,
-                    }))}; Secure; SameSite=Strict; Path=/; Max-Age=2592000`,
-                ].join(', '),
-            },
+            headers
         })
     } catch (error) {
         console.error('OAuth error:', error)
