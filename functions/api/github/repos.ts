@@ -19,14 +19,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     // Fallback for local development
     if (!accessToken && context.env.DEV_ACCESS_TOKEN) {
+        console.log('Using DEV_ACCESS_TOKEN from env')
         accessToken = context.env.DEV_ACCESS_TOKEN
     }
 
     if (!accessToken) {
-        return new Response('Unauthorized', { status: 401 })
+        console.log('No access token found')
+        return new Response('Unauthorized - No token', { status: 401 })
     }
 
     try {
+        console.log('Fetching repos from GitHub...')
         const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100', {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -35,7 +38,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             },
         })
 
+        console.log('GitHub API Status:', response.status)
+
         if (!response.ok) {
+            const text = await response.text()
+            console.error('GitHub API Error Body:', text)
             return new Response(`GitHub API error: ${response.statusText}`, { status: response.status })
         }
 
@@ -44,7 +51,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             headers: { 'Content-Type': 'application/json' },
         })
     } catch (error) {
-        console.error('GitHub API error:', error)
+        console.error('GitHub API catch:', error)
         return new Response('Failed to fetch repositories', { status: 500 })
     }
 }

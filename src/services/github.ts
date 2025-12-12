@@ -69,11 +69,24 @@ class MockGitHubService {
 class ProxyGitHubService {
 
   async listRepos() {
-    const response = await fetch('/api/github/repos')
-    if (!response.ok) {
-      throw new Error(`Failed to fetch repos: ${response.statusText}`)
+    console.log('[ProxyGitHubService] Fetching repos...')
+    try {
+      const response = await fetch('/api/github/repos')
+      console.log('[ProxyGitHubService] Response status:', response.status)
+
+      if (!response.ok) {
+        const text = await response.text()
+        console.error('[ProxyGitHubService] Error body:', text)
+        throw new Error(`Failed to fetch repos: ${response.status} ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      console.log('[ProxyGitHubService] Repos loaded:', Array.isArray(data) ? data.length : data)
+      return data
+    } catch (e) {
+      console.error('[ProxyGitHubService] listRepos error:', e)
+      throw e
     }
-    return await response.json()
   }
 
   async loadRepo(owner: string, repo: string) {
