@@ -36,7 +36,6 @@
           <MilkdownEditor 
             ref="milkdownRef"
             v-model="content" 
-            :editable="!saving"
           />
         </div>
         <div v-else key="source" class="h-full overflow-auto">
