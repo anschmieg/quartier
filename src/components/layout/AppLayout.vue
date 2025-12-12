@@ -70,6 +70,7 @@
             :selected-path="currentFile"
             @select="selectFile" 
             @enter-folder="handleEnterFolder"
+            @expand-folder="handleExpandFolder"
             @create-file="handleCreateFile"
             @create-folder="handleCreateFolder"
             @rename="handleRename"
@@ -499,6 +500,31 @@ async function handleEnterFolder(folderPath: string) {
   } catch (error) {
     console.error('Failed to load folder contents:', error)
     alert('Failed to load folder contents')
+  }
+}
+
+async function handleExpandFolder(folderPath: string) {
+  if (!repo.value) return
+  
+  const [owner, name] = repo.value.split('/')
+  if (!owner || !name) return
+  
+  // Check if we already have children for this folder
+  const existingChildren = files.value.some(f => 
+    f.path.startsWith(folderPath + '/') && f.path !== folderPath
+  )
+  if (existingChildren) return // Already loaded
+  
+  try {
+    const contents = await githubService.loadRepo(owner, name, folderPath)
+    const newItems = contents.map((item: { path: string, type: string }) => ({
+      path: item.path,
+      type: item.type as 'file' | 'dir'
+    }))
+    // Merge new items into existing files list
+    files.value = [...files.value, ...newItems]
+  } catch (error) {
+    console.error('Failed to expand folder:', error)
   }
 }
 

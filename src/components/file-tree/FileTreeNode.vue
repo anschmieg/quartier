@@ -13,7 +13,7 @@
       <button
         v-if="node.type === 'folder'"
         class="w-4 h-4 flex items-center justify-center -ml-1"
-        @click.stop="isExpanded = !isExpanded"
+        @click.stop="handleExpand"
       >
         <ChevronRight 
           class="w-3 h-3 transition-transform" 
@@ -35,7 +35,7 @@
     </div>
 
     <!-- Children (recursive) -->
-    <template v-if="node.type === 'folder' && isExpanded && node.children">
+    <template v-if="node.type === 'folder' && isExpanded && node.children && node.children.length > 0">
       <FileTreeNode
         v-for="child in node.children"
         :key="child.id"
@@ -44,9 +44,19 @@
         :level="level + 1"
         @select="emit('select', $event)"
         @enter-folder="emit('enter-folder', $event)"
+        @expand-folder="emit('expand-folder', $event)"
         @context-menu="emit('context-menu', $event)"
       />
     </template>
+    
+    <!-- Empty folder message -->
+    <div 
+      v-else-if="node.type === 'folder' && isExpanded && (!node.children || node.children.length === 0)"
+      class="text-xs text-muted-foreground italic"
+      :style="{ paddingLeft: `${(level + 1) * 12 + 8}px` }"
+    >
+      {{ loading ? 'Loading...' : 'Empty folder' }}
+    </div>
   </div>
 </template>
 
@@ -65,16 +75,27 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [path: string]
   'enter-folder': [path: string]
+  'expand-folder': [path: string]
   'context-menu': [event: { node: FileNode; x: number; y: number }]
 }>()
 
 const isExpanded = ref(false)
+const loading = ref(false)
 
 function handleClick() {
   if (props.node.type === 'file') {
     emit('select', props.node.path)
   } else {
-    isExpanded.value = !isExpanded.value
+    // Clicking folder row also expands it
+    handleExpand()
+  }
+}
+
+function handleExpand() {
+  isExpanded.value = !isExpanded.value
+  // Emit expand event to trigger lazy loading of folder contents
+  if (isExpanded.value) {
+    emit('expand-folder', props.node.path)
   }
 }
 
@@ -92,3 +113,4 @@ function handleContextMenu(event: MouseEvent) {
   })
 }
 </script>
+

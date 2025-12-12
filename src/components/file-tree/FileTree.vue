@@ -7,6 +7,8 @@
       :selected-path="selectedPath"
       :level="0"
       @select="emit('select', $event)"
+      @enter-folder="emit('enter-folder', $event)"
+      @expand-folder="emit('expand-folder', $event)"
       @context-menu="handleContextMenu"
     />
 
@@ -59,6 +61,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [path: string]
   'enter-folder': [path: string]
+  'expand-folder': [path: string]
   'create-file': [parentPath: string]
   'create-folder': [parentPath: string]
   rename: [path: string]
