@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <!-- Save Status (subtle indicator in corner) -->
+    <!-- Save Status (hidden for now - was distracting)
     <div class="absolute top-2 right-3 z-10">
       <Transition
         enter-active-class="transition-opacity duration-200"
@@ -20,6 +20,7 @@
         </span>
       </Transition>
     </div>
+    -->
 
     <!-- Editors -->
     <div class="flex-1 overflow-hidden relative">
@@ -51,7 +52,6 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Loader2, Check } from 'lucide-vue-next'
 import CodeEditor from './CodeEditor.vue'
 import MilkdownEditor from './MilkdownEditor.vue'
 
