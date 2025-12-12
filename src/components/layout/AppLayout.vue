@@ -266,7 +266,7 @@ import { ref, onMounted } from 'vue'
 import { 
   Keyboard, Save, GitBranch, PanelRight, PanelLeft, Sun, Moon,
   Eye, Code as CodeIcon, Heading, ChevronDown, List, ListOrdered, 
-  Quote, Code, Link, ImageIcon, BookMarked, Loader2, Check
+  Quote, Code, Link, ImageIcon, BookMarked
 } from 'lucide-vue-next'
 import UserMenu from './UserMenu.vue'
 import { Button } from '@/components/ui/button'
@@ -303,7 +303,7 @@ const editorRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 const showPreview = ref(false)
 const showSidebar = ref(true)
 const editorMode = ref<'visual' | 'source'>('visual')
-const repo = ref<string | null>(null)
+const repo = ref<string | undefined>(undefined)
 const showRepoSelector = ref(false)
 
 const { Meta_K, Ctrl_K } = useMagicKeys()
@@ -337,6 +337,7 @@ async function saveFile() {
 }
 
 async function handleRender() {
+  if (!repo.value) return
   const [owner, name] = repo.value.split('/')
   if (owner && name) {
     await githubService.triggerWorkflow(owner, name)
@@ -344,7 +345,7 @@ async function handleRender() {
 }
 
 async function commitChanges() {
-  if (currentFile.value) {
+  if (currentFile.value && repo.value) {
     const [owner, name] = repo.value.split('/')
     await githubService.commitChanges(
       owner || 'mock-owner', 
