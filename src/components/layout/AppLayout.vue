@@ -25,12 +25,12 @@
       />
 
       <!-- Main Content -->
-      <main class="flex-1 flex flex-col h-full min-w-0 bg-background/50">
+      <main class="flex-1 flex flex-col h-full min-w-0 bg-background/50 transition-all duration-150">
         <!-- Editor/Preview Split -->
         <div class="flex-1 flex overflow-hidden relative">
           <div 
             :class="showPreview ? 'w-1/2' : 'w-full'" 
-            class="h-full overflow-hidden transition-all duration-200"
+            class="h-full overflow-hidden transition-all duration-150"
           >
             <EditorWrapper 
               :initial-content="fileContent"
