@@ -49,15 +49,16 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import FileTreeNode from './FileTreeNode.vue'
-import { buildFileTree, type FileNode } from '@/types/files'
+import { buildFileTree, type FileNode, type FileItem } from '@/types/files'
 
 const props = defineProps<{
-  files: string[]
+  files: FileItem[]
   selectedPath?: string | null
 }>()
 
 const emit = defineEmits<{
   select: [path: string]
+  'enter-folder': [path: string]
   'create-file': [parentPath: string]
   'create-folder': [parentPath: string]
   rename: [path: string]

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { buildFileTree, getFileExtension } from '@/types/files'
+import { buildFileTree, getFileExtension, type FileItem } from '@/types/files'
+
+// Helper to create FileItem from path (all treated as files for simplicity in tests)
+function toFileItems(paths: string[]): FileItem[] {
+    return paths.map(path => ({ path, type: 'file' as const }))
+}
 
 describe('buildFileTree', () => {
     it('should handle empty file list', () => {
@@ -8,7 +13,7 @@ describe('buildFileTree', () => {
     })
 
     it('should create flat list for files without folders', () => {
-        const files = ['index.qmd', 'analysis.py', 'readme.md']
+        const files = toFileItems(['index.qmd', 'analysis.py', 'readme.md'])
         const result = buildFileTree(files)
 
         expect(result).toHaveLength(3)
@@ -17,11 +22,11 @@ describe('buildFileTree', () => {
     })
 
     it('should create nested structure for paths with folders', () => {
-        const files = [
+        const files = toFileItems([
             'src/main.ts',
             'src/utils/helper.ts',
             'package.json',
-        ]
+        ])
         const result = buildFileTree(files)
 
         // Should have package.json and src folder at root
@@ -41,7 +46,7 @@ describe('buildFileTree', () => {
     })
 
     it('should set correct paths for nested items', () => {
-        const files = ['a/b/c.txt']
+        const files = toFileItems(['a/b/c.txt'])
         const result = buildFileTree(files)
 
         const a = result[0]
@@ -52,6 +57,21 @@ describe('buildFileTree', () => {
 
         const c = b?.children?.[0]
         expect(c?.path).toBe('a/b/c.txt')
+    })
+
+    it('should handle explicit dir type from API', () => {
+        const items: FileItem[] = [
+            { path: 'docs', type: 'dir' },
+            { path: 'README.md', type: 'file' },
+        ]
+        const result = buildFileTree(items)
+
+        expect(result).toHaveLength(2)
+        const docsFolder = result.find(n => n.name === 'docs')
+        expect(docsFolder?.type).toBe('folder')
+
+        const readme = result.find(n => n.name === 'README.md')
+        expect(readme?.type).toBe('file')
     })
 })
 
@@ -82,3 +102,4 @@ describe('getFileExtension', () => {
         expect(getFileExtension('archive.tar.gz')).toBe('gz')
     })
 })
+

@@ -50,6 +50,17 @@
               All
             </label>
           </div>
+          
+          <!-- Breadcrumb navigation -->
+          <div v-if="currentPath && repo" class="flex items-center gap-1 px-2 py-1.5 mb-2 text-xs text-muted-foreground bg-muted/50 rounded">
+            <button @click="navigateToPath('')" class="hover:text-foreground">/</button>
+            <template v-for="(segment, idx) in currentPath.split('/')" :key="idx">
+              <span>/</span>
+              <button @click="navigateToPath(currentPath.split('/').slice(0, idx + 1).join('/'))" class="hover:text-foreground truncate max-w-[80px]">
+                {{ segment }}
+              </button>
+            </template>
+          </div>
           <div v-if="!repo" class="text-sm text-muted-foreground px-2 py-4 text-center">
             No repository selected.
           </div>
@@ -58,6 +69,7 @@
             :files="filteredFiles" 
             :selected-path="currentFile"
             @select="selectFile" 
+            @enter-folder="handleEnterFolder"
             @create-file="handleCreateFile"
             @create-folder="handleCreateFolder"
             @rename="handleRename"
@@ -321,6 +333,7 @@ const editorMode = ref<'visual' | 'source'>('visual')
 const repo = ref<string | undefined>(undefined)
 const showRepoSelector = ref(false)
 const showAllFiles = ref(false)
+const currentPath = ref('')  // Current folder path for navigation
 
 // Quarto-relevant file extensions (whitelist)
 const QUARTO_EXTENSIONS = new Set([
@@ -334,21 +347,23 @@ const QUARTO_EXTENSIONS = new Set([
 ])
 
 const filteredFiles = computed(() => {
-  if (showAllFiles.value) return files.value.map(f => f.path)
-  return files.value
-    .filter(f => {
-      // Always hide hidden files/folders unless showAllFiles
-      const parts = f.path.split('/')
-      if (parts.some(part => part.startsWith('.'))) return false
-      
-      // Always include directories
-      if (f.type === 'dir') return true
-      
-      // Check extension whitelist for files
-      const ext = '.' + f.path.split('.').pop()?.toLowerCase()
-      return QUARTO_EXTENSIONS.has(ext)
-    })
-    .map(f => f.path)
+  const items = showAllFiles.value 
+    ? files.value 
+    : files.value.filter(f => {
+        // Always hide hidden files/folders unless showAllFiles
+        const parts = f.path.split('/')
+        if (parts.some(part => part.startsWith('.'))) return false
+        
+        // Always include directories
+        if (f.type === 'dir') return true
+        
+        // Check extension whitelist for files
+        const ext = '.' + f.path.split('.').pop()?.toLowerCase()
+        return QUARTO_EXTENSIONS.has(ext)
+      })
+  
+  // Return FileItem[] for FileTree
+  return items
 })
 
 const { Meta_K, Ctrl_K } = useMagicKeys()
@@ -465,6 +480,44 @@ async function handleRepoSelect(selectedRepo: { owner: string, name: string, ful
   } catch (error) {
     console.error('Failed to load repo contents:', error)
     alert('Failed to load repository contents')
+  }
+}
+
+async function handleEnterFolder(folderPath: string) {
+  if (!repo.value) return
+  
+  const [owner, name] = repo.value.split('/')
+  if (!owner || !name) return
+  
+  try {
+    const contents = await githubService.loadRepo(owner, name, folderPath)
+    files.value = contents.map((item: { path: string, type: string }) => ({
+      path: item.path,
+      type: item.type as 'file' | 'dir'
+    }))
+    currentPath.value = folderPath
+  } catch (error) {
+    console.error('Failed to load folder contents:', error)
+    alert('Failed to load folder contents')
+  }
+}
+
+async function navigateToPath(path: string) {
+  if (!repo.value) return
+  
+  const [owner, name] = repo.value.split('/')
+  if (!owner || !name) return
+  
+  try {
+    const contents = await githubService.loadRepo(owner, name, path)
+    files.value = contents.map((item: { path: string, type: string }) => ({
+      path: item.path,
+      type: item.type as 'file' | 'dir'
+    }))
+    currentPath.value = path
+  } catch (error) {
+    console.error('Failed to navigate:', error)
+    alert('Failed to navigate to folder')
   }
 }
 

@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import FileTree from '@/components/file-tree/FileTree.vue'
+import type { FileItem } from '@/types/files'
+
+// Helper to create FileItem from path
+function toFileItems(paths: string[]): FileItem[] {
+    return paths.map(path => ({ path, type: 'file' as const }))
+}
 
 // Mock child components
 vi.mock('@/components/file-tree/FileTreeNode.vue', () => ({
@@ -35,7 +41,7 @@ describe('FileTree', () => {
     it('renders nodes for each root-level item', () => {
         const wrapper = mount(FileTree, {
             props: {
-                files: ['file1.txt', 'file2.md', 'folder/file3.ts'],
+                files: toFileItems(['file1.txt', 'file2.md', 'folder/file3.ts']),
                 selectedPath: null
             },
             global: {
@@ -61,7 +67,7 @@ describe('FileTree', () => {
     it('emits select event when file is clicked', async () => {
         const wrapper = mount(FileTree, {
             props: {
-                files: ['test.txt'],
+                files: toFileItems(['test.txt']),
                 selectedPath: null
             },
             global: {
@@ -74,7 +80,7 @@ describe('FileTree', () => {
                     FileTreeNode: {
                         template: '<div class="node-stub" @click="$emit(\'select\', \'test.txt\')"></div>',
                         props: ['node', 'selectedPath', 'level'],
-                        emits: ['select', 'context-menu'],
+                        emits: ['select', 'context-menu', 'enter-folder'],
                     },
                 }
             }
@@ -86,3 +92,4 @@ describe('FileTree', () => {
         expect(wrapper.emitted('select')?.[0]).toEqual(['test.txt'])
     })
 })
+

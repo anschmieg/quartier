@@ -6,6 +6,7 @@
       :class="{ 'bg-muted': selectedPath === node.path }"
       :style="{ paddingLeft: `${level * 12 + 8}px` }"
       @click="handleClick"
+      @dblclick="handleDoubleClick"
       @contextmenu.prevent="handleContextMenu"
     >
       <!-- Expand/collapse chevron for folders -->
@@ -42,6 +43,7 @@
         :selected-path="selectedPath"
         :level="level + 1"
         @select="emit('select', $event)"
+        @enter-folder="emit('enter-folder', $event)"
         @context-menu="emit('context-menu', $event)"
       />
     </template>
@@ -62,6 +64,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [path: string]
+  'enter-folder': [path: string]
   'context-menu': [event: { node: FileNode; x: number; y: number }]
 }>()
 
@@ -72,6 +75,12 @@ function handleClick() {
     emit('select', props.node.path)
   } else {
     isExpanded.value = !isExpanded.value
+  }
+}
+
+function handleDoubleClick() {
+  if (props.node.type === 'folder') {
+    emit('enter-folder', props.node.path)
   }
 }
 

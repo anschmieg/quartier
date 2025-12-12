@@ -10,18 +10,24 @@ export interface FileNode {
     children?: FileNode[]
 }
 
+export interface FileItem {
+    path: string
+    type: 'file' | 'dir'
+}
+
 /**
  * Convert flat file list to hierarchical tree structure
+ * Now accepts FileItem objects with explicit type info
  */
-export function buildFileTree(paths: string[]): FileNode[] {
+export function buildFileTree(items: FileItem[]): FileNode[] {
     const root: FileNode[] = []
     const map = new Map<string, FileNode>()
 
-    // Sort paths to ensure parents come before children
-    const sortedPaths = [...paths].sort()
+    // Sort items to ensure parents come before children
+    const sortedItems = [...items].sort((a, b) => a.path.localeCompare(b.path))
 
-    for (const filePath of sortedPaths) {
-        const parts = filePath.split('/')
+    for (const item of sortedItems) {
+        const parts = item.path.split('/')
         let currentPath = ''
         let parentChildren = root
 
@@ -30,22 +36,27 @@ export function buildFileTree(paths: string[]): FileNode[] {
             if (!part) continue // Skip empty parts
 
             currentPath = currentPath ? `${currentPath}/${part}` : part
-            const isFile = i === parts.length - 1
+            const isLastPart = i === parts.length - 1
 
             let node = map.get(currentPath)
             if (!node) {
+                // Use explicit type from API for leaf nodes, infer 'folder' for intermediate paths
+                const nodeType = isLastPart
+                    ? (item.type === 'dir' ? 'folder' : 'file')
+                    : 'folder'
+
                 node = {
                     id: currentPath,
                     name: part,
-                    type: isFile ? 'file' : 'folder',
+                    type: nodeType,
                     path: currentPath,
-                    children: isFile ? undefined : [],
+                    children: nodeType === 'folder' ? [] : undefined,
                 }
                 map.set(currentPath, node)
                 parentChildren.push(node)
             }
 
-            if (!isFile && node.children) {
+            if (node.type === 'folder' && node.children) {
                 parentChildren = node.children
             }
         }
