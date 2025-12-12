@@ -104,11 +104,20 @@ const MilkdownInternal = defineComponent({
     })
 
     // Focus helper for container click
-    const focusEditor = () => {
+    const focusEditor = (e?: Event) => {
+      // Prevent event from bubbling to scrolling parents or triggering navigation
+      if (e) {
+        e.stopPropagation()
+        // e.preventDefault() // Don't prevent default, we want the click to register, just focus.
+      }
+      
       const editorInstance = get()
       if (!editorInstance) return
       editorInstance.action((ctx) => {
-        ctx.get(editorViewCtx).focus()
+        const view = ctx.get(editorViewCtx)
+        if (view && !view.hasFocus()) {
+           view.focus()
+        }
       })
     }
 
@@ -139,7 +148,9 @@ const MilkdownInternal = defineComponent({
   background: transparent !important;
   font-family: var(--font-sans);
   line-height: 1.6;
+  line-height: 1.6;
   white-space: pre-wrap !important;
+  cursor: text;
 }
 
 /* Headings */
