@@ -35,7 +35,8 @@
         <div v-if="mode === 'visual'" key="visual" class="h-full overflow-auto">
           <MilkdownEditor 
             ref="milkdownRef"
-            v-model="content" 
+            v-model="content"
+            :editable="true"
           />
         </div>
         <div v-else key="source" class="h-full overflow-auto">
