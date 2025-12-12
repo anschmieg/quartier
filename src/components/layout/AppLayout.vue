@@ -108,9 +108,12 @@ whenever(() => Meta_K?.value || Ctrl_K?.value, () => openCommandPalette())
 
 // Restore file content on mount
 onMounted(async () => {
+  console.log('[AppLayout] onMounted - repo:', repo.value, 'currentFile:', currentFile.value)
   if (repo.value && currentFile.value) {
     console.log('[AppLayout] Restoring file on mount:', currentFile.value)
     await selectFile(currentFile.value)
+  } else {
+    console.log('[AppLayout] No file to restore')
   }
 })
 
