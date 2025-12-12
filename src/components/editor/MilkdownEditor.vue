@@ -227,14 +227,12 @@ const MilkdownInternal = defineComponent({
   font-weight: 600;
 }
 
-/* Selection */
+/* Selection - use browser default for visibility */
 .milkdown .ProseMirror-selectednode {
   outline: 2px solid hsl(var(--primary));
   outline-offset: 2px;
 }
-.milkdown ::selection {
-  background-color: hsl(var(--accent));
-}
+/* Removed custom ::selection to use browser default blue */
 
 /* Overrides for Nord Theme Artifacts */
 .milkdown .icon { color: hsl(var(--foreground)); }
