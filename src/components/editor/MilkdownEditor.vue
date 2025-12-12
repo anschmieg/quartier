@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, watch, ref } from 'vue'
+import { defineComponent, h, watch, watchEffect, ref } from 'vue'
 import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/preset-commonmark'
@@ -67,6 +67,9 @@ const MilkdownInternal = defineComponent({
     
     // Track internal content to avoid infinite loops
     const localValue = ref(initialValue)
+    
+    // Track pending content that arrives before editor is ready
+    const pendingContent = ref<string | null>(null)
 
     const { get } = useEditor((root) => {
       return Editor.make()
@@ -107,25 +110,32 @@ const MilkdownInternal = defineComponent({
 
     // Update content when modelValue changes externally
     watch(() => props.modelValue, (newValue) => {
-      console.log('[MilkdownEditor] modelValue changed:', { 
-        newValue: newValue?.substring(0, 50), 
-        localValue: localValue.value?.substring(0, 50) 
-      })
-      
       if (newValue === localValue.value) {
-        console.log('[MilkdownEditor] Same value, skipping replaceAll')
         return // content is same, ignore
       }
       
       const editorInstance = get()
       if (!editorInstance) {
-        console.log('[MilkdownEditor] No editor instance yet')
+        // Editor not ready yet, store for later
+        console.log('[MilkdownEditor] Editor not ready, storing pending content')
+        pendingContent.value = newValue
         return
       }
       
-      localValue.value = newValue // update local to match external
+      localValue.value = newValue
       editorInstance.action(replaceAll(newValue))
       console.log('[MilkdownEditor] Called replaceAll with new content')
+    })
+
+    // Apply pending content once editor is ready
+    watchEffect(() => {
+      const editorInstance = get()
+      if (editorInstance && pendingContent.value !== null) {
+        console.log('[MilkdownEditor] Applying pending content')
+        localValue.value = pendingContent.value
+        editorInstance.action(replaceAll(pendingContent.value))
+        pendingContent.value = null // Clear pending
+      }
     })
 
     // Focus helper for container click
