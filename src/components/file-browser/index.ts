@@ -1,0 +1,6 @@
+export { default as FileBrowser } from './FileBrowser.vue'
+export { default as FileTree } from './FileTree.vue'
+export { default as FileTreeNode } from './FileTreeNode.vue'
+export { default as FileIcon } from './FileIcon.vue'
+export { default as PathBreadcrumbs } from './PathBreadcrumbs.vue'
+export { default as FileFilters } from './FileFilters.vue'

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import FileTree from '@/components/file-tree/FileTree.vue'
+import FileTree from '@/components/file-browser/FileTree.vue'
 import type { FileItem } from '@/types/files'
 
 // Helper to create FileItem from path
