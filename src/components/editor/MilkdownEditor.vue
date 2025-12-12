@@ -38,8 +38,8 @@ const emit = defineEmits(['update:modelValue'])
 const MilkdownInternal = defineComponent({
   name: 'MilkdownInternal',
   props: ['modelValue', 'editable'],
-  emits: ['update:modelValue'],
-  setup(props, { emit }) {
+  emits: ['update:modelValue', 'ready'],
+  setup(props, { emit, expose }) {
     const { get } = useEditor((root) => {
       return Editor.make()
         .config((ctx) => {
@@ -68,11 +68,16 @@ const MilkdownInternal = defineComponent({
         .use(diagram)
     })
 
+    // Expose the editor instance getter
+    expose({
+      getEditor: get
+    })
+
     // Update content when modelValue changes externally
     watch(() => props.modelValue, (newValue) => {
-      const editor = get()
-      if (!editor) return
-      editor.action(replaceAll(newValue))
+      const editorInstance = get()
+      if (!editorInstance) return
+      editorInstance.action(replaceAll(newValue))
     })
 
     return () => h(Milkdown, { 
