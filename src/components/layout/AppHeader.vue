@@ -64,8 +64,8 @@
     
     <!-- Editor Toolbar (only in visual mode) -->
     <EditorToolbar 
-      v-if="editorMode === 'visual' && editorInstance" 
-      :editor="editorInstance"
+      v-if="editorMode === 'visual'" 
+      :get-editor="getEditor"
       class="flex-1"
     />
     
@@ -100,7 +100,6 @@
 </template>
 
 <script setup lang="ts">
-import type { Editor } from '@tiptap/vue-3'
 import { Eye, Code, Keyboard, PanelRightOpen } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -112,7 +111,7 @@ defineProps<{
   sidebarVisible: boolean
   showPreview: boolean
   editorMode: 'visual' | 'source'
-  editorInstance?: Editor | null
+  getEditor: () => any
 }>()
 
 const emit = defineEmits<{

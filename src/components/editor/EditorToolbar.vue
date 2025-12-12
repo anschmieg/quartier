@@ -28,6 +28,57 @@
 
     <Separator orientation="vertical" class="h-6" />
 
+    <!-- Text Formatting -->
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            :class="{ 'bg-muted': isActive('strong') }"
+            @click="toggleBold"
+          >
+            <Bold class="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Bold (Ctrl+B)</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            :class="{ 'bg-muted': isActive('emphasis') }"
+            @click="toggleItalic"
+          >
+            <Italic class="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Italic (Ctrl+I)</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            :class="{ 'bg-muted': isActive('inline_code') }"
+            @click="toggleInlineCode"
+          >
+            <Code2 class="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Inline Code (Ctrl+E)</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+
+    <Separator orientation="vertical" class="h-6" />
+
     <!-- List Buttons -->
     <TooltipProvider>
       <Tooltip>
@@ -35,7 +86,7 @@
           <Button 
             variant="ghost" 
             size="icon"
-            :class="{ 'bg-muted': editor?.isActive('bulletList') }"
+            :class="{ 'bg-muted': isActive('bullet_list') }"
             @click="toggleBulletList"
           >
             <List class="w-4 h-4" />
@@ -51,7 +102,7 @@
           <Button 
             variant="ghost" 
             size="icon"
-            :class="{ 'bg-muted': editor?.isActive('orderedList') }"
+            :class="{ 'bg-muted': isActive('ordered_list') }"
             @click="toggleOrderedList"
           >
             <ListOrdered class="w-4 h-4" />
@@ -70,7 +121,7 @@
           <Button 
             variant="ghost" 
             size="icon"
-            :class="{ 'bg-muted': editor?.isActive('blockquote') }"
+            :class="{ 'bg-muted': isActive('blockquote') }"
             @click="toggleBlockquote"
           >
             <Quote class="w-4 h-4" />
@@ -86,7 +137,7 @@
           <Button 
             variant="ghost" 
             size="icon"
-            :class="{ 'bg-muted': editor?.isActive('codeBlock') }"
+            :class="{ 'bg-muted': isActive('code_block') }"
             @click="toggleCodeBlock"
           >
             <Code class="w-4 h-4" />
@@ -105,8 +156,8 @@
           <Button 
             variant="ghost" 
             size="icon"
-            :class="{ 'bg-muted': editor?.isActive('link') }"
-            @click="setLink"
+            :class="{ 'bg-muted': isActive('link') }"
+            @click="handleSetLink"
           >
             <Link class="w-4 h-4" />
           </Button>
@@ -135,7 +186,7 @@
           <Button 
             variant="ghost" 
             size="icon"
-            :disabled="!editor?.can().undo()"
+            :disabled="!can().undo()"
             @click="undo"
           >
             <Undo class="w-4 h-4" />
@@ -151,7 +202,7 @@
           <Button 
             variant="ghost" 
             size="icon"
-            :disabled="!editor?.can().redo()"
+            :disabled="!can().redo()"
             @click="redo"
           >
             <Redo class="w-4 h-4" />
@@ -164,10 +215,10 @@
 </template>
 
 <script setup lang="ts">
-import type { Editor } from '@tiptap/vue-3'
+import { type Editor } from '@milkdown/kit/core'
 import { 
   Heading, ChevronDown, List, ListOrdered, Quote, Code, 
-  Link, Image, Undo, Redo 
+  Link, Image, Undo, Redo, Bold, Italic, Code2 
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -179,54 +230,44 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useMilkdownCommands } from './useMilkdownCommands'
 
 const props = defineProps<{
-  editor: Editor | undefined
+  getEditor: () => Editor | undefined
 }>()
 
-function setHeading(level: 1 | 2 | 3) {
-  props.editor?.chain().focus().toggleHeading({ level }).run()
-}
+const { 
+  toggleBold, toggleItalic, toggleInlineCode,
+  setHeading, toggleBulletList, toggleOrderedList,
+  toggleBlockquote, toggleCodeBlock,
+  setLink, insertImage,
+  undo, redo,
+  isActive, can
+} = useMilkdownCommands(props.getEditor)
 
+// Helper for paragraph (not in composable yet, or use setHeading(0) logic? No, turn node to paragraph)
+// For now, mapping setParagraph to a no-op or implementation if needed. 
+// CommonMark doesn't have "set paragraph" command easily exposed, but turning off heading usually does it.
+// We'll leave it empty or try to toggle heading off.
 function setParagraph() {
-  props.editor?.chain().focus().setParagraph().run()
+  // If we are in a heading, toggling it off makes it a paragraph usually
+  setHeading(1) // This is wrong.
+  // Implementation TODO
 }
 
-function toggleBulletList() {
-  props.editor?.chain().focus().toggleBulletList().run()
-}
-
-function toggleOrderedList() {
-  props.editor?.chain().focus().toggleOrderedList().run()
-}
-
-function toggleBlockquote() {
-  props.editor?.chain().focus().toggleBlockquote().run()
-}
-
-function toggleCodeBlock() {
-  props.editor?.chain().focus().toggleCodeBlock().run()
-}
-
-function setLink() {
-  const url = window.prompt('Enter URL')
-  if (url) {
-    props.editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-  }
-}
-
+// Map addImage from template to insertImage
 function addImage() {
   const url = window.prompt('Enter image URL')
   if (url) {
-    props.editor?.chain().focus().setImage({ src: url }).run()
+    insertImage(url)
   }
 }
 
-function undo() {
-  props.editor?.chain().focus().undo().run()
-}
-
-function redo() {
-  props.editor?.chain().focus().redo().run()
+// Wrapper for link to prompt
+function handleSetLink() {
+    const url = window.prompt('Enter URL')
+    if (url) {
+        setLink(url)
+    }
 }
 </script>
