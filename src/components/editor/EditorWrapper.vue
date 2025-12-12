@@ -55,12 +55,18 @@ import { Loader2, Check } from 'lucide-vue-next'
 import CodeEditor from './CodeEditor.vue'
 import MilkdownEditor from './MilkdownEditor.vue'
 
-// Synchronous import for stability/debugging
-// const MilkdownEditor = defineAsyncComponent({
-//   loader: () => import('./MilkdownEditor.vue'),
-//   loadingComponent: { template: '<div class="flex items-center justify-center h-full"><div class="text-muted-foreground">Loading visual editor...</div></div>' },
-//   delay: 200
-// })
+// Reference to the Milkdown component to access exposed methods
+const milkdownRef = ref<any>(null)
+
+// Helper to get the underlying editor instance
+const getMilkdownEditor = () => {
+  return milkdownRef.value?.getEditor?.()
+}
+
+// Expose so parent (AppLayout) can grab it
+defineExpose({
+  getMilkdownEditor
+})
 
 const props = defineProps<{
   initialContent: string

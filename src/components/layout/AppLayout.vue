@@ -6,7 +6,7 @@
       :sidebar-visible="showSidebar"
       :show-preview="showPreview"
       :editor-mode="editorMode"
-      :editor-instance="editorInstance"
+      :get-editor="getEditorInstance"
       @command-palette="openCommandPalette"
       @save="saveFile"
       @toggle-sidebar="showSidebar = !showSidebar"
@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useStorage } from '@vueuse/core'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
@@ -93,12 +93,13 @@ const commandPaletteRef = ref()
 const showRepoSelector = ref(false)
 const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 
-// Computed editor instance from EditorWrapper ref
-const editorInstance = computed(() => {
-  // EditorWrapper exposes MilkdownEditor via milkdownRef, which exposes editor
-  // @ts-ignore - accessing nested ref
-  return editorWrapperRef.value?.milkdownRef?.editor
-})
+// Getter for the editor instance (passed down to toolbar)
+// This must be a function so the toolbar can call it lazily
+const getEditorInstance = () => {
+  // EditorWrapper exposes getMilkdownEditor
+  // @ts-ignore - accessing exposed method
+  return editorWrapperRef.value?.getMilkdownEditor?.() ?? undefined
+}
 
 // Keyboard shortcuts
 const { Meta_K, Ctrl_K } = useMagicKeys()
