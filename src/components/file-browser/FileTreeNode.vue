@@ -112,6 +112,7 @@ const isExpanded = ref(false)
 const loading = ref(false)
 let expandTimeout: ReturnType<typeof setTimeout> | null = null
 let loadingTimeout: ReturnType<typeof setTimeout> | null = null
+let loadingDelayTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Adjusted stagger settings
 const STAGGER_DELAY = 30 // ms per item
@@ -122,22 +123,42 @@ const visibleChildren = computed(() => {
   return props.node.children
 })
 
-// Watch for specific node update to clear loading (covers empty folder case)
-// When AppLayout updates 'files', the tree is rebuilt and 'node' prop changes reference
-watch(() => props.node, () => {
-  if (loading.value) {
-    loading.value = false
-    if (loadingTimeout) {
-      clearTimeout(loadingTimeout)
-      loadingTimeout = null
-    }
+// Helper to start loading with delay (to avoid flicker on fast loads)
+function startLoadingDelayed() {
+  if (loadingDelayTimeout) clearTimeout(loadingDelayTimeout)
+  
+  // Emit expand immediately to start fetch
+  emit('expand-folder', props.node.path)
+  
+  // Delay showing spinner by 200ms
+  loadingDelayTimeout = setTimeout(() => {
+    loading.value = true
+    
+    // Fallback timeout (3s) to clear spinner if stuck
+    if (loadingTimeout) clearTimeout(loadingTimeout)
+    loadingTimeout = setTimeout(() => { loading.value = false }, 3000)
+    
+    loadingDelayTimeout = null
+  }, 200)
+}
+
+function clearLoading() {
+  loading.value = false
+  if (loadingDelayTimeout) {
+    clearTimeout(loadingDelayTimeout)
+    loadingDelayTimeout = null
   }
-})
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout)
+    loadingTimeout = null
+  }
+}
+
+// Watch for specific node update to clear loading (covers empty folder case)
+watch(() => props.node, () => clearLoading())
 
 // Also watch children length as backup
-watch(() => props.node.children?.length, () => {
-  loading.value = false
-}, { immediate: false })
+watch(() => props.node.children?.length, () => clearLoading(), { immediate: false })
 
 // Animation Hooks
 function onBeforeEnter(el: Element) {
@@ -174,14 +195,9 @@ function handleClick() {
   if (props.node.type === 'file') {
     emit('select', props.node.path)
   } else {
-    // PREFETCH: Start loading immediately
+    // PREFETCH: Start loading logic
     if (!isExpanded.value && (!props.node.children || props.node.children.length === 0)) {
-       loading.value = true
-       emit('expand-folder', props.node.path)
-       
-       // Fallback timeout (reduced to 3s)
-       if (loadingTimeout) clearTimeout(loadingTimeout)
-       loadingTimeout = setTimeout(() => { loading.value = false }, 3000)
+       startLoadingDelayed()
     }
     
     // VISUAL DELAY: Reduced to 150ms
@@ -213,10 +229,7 @@ function toggleExpand() {
   if (!isExpanded.value) {
      // Trigger fetch if needed
      if (!props.node.children || props.node.children.length === 0) {
-       loading.value = true
-       emit('expand-folder', props.node.path)
-       if (loadingTimeout) clearTimeout(loadingTimeout)
-       loadingTimeout = setTimeout(() => { loading.value = false }, 5000)
+       startLoadingDelayed()
      }
   }
   toggleExpandVisual()
@@ -225,7 +238,7 @@ function toggleExpand() {
 function toggleExpandVisual() {
   isExpanded.value = !isExpanded.value
   if (!isExpanded.value) {
-     loading.value = false // Reset loading if collapsed
+     clearLoading() // Reset loading if collapsed
   }
 }
 
