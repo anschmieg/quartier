@@ -13,8 +13,16 @@ export function useMilkdownCommands(getEditor: () => Editor | undefined) {
 
     const action = (command: any, payload?: any) => {
         const editor = getEditor()
-        if (!editor) return
-        editor.action(callCommand(command, payload))
+        console.log('[useMilkdownCommands] action called:', {
+            command: command?.key || command,
+            payload,
+            hasEditor: !!editor
+        })
+        if (!editor) {
+            console.warn('[useMilkdownCommands] No editor instance available!')
+            return
+        }
+        editor.action(callCommand(command.key ?? command, payload))
     }
 
     return {
