@@ -20,7 +20,7 @@
     
     <!-- Center: Editor Mode Toggle (aligned with editor area) -->
     <div 
-      class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg"
+      class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg transition-all duration-150"
       :style="{ marginLeft: sidebarVisible ? 'calc((256px - 1rem) - (4rem + 2.5rem))' : '0' }"
     >
       <TooltipProvider :delay-duration="0">
