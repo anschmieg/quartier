@@ -78,6 +78,7 @@ import CommandPalette from '@/components/command/CommandPalette.vue'
 import RepoSelector from '@/components/github/RepoSelector.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
+import { cachedFileSystem } from '@/services/storage'
 
 // Persisted State (localStorage)
 const repo = useStorage<string | undefined>('quartier:repo', undefined)
@@ -129,10 +130,24 @@ async function selectFile(path: string) {
     fileContent.value = 'Loading...'
     
     console.log('Loading file:', path)
+    
+    // Check cache first
+    const cached = await cachedFileSystem.getCache(owner, name, path)
+    if (cached !== null) {
+      console.log('[AppLayout] Loaded from cache:', path)
+      fileContent.value = cached
+      fileLoading.value = false
+      return
+    }
+    
+    // Not cached, load from GitHub
     const content = await githubService.readFile(owner, name, path)
     
+    // Cache the content
+    await cachedFileSystem.setCache(owner, name, path, content)
+    
     fileContent.value = content
-    console.log('File loaded successfully, length:', content.length)
+    console.log('File loaded from GitHub, length:', content.length)
   } catch (error) {
     console.error('Failed to load file:', error)
     fileContent.value = `# Error loading file\n\nFailed to load ${path}:\n${error instanceof Error ? error.message : 'Unknown error'}`
@@ -141,8 +156,16 @@ async function selectFile(path: string) {
   }
 }
 
-function updateContent(newContent: string) {
+async function updateContent(newContent: string) {
   fileContent.value = newContent
+  
+  // Persist to cache
+  if (repo.value && currentFile.value) {
+    const [owner, name] = repo.value.split('/')
+    if (owner && name) {
+      await cachedFileSystem.setCache(owner, name, currentFile.value, newContent)
+    }
+  }
 }
 
 async function saveFile() {
