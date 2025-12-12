@@ -6,25 +6,40 @@
       :class="showSidebar ? 'w-60' : 'w-0 border-r-0'"
     >
       <div v-show="showSidebar" class="flex flex-col h-full min-w-60">
-        <div class="p-5 border-b border-border/50 flex items-center justify-between">
-          <span class="font-semibold flex items-center gap-2.5 text-foreground">
-            <div class="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-              <span class="text-xs font-bold text-primary-foreground">Q</span>
+        <div class="p-4 border-b border-border/50 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold flex items-center gap-2.5 text-foreground">
+              <div class="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+                <span class="text-xs font-bold text-primary-foreground">Q</span>
+              </div>
+              Quartier
+            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button variant="ghost" size="icon" class="h-7 w-7" @click="openCommandPalette">
+                    <Keyboard class="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Command Palette (⌘K)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            class="w-full justify-between px-2 h-8 text-xs font-normal border-dashed" 
+            @click="showRepoSelector = true"
+          >
+            <div class="flex items-center truncate">
+              <BookMarked class="w-3.5 h-3.5 mr-2 opacity-70" />
+              <span class="truncate">{{ repo || 'Select Repository...' }}</span>
             </div>
-            Quartier
-          </span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Button variant="ghost" size="icon" class="h-7 w-7" @click="openCommandPalette">
-                  <Keyboard class="w-3.5 h-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Command Palette (⌘K)</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <ChevronDown class="w-3 h-3 opacity-50 ml-2 flex-shrink-0" />
+          </Button>
         </div>
         
         <div class="flex-1 overflow-auto p-3">
@@ -238,15 +253,19 @@
     </main>
 
     <CommandPalette ref="commandPaletteRef" />
+    <RepoSelector 
+      v-model:open="showRepoSelector"
+      :current-repo="repo"
+      @select="handleRepoSelect"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { 
   Keyboard, Save, GitBranch, PanelRight, PanelLeft, Sun, Moon,
   Eye, Code as CodeIcon, Heading, ChevronDown, List, ListOrdered, 
-  Quote, Code, Link, ImageIcon
+  Quote, Code, Link, ImageIcon, BookMarked, Loader2, Check
 } from 'lucide-vue-next'
 import UserMenu from './UserMenu.vue'
 import { Button } from '@/components/ui/button'
@@ -262,6 +281,7 @@ import EditorWrapper from '@/components/editor/EditorWrapper.vue'
 import FileTree from '@/components/file-tree/FileTree.vue'
 import CommandPalette from '@/components/command/CommandPalette.vue'
 import PreviewPanel from '@/components/preview/PreviewPanel.vue'
+import RepoSelector from '@/components/github/RepoSelector.vue'
 import { fileSystem } from '@/services/storage'
 import { githubService } from '@/services/github'
 import { useMagicKeys, whenever, useDark, useToggle } from '@vueuse/core'
@@ -282,7 +302,8 @@ const editorRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 const showPreview = ref(false)
 const showSidebar = ref(true)
 const editorMode = ref<'visual' | 'source'>('visual')
-const repo = ref('mock-owner/mock-repo')
+const repo = ref<string | null>(null)
+const showRepoSelector = ref(false)
 
 const { Meta_K, Ctrl_K } = useMagicKeys()
 
@@ -378,6 +399,12 @@ async function handleDelete(path: string) {
       fileContent.value = ''
     }
   }
+}
+
+function handleRepoSelect(selectedRepo: { full_name: string }) {
+  repo.value = selectedRepo.full_name
+  // TODO: Load repo files
+  console.log('Selected repo:', selectedRepo.full_name)
 }
 
 onMounted(() => {

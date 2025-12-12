@@ -27,3 +27,7 @@ dist-ssr
 .env
 .env.*
 .dev.vars
+
+# Wrangler files – ignore for Pages.dev
+wrangler*ml
+wrangler.dev.toml
