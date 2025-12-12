@@ -24,7 +24,7 @@ const isDark = useDark({
   selector: 'html',
   attribute: 'class',
   valueDark: 'dark',
-  valueLight: 'light',
+  valueLight: '', // Default: remove class for light mode
 })
 
 const toggleTheme = useToggle(isDark)

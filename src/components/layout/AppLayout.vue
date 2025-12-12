@@ -4,12 +4,10 @@
     <AppHeader 
       :can-save="!!currentFile"
       :sidebar-visible="showSidebar"
-      :editor-mode="editorMode"
       :show-preview="showPreview"
       @command-palette="openCommandPalette"
       @save="saveFile"
       @toggle-sidebar="showSidebar = !showSidebar"
-      @update:editor-mode="editorMode = $event"
       @update:show-preview="showPreview = $event"
     />
 
@@ -24,9 +22,46 @@
         @select-file="selectFile"
       />
 
-      <!-- Main Content: Editor/Preview Split -->
-      <main class="flex-1 flex h-full min-w-0 overflow-hidden">
-        <div :class="showPreview ? 'w-1/2' : 'w-full'" class="h-full overflow-hidden">
+      <!-- Main Content -->
+      <main class="flex-1 flex flex-col h-full min-w-0 bg-background/50">
+        <!-- Editor Toolbar -->
+        <div class="h-9 flex items-center px-4 border-b border-border/50 bg-background">
+          <!-- Sliding Toggle: Visual | Source -->
+          <div class="flex items-center p-0.5 bg-muted/50 rounded-lg">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <button 
+                    @click="editorMode = 'visual'"
+                    class="p-1 px-2 rounded-md transition-all text-muted-foreground hover:text-foreground"
+                    :class="{ 'bg-background text-foreground shadow-sm': editorMode === 'visual' }"
+                  >
+                    <Eye class="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom"><p>Visual Mode</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <button 
+                    @click="editorMode = 'source'"
+                    class="p-1 px-2 rounded-md transition-all text-muted-foreground hover:text-foreground"
+                    :class="{ 'bg-background text-foreground shadow-sm': editorMode === 'source' }"
+                  >
+                    <CodeIcon class="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom"><p>Source Mode</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+
+        <!-- Editor/Preview Split -->
+        <div class="flex-1 flex overflow-hidden relative">
           <EditorWrapper 
             :initial-content="fileContent"
             :mode="editorMode"
