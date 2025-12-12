@@ -43,9 +43,19 @@
         </div>
         
         <div class="flex-1 overflow-auto p-3">
-          <div class="text-[11px] font-medium text-muted-foreground mb-3 px-2 uppercase tracking-wider">Files</div>
+          <div class="flex items-center justify-between mb-3 px-2">
+            <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Files</span>
+            <label v-if="repo" class="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+              <input type="checkbox" v-model="showHiddenFiles" class="w-3 h-3 rounded border-muted-foreground/50" />
+              Hidden
+            </label>
+          </div>
+          <div v-if="!repo" class="text-sm text-muted-foreground px-2 py-4 text-center">
+            No repository selected.
+          </div>
           <FileTree 
-            :files="files" 
+            v-else
+            :files="filteredFiles" 
             :selected-path="currentFile"
             @select="selectFile" 
             @create-file="handleCreateFile"
@@ -262,7 +272,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { 
   Keyboard, Save, GitBranch, PanelRight, PanelLeft, Sun, Moon,
   Eye, Code as CodeIcon, Heading, ChevronDown, List, ListOrdered, 
@@ -305,6 +315,15 @@ const showSidebar = ref(true)
 const editorMode = ref<'visual' | 'source'>('visual')
 const repo = ref<string | undefined>(undefined)
 const showRepoSelector = ref(false)
+const showHiddenFiles = ref(false)
+
+const filteredFiles = computed(() => {
+  if (showHiddenFiles.value) return files.value
+  return files.value.filter(f => {
+    const parts = f.split('/')
+    return !parts.some(part => part.startsWith('.'))
+  })
+})
 
 const { Meta_K, Ctrl_K } = useMagicKeys()
 
@@ -421,6 +440,6 @@ async function handleRepoSelect(selectedRepo: { owner: string, name: string, ful
 }
 
 onMounted(() => {
-  loadFiles()
+  // Files are now loaded when a repo is selected
 })
 </script>
