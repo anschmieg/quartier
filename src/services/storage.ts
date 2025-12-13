@@ -74,7 +74,9 @@ export const kvSync = {
    */
   async get(owner: string, repo: string, path: string): Promise<{ content: string; user: string; timestamp: number } | null> {
     try {
-      const response = await fetch(`/api/sync/${owner}/${repo}/${path}`)
+      const response = await fetch(`/api/sync/${owner}/${repo}/${path}`, {
+        credentials: 'include'
+      })
       if (!response.ok) {
         if (response.status === 404) return null
         throw new Error(`KV sync GET failed: ${response.status}`)
@@ -93,6 +95,7 @@ export const kvSync = {
     try {
       const response = await fetch(`/api/sync/${owner}/${repo}/${path}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, sha })
       })
@@ -113,7 +116,8 @@ export const kvSync = {
   async delete(owner: string, repo: string, path: string): Promise<boolean> {
     try {
       const response = await fetch(`/api/sync/${owner}/${repo}/${path}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       })
       if (!response.ok) {
         throw new Error(`KV sync DELETE failed: ${response.status}`)
