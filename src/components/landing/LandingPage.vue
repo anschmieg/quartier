@@ -47,9 +47,8 @@
 
 <script setup lang="ts">
 function login() {
-  // Cloudflare Access handles the redirect automatically
-  // Just redirect to the main app - Access will intercept if not authenticated
-  window.location.href = '/cdn-cgi/access/login'
+  // Redirect to /app - Cloudflare Access will intercept if not authenticated
+  window.location.href = '/app'
 }
 </script>
 

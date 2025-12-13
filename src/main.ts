@@ -7,5 +7,7 @@ import '@fontsource/newsreader/400-italic.css'
 import '@fontsource/newsreader/700.css'
 import './assets/css/tailwind.css'
 import App from './App.vue'
+import router from './router'
 
-createApp(App).mount('#app')
+createApp(App).use(router).mount('#app')
+
