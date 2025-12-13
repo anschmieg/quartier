@@ -64,6 +64,12 @@
     <!-- Modals -->
     <CommandPalette ref="commandPaletteRef" :files="[]" @select="selectFile" />
     <RepoSelector v-model:open="showRepoSelector" @select="handleRepoSelect" />
+    <CommitDialog 
+      ref="commitDialogRef" 
+      :file-path="currentFile || ''" 
+      @confirm="handleCommit"
+    />
+    <Toast ref="toastRef" />
   </div>
 </template>
 
@@ -76,6 +82,8 @@ import EditorWrapper from '@/components/editor/EditorWrapper.vue'
 import PreviewPanel from '@/components/preview/PreviewPanel.vue'
 import CommandPalette from '@/components/command/CommandPalette.vue'
 import RepoSelector from '@/components/github/RepoSelector.vue'
+import CommitDialog from '@/components/dialogs/CommitDialog.vue'
+import Toast from '@/components/ui/Toast.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
 import { cachedFileSystem, kvSync } from '@/services/storage'
@@ -91,6 +99,8 @@ const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visua
 const fileContent = ref('')
 const fileLoading = ref(false)
 const commandPaletteRef = ref()
+const commitDialogRef = ref()
+const toastRef = ref()
 const showRepoSelector = ref(false)
 const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 
@@ -201,12 +211,15 @@ async function updateContent(newContent: string) {
 async function saveFile() {
   if (!currentFile.value || !repo.value) return
   
+  // Open the commit dialog
+  commitDialogRef.value?.open()
+}
+
+async function handleCommit(message: string) {
+  if (!currentFile.value || !repo.value) return
+  
   const [owner, name] = repo.value.split('/')
   if (!owner || !name) return
-  
-  // Prompt for commit message
-  const message = prompt('Commit message:', `Update ${currentFile.value}`)
-  if (!message) return // User cancelled
   
   console.log('[AppLayout] Committing:', currentFile.value)
   
@@ -222,10 +235,10 @@ async function saveFile() {
     console.log('[AppLayout] Commit successful:', result.commitSha)
     // Clear local cache since it's now committed
     await cachedFileSystem.clearCache(owner, name, currentFile.value)
-    alert(`Committed successfully!\n\nSHA: ${result.commitSha?.slice(0, 7)}`)
+    toastRef.value?.success(`Committed: ${result.commitSha?.slice(0, 7)}`)
   } else {
     console.error('[AppLayout] Commit failed:', result.error)
-    alert(`Commit failed: ${result.error}`)
+    toastRef.value?.error(`Commit failed: ${result.error}`)
   }
 }
 
