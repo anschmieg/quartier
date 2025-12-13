@@ -22,8 +22,6 @@ import { diagram } from '@milkdown/plugin-diagram'
 import { nord } from '@milkdown/theme-nord'
 import { replaceAll, $prose } from '@milkdown/utils'
 import { keymap } from '@milkdown/prose/keymap'
-import { slashFactory } from '@milkdown/plugin-slash'
-import { tooltipFactory } from '@milkdown/plugin-tooltip'
 import { block } from '@milkdown/plugin-block'
 
 
@@ -65,10 +63,6 @@ const MilkdownInternal = defineComponent({
       })
     })
 
-    // Create plugin instances using factory functions
-    const slash = slashFactory('default')
-    const tooltip = tooltipFactory('default')
-
     // Capture initial value ONCE to prevent useEditor from being reactive
     const initialValue = props.modelValue
     
@@ -108,8 +102,6 @@ const MilkdownInternal = defineComponent({
         .use(math)
         .use(diagram)
         .use(escapePlugin)
-        .use(slash)
-        .use(tooltip)
         .use(block)
     })
 
