@@ -18,6 +18,7 @@ interface SyncData {
     user: string
     timestamp: number
     sha?: string // GitHub commit SHA if known
+    yjsState?: string // Base64 encoded Yjs document state for conflict-free merging
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -88,7 +89,11 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const key = pathParts.join('/')
 
     try {
-        const body = await context.request.json() as { content: string; sha?: string }
+        const body = await context.request.json() as {
+            content: string
+            sha?: string
+            yjsState?: string // Base64 encoded Yjs state
+        }
 
         if (!body.content && body.content !== '') {
             return new Response(JSON.stringify({ error: 'Missing content' }), {
@@ -101,7 +106,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
             content: body.content,
             user: email,
             timestamp: Date.now(),
-            sha: body.sha
+            sha: body.sha,
+            yjsState: body.yjsState
         }
 
         // Store with 30 day expiration (in seconds)

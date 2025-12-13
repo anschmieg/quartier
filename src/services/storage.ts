@@ -75,7 +75,12 @@ export const kvSync = {
   /**
    * Get file content from KV
    */
-  async get(owner: string, repo: string, path: string): Promise<{ content: string; user: string; timestamp: number } | null> {
+  async get(owner: string, repo: string, path: string): Promise<{
+    content: string
+    user: string
+    timestamp: number
+    yjsState?: string
+  } | null> {
     // Skip on localhost - no Cloudflare Access
     if (!isProduction) return null
 
@@ -95,9 +100,16 @@ export const kvSync = {
   },
 
   /**
-   * Save file content to KV
+   * Save file content to KV (with optional Yjs state for conflict-free sync)
    */
-  async put(owner: string, repo: string, path: string, content: string, sha?: string): Promise<boolean> {
+  async put(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    sha?: string,
+    yjsState?: string
+  ): Promise<boolean> {
     // Skip on localhost - no Cloudflare Access
     if (!isProduction) return false
 
@@ -106,7 +118,7 @@ export const kvSync = {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, sha })
+        body: JSON.stringify({ content, sha, yjsState })
       })
       if (!response.ok) {
         throw new Error(`KV sync PUT failed: ${response.status}`)

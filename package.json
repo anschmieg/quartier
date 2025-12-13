@@ -18,6 +18,7 @@
     "@fontsource/newsreader": "^5.2.10",
     "@milkdown/kit": "^7.17.3",
     "@milkdown/plugin-clipboard": "^7.17.3",
+    "@milkdown/plugin-collab": "^7.17.3",
     "@milkdown/plugin-diagram": "^7.7.0",
     "@milkdown/plugin-history": "^7.17.3",
     "@milkdown/plugin-listener": "^7.17.3",
