@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LandingPage from '@/components/landing/LandingPage.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import JoinPage from '@/pages/JoinPage.vue'
 
 const routes = [
     {
@@ -13,6 +14,12 @@ const routes = [
         path: '/app',
         name: 'app',
         component: AppLayout,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/join/:token',
+        name: 'join',
+        component: JoinPage,
         meta: { requiresAuth: true }
     },
     // Catch-all redirect to landing
