@@ -23,21 +23,8 @@ interface SyncData {
 export const onRequestGet: PagesFunction<Env> = async (context) => {
     const email = context.request.headers.get('cf-access-authenticated-user-email')
 
-    // Debug: log all headers to see what's being passed
-    const headers: Record<string, string> = {}
-    context.request.headers.forEach((value, key) => {
-        headers[key] = key.toLowerCase().includes('auth') || key.toLowerCase().includes('access')
-            ? value
-            : '[redacted]'
-    })
-    console.log('[sync] Request headers:', JSON.stringify(headers))
-    console.log('[sync] Email header:', email)
-
     if (!email) {
-        return new Response(JSON.stringify({
-            error: 'Unauthorized',
-            debug: 'cf-access-authenticated-user-email header not found'
-        }), {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' }
         })
