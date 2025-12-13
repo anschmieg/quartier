@@ -134,19 +134,40 @@ async function selectFile(path: string) {
     
     console.log('Loading file:', path)
     
-    // Check cache first
-    const cached = await cachedFileSystem.getCache(owner, name, path)
-    if (cached !== null) {
-      console.log('[AppLayout] Loaded from cache:', path)
-      fileContent.value = cached
+    // Try to load from KV first (cross-device sync)
+    const kvData = await kvSync.get(owner, name, path)
+    const localContent = await cachedFileSystem.getCache(owner, name, path)
+    
+    // Determine which source to use
+    if (kvData && localContent) {
+      // Both exist - use KV since it's the server source of truth
+      console.log('[AppLayout] Loaded from KV (cross-device):', path)
+      fileContent.value = kvData.content
+      // Update local cache with KV content
+      await cachedFileSystem.setCache(owner, name, path, kvData.content)
       fileLoading.value = false
       return
     }
     
-    // Not cached, load from GitHub
+    if (kvData) {
+      console.log('[AppLayout] Loaded from KV:', path)
+      fileContent.value = kvData.content
+      await cachedFileSystem.setCache(owner, name, path, kvData.content)
+      fileLoading.value = false
+      return
+    }
+    
+    if (localContent !== null) {
+      console.log('[AppLayout] Loaded from local cache:', path)
+      fileContent.value = localContent
+      fileLoading.value = false
+      return
+    }
+    
+    // Not in KV or local cache, load from GitHub
     const content = await githubService.readFile(owner, name, path)
     
-    // Cache the content
+    // Cache the content locally
     await cachedFileSystem.setCache(owner, name, path, content)
     
     fileContent.value = content
