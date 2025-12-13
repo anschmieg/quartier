@@ -22,7 +22,6 @@ import { diagram } from '@milkdown/plugin-diagram'
 import { nord } from '@milkdown/theme-nord'
 import { replaceAll, $prose } from '@milkdown/utils'
 import { keymap } from '@milkdown/prose/keymap'
-import { block } from '@milkdown/plugin-block'
 
 
 // Import base styles for structure (optional, but nord helps with complex nodes)
@@ -102,7 +101,6 @@ const MilkdownInternal = defineComponent({
         .use(math)
         .use(diagram)
         .use(escapePlugin)
-        .use(block)
     })
 
     // Expose the editor instance getter
