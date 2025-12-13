@@ -199,9 +199,33 @@ async function updateContent(newContent: string) {
 }
 
 async function saveFile() {
-  if (currentFile.value) {
-    console.log('Saving:', currentFile.value)
-    // TODO: Implement save to GitHub
+  if (!currentFile.value || !repo.value) return
+  
+  const [owner, name] = repo.value.split('/')
+  if (!owner || !name) return
+  
+  // Prompt for commit message
+  const message = prompt('Commit message:', `Update ${currentFile.value}`)
+  if (!message) return // User cancelled
+  
+  console.log('[AppLayout] Committing:', currentFile.value)
+  
+  const result = await githubService.commitChanges(
+    owner,
+    name,
+    currentFile.value,
+    fileContent.value,
+    message
+  )
+  
+  if (result.success) {
+    console.log('[AppLayout] Commit successful:', result.commitSha)
+    // Clear local cache since it's now committed
+    await cachedFileSystem.clearCache(owner, name, currentFile.value)
+    alert(`Committed successfully!\n\nSHA: ${result.commitSha?.slice(0, 7)}`)
+  } else {
+    console.error('[AppLayout] Commit failed:', result.error)
+    alert(`Commit failed: ${result.error}`)
   }
 }
 

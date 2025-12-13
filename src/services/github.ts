@@ -87,10 +87,43 @@ class ProxyGitHubService {
     }
   }
 
-  async commitChanges(_owner: string, _repo: string, _path: string, _content: string, _message: string) {
-    // TODO: Implement /api/github/commit endpoint
-    console.warn('commitChanges via proxy not implemented yet')
-    return {}
+  async commitChanges(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    message: string
+  ): Promise<{ success: boolean; commitSha?: string; fileSha?: string; error?: string }> {
+    try {
+      const response = await fetch('/api/github/commit', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner, repo, path, content, message })
+      })
+
+      const result = await response.json() as {
+        success?: boolean
+        commitSha?: string
+        fileSha?: string
+        error?: string
+      }
+
+      if (!response.ok) {
+        console.error('[ProxyGitHubService] Commit error:', result)
+        return { success: false, error: result.error || 'Commit failed' }
+      }
+
+      console.log('[ProxyGitHubService] Committed:', path, 'SHA:', result.commitSha)
+      return {
+        success: true,
+        commitSha: result.commitSha,
+        fileSha: result.fileSha
+      }
+    } catch (e) {
+      console.error('[ProxyGitHubService] commitChanges error:', e)
+      return { success: false, error: e instanceof Error ? e.message : 'Unknown error' }
+    }
   }
 
   async hasQuartierWorkflow(_owner: string, _repo: string): Promise<boolean> {
