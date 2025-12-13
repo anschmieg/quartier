@@ -67,12 +67,18 @@ export const cachedFileSystem = {
 
 /**
  * KV Sync service - syncs edits to Cloudflare KV for server-side persistence
+ * Only works in production (Cloudflare Access required)
  */
+const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')
+
 export const kvSync = {
   /**
    * Get file content from KV
    */
   async get(owner: string, repo: string, path: string): Promise<{ content: string; user: string; timestamp: number } | null> {
+    // Skip on localhost - no Cloudflare Access
+    if (!isProduction) return null
+
     try {
       const response = await fetch(`/api/sync/${owner}/${repo}/${path}`, {
         credentials: 'include'
@@ -92,6 +98,9 @@ export const kvSync = {
    * Save file content to KV
    */
   async put(owner: string, repo: string, path: string, content: string, sha?: string): Promise<boolean> {
+    // Skip on localhost - no Cloudflare Access
+    if (!isProduction) return false
+
     try {
       const response = await fetch(`/api/sync/${owner}/${repo}/${path}`, {
         method: 'PUT',
@@ -114,6 +123,9 @@ export const kvSync = {
    * Delete file from KV
    */
   async delete(owner: string, repo: string, path: string): Promise<boolean> {
+    // Skip on localhost - no Cloudflare Access
+    if (!isProduction) return false
+
     try {
       const response = await fetch(`/api/sync/${owner}/${repo}/${path}`, {
         method: 'DELETE',
