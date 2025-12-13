@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useStorage } from '@vueuse/core'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
@@ -110,6 +110,10 @@ const showRepoSelector = ref(false)
 const recentFiles = ref<string[]>([])
 const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 
+// Auto-sync state
+let lastSyncedContent = ''
+let autoSyncInterval: ReturnType<typeof setInterval> | null = null
+
 // Getter for the editor instance (passed down to toolbar)
 // This must be a function so the toolbar can call it lazily
 const getEditorInstance = () => {
@@ -130,6 +134,30 @@ onMounted(async () => {
     await selectFile(currentFile.value)
   } else {
     console.log('[AppLayout] No file to restore')
+  }
+  
+  // Start auto-sync every 60 seconds
+  autoSyncInterval = setInterval(async () => {
+    if (!repo.value || !currentFile.value) return
+    if (fileContent.value === lastSyncedContent) return // No changes
+    if (fileContent.value === 'Loading...') return
+    
+    const [owner, name] = repo.value.split('/')
+    if (!owner || !name) return
+    
+    console.log('[AutoSync] Saving to KV...')
+    const saved = await kvSync.put(owner, name, currentFile.value, fileContent.value)
+    if (saved) {
+      lastSyncedContent = fileContent.value
+      console.log('[AutoSync] Saved successfully')
+    }
+  }, 60000) // Every 60 seconds
+})
+
+onUnmounted(() => {
+  if (autoSyncInterval) {
+    clearInterval(autoSyncInterval)
+    autoSyncInterval = null
   }
 })
 
