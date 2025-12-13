@@ -4,13 +4,15 @@
       ref="internalRef"
       :modelValue="modelValue" 
       :editable="editable"
+      :roomId="roomId"
+      :userEmail="userEmail"
       @update:modelValue="emit('update:modelValue', $event)" 
     />
   </MilkdownProvider>
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, watch, watchEffect, ref } from 'vue'
+import { defineComponent, h, watch, watchEffect, ref, onUnmounted } from 'vue'
 import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/preset-commonmark'
@@ -22,6 +24,10 @@ import { diagram } from '@milkdown/plugin-diagram'
 import { nord } from '@milkdown/theme-nord'
 import { replaceAll, $prose } from '@milkdown/utils'
 import { keymap } from '@milkdown/prose/keymap'
+import { collab, collabServiceCtx } from '@milkdown/plugin-collab'
+import * as Y from 'yjs'
+import { WebrtcProvider } from 'y-webrtc'
+import { IndexeddbPersistence } from 'y-indexeddb'
 
 
 // Import base styles for structure (optional, but nord helps with complex nodes)
@@ -33,6 +39,8 @@ import 'katex/dist/katex.min.css'
 const props = defineProps<{
   modelValue: string
   editable?: boolean
+  roomId?: string // For collaboration: unique room ID (e.g., 'quartier:owner/repo/path')
+  userEmail?: string // For cursor presence
 }>()
 
 const emit = defineEmits(['update:modelValue'])
@@ -46,9 +54,14 @@ defineExpose({
 // Internal component that uses useEditor (must be inside Provider)
 const MilkdownInternal = defineComponent({
   name: 'MilkdownInternal',
-  props: ['modelValue', 'editable'],
+  props: ['modelValue', 'editable', 'roomId', 'userEmail'],
   emits: ['update:modelValue', 'ready'],
   setup(props, ctx) {
+    // Yjs document and providers for collaboration
+    let ydoc: Y.Doc | null = null
+    let webrtcProvider: WebrtcProvider | null = null
+    let idbProvider: IndexeddbPersistence | null = null
+    
     // Plugin to handle Escape key -> Blur
     const escapePlugin = $prose((_ctx) => {
       return keymap({
@@ -101,6 +114,69 @@ const MilkdownInternal = defineComponent({
         .use(math)
         .use(diagram)
         .use(escapePlugin)
+        .use(collab)
+    })
+
+    // Setup collaboration after editor is ready
+    watchEffect(() => {
+      const editor = get()
+      if (!editor || !props.roomId) return
+      
+      // Create Yjs document if not exists
+      if (!ydoc) {
+        ydoc = new Y.Doc()
+        
+        // Setup IndexedDB persistence (local offline storage)
+        idbProvider = new IndexeddbPersistence(props.roomId, ydoc)
+        console.log('[Collab] IndexedDB connected:', props.roomId)
+        
+        // Setup WebRTC provider (peer-to-peer real-time sync)
+        webrtcProvider = new WebrtcProvider(props.roomId, ydoc, {
+          signaling: ['wss://signaling.yjs.dev'],
+        })
+        
+        // Set user awareness for cursor presence
+        if (props.userEmail) {
+          const hue = props.userEmail.split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0) % 360
+          webrtcProvider.awareness.setLocalStateField('user', {
+            name: props.userEmail.split('@')[0],
+            email: props.userEmail,
+            color: `hsl(${hue}, 70%, 50%)`,
+          })
+        }
+        console.log('[Collab] WebRTC connected:', props.roomId)
+      }
+      
+      // Connect collab service to Yjs
+      try {
+        editor.action((ctx) => {
+          const collabService = ctx.get(collabServiceCtx)
+          collabService
+            .bindDoc(ydoc!)
+            .setAwareness(webrtcProvider!.awareness)
+            .connect()
+        })
+        console.log('[Collab] Editor connected to Yjs')
+      } catch (error) {
+        console.error('[Collab] Failed to connect:', error)
+      }
+    })
+
+    // Cleanup on unmount
+    onUnmounted(() => {
+      if (webrtcProvider) {
+        webrtcProvider.destroy()
+        webrtcProvider = null
+      }
+      if (idbProvider) {
+        idbProvider.destroy()
+        idbProvider = null
+      }
+      if (ydoc) {
+        ydoc.destroy()
+        ydoc = null
+      }
+      console.log('[Collab] Cleanup complete')
     })
 
     // Expose the editor instance getter

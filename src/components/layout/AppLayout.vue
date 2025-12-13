@@ -37,6 +37,8 @@
               ref="editorWrapperRef"
               :initial-content="fileContent"
               :mode="editorMode"
+              :roomId="collabRoomId"
+              :userEmail="userEmail"
               @update:content="updateContent"
             />
           </div>
@@ -79,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useStorage } from '@vueuse/core'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
@@ -109,6 +111,13 @@ const toastRef = ref()
 const showRepoSelector = ref(false)
 const recentFiles = ref<string[]>([])
 const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
+const userEmail = ref<string | undefined>(undefined)
+
+// Computed room ID for collaboration
+const collabRoomId = computed(() => {
+  if (!repo.value || !currentFile.value) return undefined
+  return `quartier:${repo.value}/${currentFile.value}`
+})
 
 // Auto-sync state
 let lastSyncedContent = ''
@@ -129,6 +138,19 @@ whenever(() => Meta_K?.value || Ctrl_K?.value, () => openCommandPalette())
 // Restore file content on mount
 onMounted(async () => {
   console.log('[AppLayout] onMounted - repo:', repo.value, 'currentFile:', currentFile.value)
+  
+  // Fetch user email for collaboration
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'include' })
+    if (res.ok) {
+      const data = await res.json()
+      userEmail.value = data.email
+      console.log('[AppLayout] User email:', userEmail.value)
+    }
+  } catch (error) {
+    console.log('[AppLayout] Not authenticated or running locally')
+  }
+  
   if (repo.value && currentFile.value) {
     console.log('[AppLayout] Restoring file on mount:', currentFile.value)
     await selectFile(currentFile.value)

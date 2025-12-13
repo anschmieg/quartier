@@ -38,6 +38,8 @@
             ref="milkdownRef"
             v-model="content"
             :editable="true"
+            :roomId="roomId"
+            :userEmail="userEmail"
           />
         </div>
         <div v-else key="source" class="h-full overflow-auto">
@@ -71,6 +73,8 @@ defineExpose({
 const props = defineProps<{
   initialContent: string
   mode: 'visual' | 'source'
+  roomId?: string
+  userEmail?: string
 }>()
 
 const emit = defineEmits(['update:content', 'save'])
