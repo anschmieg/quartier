@@ -62,7 +62,12 @@
     </div>
 
     <!-- Modals -->
-    <CommandPalette ref="commandPaletteRef" :files="[]" @select="selectFile" />
+    <CommandPalette 
+      ref="commandPaletteRef" 
+      :files="recentFiles" 
+      @select="selectFile" 
+      @action="handlePaletteAction"
+    />
     <RepoSelector v-model:open="showRepoSelector" @select="handleRepoSelect" />
     <CommitDialog 
       ref="commitDialogRef" 
@@ -102,6 +107,7 @@ const commandPaletteRef = ref()
 const commitDialogRef = ref()
 const toastRef = ref()
 const showRepoSelector = ref(false)
+const recentFiles = ref<string[]>([])
 const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 
 // Getter for the editor instance (passed down to toolbar)
@@ -246,5 +252,30 @@ function handleRepoSelect(selectedRepo: { owner: string, name: string, full_name
   repo.value = selectedRepo.full_name
   currentFile.value = null
   fileContent.value = ''
+}
+
+function handlePaletteAction(action: string) {
+  switch (action) {
+    case 'save':
+      saveFile()
+      break
+    case 'toggle-sidebar':
+      showSidebar.value = !showSidebar.value
+      break
+    case 'toggle-preview':
+      showPreview.value = !showPreview.value
+      break
+    case 'toggle-mode':
+      editorMode.value = editorMode.value === 'visual' ? 'source' : 'visual'
+      break
+    case 'go-to-repo':
+      showRepoSelector.value = true
+      break
+    case 'new-file':
+      toastRef.value?.info('New file: Not yet implemented')
+      break
+    default:
+      console.log('[AppLayout] Unknown palette action:', action)
+  }
 }
 </script>
