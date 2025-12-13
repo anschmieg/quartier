@@ -65,6 +65,67 @@ export const cachedFileSystem = {
   }
 }
 
+/**
+ * KV Sync service - syncs edits to Cloudflare KV for server-side persistence
+ */
+export const kvSync = {
+  /**
+   * Get file content from KV
+   */
+  async get(owner: string, repo: string, path: string): Promise<{ content: string; user: string; timestamp: number } | null> {
+    try {
+      const response = await fetch(`/api/sync/${owner}/${repo}/${path}`)
+      if (!response.ok) {
+        if (response.status === 404) return null
+        throw new Error(`KV sync GET failed: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('[kvSync] GET error:', error)
+      return null
+    }
+  },
+
+  /**
+   * Save file content to KV
+   */
+  async put(owner: string, repo: string, path: string, content: string, sha?: string): Promise<boolean> {
+    try {
+      const response = await fetch(`/api/sync/${owner}/${repo}/${path}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, sha })
+      })
+      if (!response.ok) {
+        throw new Error(`KV sync PUT failed: ${response.status}`)
+      }
+      console.log('[kvSync] Saved to KV:', `${owner}/${repo}/${path}`)
+      return true
+    } catch (error) {
+      console.error('[kvSync] PUT error:', error)
+      return false
+    }
+  },
+
+  /**
+   * Delete file from KV
+   */
+  async delete(owner: string, repo: string, path: string): Promise<boolean> {
+    try {
+      const response = await fetch(`/api/sync/${owner}/${repo}/${path}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) {
+        throw new Error(`KV sync DELETE failed: ${response.status}`)
+      }
+      return true
+    } catch (error) {
+      console.error('[kvSync] DELETE error:', error)
+      return false
+    }
+  }
+}
+
 // Legacy mock file system (for backwards compatibility)
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 

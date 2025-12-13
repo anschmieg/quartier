@@ -78,7 +78,7 @@ import CommandPalette from '@/components/command/CommandPalette.vue'
 import RepoSelector from '@/components/github/RepoSelector.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
-import { cachedFileSystem } from '@/services/storage'
+import { cachedFileSystem, kvSync } from '@/services/storage'
 
 // Persisted State (localStorage)
 const repo = useStorage<string | undefined>('quartier:repo', undefined)
@@ -166,7 +166,13 @@ async function updateContent(newContent: string) {
   if (repo.value && currentFile.value) {
     const [owner, name] = repo.value.split('/')
     if (owner && name) {
+      // Save to local cache immediately
       await cachedFileSystem.setCache(owner, name, currentFile.value, newContent)
+      
+      // Also sync to KV (debounced separately in the background)
+      kvSync.put(owner, name, currentFile.value, newContent).catch(err => {
+        console.warn('[AppLayout] KV sync failed (will retry):', err)
+      })
     }
   }
 }
