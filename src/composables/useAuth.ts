@@ -55,7 +55,10 @@ export function useAuth() {
             const res = await fetch('/api/auth/me', { credentials: 'include' })
             if (res.ok) {
                 const data = await res.json()
-                if (data.email) {
+                if (data.user?.email) {
+                    accessUser.value = { email: data.user.email }
+                } else if (data.email) {
+                    // Fallback in case API changes
                     accessUser.value = { email: data.email }
                 }
             }
