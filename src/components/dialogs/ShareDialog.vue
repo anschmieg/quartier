@@ -14,7 +14,8 @@
           <p class="text-sm text-muted-foreground">Share scope:</p>
           <div class="grid grid-cols-3 gap-2">
             <button 
-              @click="shareScope = 'file'"
+              type="button"
+              @click="setScope('file')"
               class="p-3 rounded-lg border text-left transition-all"
               :class="shareScope === 'file' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted'"
             >
@@ -23,7 +24,8 @@
               <p class="text-xs text-muted-foreground truncate">{{ fileName }}</p>
             </button>
             <button 
-              @click="shareScope = 'folder'"
+              type="button"
+              @click="setScope('folder')"
               class="p-3 rounded-lg border text-left transition-all"
               :class="shareScope === 'folder' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted'"
             >
@@ -32,7 +34,8 @@
               <p class="text-xs text-muted-foreground truncate">{{ folderName }}/</p>
             </button>
             <button 
-              @click="shareScope = 'repo'"
+              type="button"
+              @click="setScope('repo')"
               class="p-3 rounded-lg border text-left transition-all"
               :class="shareScope === 'repo' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted'"
             >
@@ -127,6 +130,10 @@ const sharePath = computed(() => {
     case 'repo': return repoName.value
   }
 })
+
+function setScope(scope: 'file' | 'folder' | 'repo') {
+  shareScope.value = scope
+}
 
 async function createSession() {
   loading.value = true
