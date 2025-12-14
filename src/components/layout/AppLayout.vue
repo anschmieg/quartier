@@ -82,6 +82,8 @@
     <CommitDialog 
       ref="commitDialogRef" 
       :file-path="currentFile || ''" 
+      :original-content="originalFileContent"
+      :current-content="fileContent"
       @confirm="handleCommit"
     />
     <ShareDialog 
@@ -119,6 +121,7 @@ const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visua
 
 // Transient State (not persisted)
 const fileContent = ref('')
+const originalFileContent = ref('')
 const fileLoading = ref(false)
 const commandPaletteRef = ref()
 const commitDialogRef = ref()
@@ -280,6 +283,7 @@ async function selectFile(path: string) {
     await cachedFileSystem.setCache(owner, name, path, content)
     
     fileContent.value = content
+    originalFileContent.value = content // Track original for diff
     console.log('File loaded from GitHub, length:', content.length)
   } catch (error) {
     console.error('Failed to load file:', error)
