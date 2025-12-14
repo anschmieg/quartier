@@ -85,6 +85,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { 
   Dialog, 
   DialogContent, 
@@ -108,11 +109,21 @@ const shareUrl = ref<string | null>(null)
 const copied = ref(false)
 const shareScope = ref<'file' | 'folder' | 'repo'>('file')
 
+const route = useRoute()
+
 // Computed path components
 const pathParts = computed(() => props.filePath.split('/'))
 const repoName = computed(() => pathParts.value.slice(0, 2).join('/'))
 const fileName = computed(() => pathParts.value[pathParts.value.length - 1] || 'file')
+
+// Get folder path from URL query param or from file path
+const urlPath = computed(() => (route.query.path as string) || '')
 const folderName = computed(() => {
+  // First check URL path param (for when browsing a folder)
+  if (urlPath.value) {
+    return urlPath.value
+  }
+  // Fallback to parent folder of current file
   if (pathParts.value.length > 3) {
     return pathParts.value.slice(2, -1).join('/')
   }
@@ -124,11 +135,15 @@ const sharePath = computed(() => {
   switch (shareScope.value) {
     case 'file': return props.filePath
     case 'folder': 
-      if (pathParts.value.length > 3) {
-        return pathParts.value.slice(0, -1).join('/')
+      // Use URL path if available, otherwise derive from file path
+      if (urlPath.value) {
+        return `${repoName.value}/${urlPath.value}/*`
       }
-      return repoName.value // If file at root, folder = repo
-    case 'repo': return repoName.value
+      if (pathParts.value.length > 3) {
+        return pathParts.value.slice(0, -1).join('/') + '/*'
+      }
+      return repoName.value + '/*' // If file at root, folder = repo
+    case 'repo': return repoName.value + '/*'
   }
 })
 
