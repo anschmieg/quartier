@@ -35,6 +35,7 @@
         <FileBrowser 
           :repo="repo" 
           :selected-path="selectedFile"
+          :is-host="isHost"
           @select="emit('select-file', $event)"
           @create-file="emit('create-file', $event)"
           @create-folder="emit('create-folder', $event)"

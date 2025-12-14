@@ -44,7 +44,6 @@ import FileTree from './FileTree.vue'
 import PathBreadcrumbs from './PathBreadcrumbs.vue'
 import FileFilters from './FileFilters.vue'
 import { githubService } from '@/services/github'
-import { useAuth } from '@/composables/useAuth'
 import { kvSync } from '@/services/storage'
 
 interface FileItem {
@@ -52,10 +51,13 @@ interface FileItem {
   type: 'file' | 'dir'
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   repo?: string
   selectedPath?: string | null
-}>()
+  isHost?: boolean
+}>(), {
+  isHost: false
+})
 
 const emit = defineEmits<{
   'select': [path: string]
@@ -112,7 +114,7 @@ watch(() => props.repo, async (newRepo) => {
   }
 }, { immediate: true })
 
-const { isHost } = useAuth()
+// ...
 
 // ...
 
@@ -121,7 +123,7 @@ async function loadRepoContents(repoFullName: string, path: string) {
   if (!owner || !name) return
   
   // If Host, use GitHub API
-  if (isHost.value) {
+  if (props.isHost) {
       try {
         const contents = await githubService.loadRepo(owner, name, path)
         files.value = contents.map((item: { path: string, type: string }) => ({
@@ -210,7 +212,7 @@ async function handleExpandFolder(folderPath: string) {
   if (!owner || !name) return
   
   // If Guest, use KV list
-  if (!isHost.value) {
+  if (!props.isHost) {
       try {
           const allFiles = await kvSync.list(owner, name)
           if (!allFiles) return
