@@ -162,9 +162,12 @@ async function loadRepoContents(repoFullName: string, path: string) {
               filtered.set(parts[0], { path: f.path, type: 'file' })
           } else {
               // It's a folder
-              const folderName = parts[0]
-              const folderPath = path ? `${path}/${folderName}` : folderName
-              filtered.set(folderName, { path: folderPath, type: 'dir' })
+              const subFolderName = parts[0]
+              if (subFolderName) {
+                  const folderName = subFolderName
+                  const folderPath = path ? `${path}/${folderName}` : folderName
+                  filtered.set(folderName, { path: folderPath, type: 'dir' })
+              }
           }
       })
       
@@ -225,13 +228,15 @@ async function handleExpandFolder(folderPath: string) {
               } else {
                   // Subfolder
                   const subFolderName = parts[0]
-                  if (!processedFolders.has(subFolderName)) {
-                      const subFolderPath = `${folderPath}/${subFolderName}`
-                      // Ensure not a duplicate of existing
-                      if (!files.value.some(ex => ex.path === subFolderPath)) {
-                           newItems.push({ path: subFolderPath, type: 'dir' })
+                  if (subFolderName) {
+                      if (!processedFolders.has(subFolderName)) {
+                          const subFolderPath = `${folderPath}/${subFolderName}`
+                          // Ensure not a duplicate of existing
+                          if (!files.value.some(ex => ex.path === subFolderPath)) {
+                               newItems.push({ path: subFolderPath, type: 'dir' })
+                          }
+                          processedFolders.add(subFolderName)
                       }
-                      processedFolders.add(subFolderName)
                   }
               }
           })
