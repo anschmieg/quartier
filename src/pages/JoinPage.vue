@@ -121,6 +121,14 @@ async function joinSession() {
     
     if (!res.ok) {
       const data = await res.json()
+      
+      // If not authenticated, redirect to login with return URL
+      if (res.status === 401) {
+        const returnUrl = encodeURIComponent(window.location.pathname)
+        window.location.href = `/api/oauth/login?return_to=${returnUrl}`
+        return
+      }
+      
       error.value = data.error || 'Failed to join'
       return
     }

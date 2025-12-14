@@ -20,7 +20,7 @@ const routes = [
         path: '/s/:token',
         name: 'share',
         component: JoinPage,
-        meta: { requiresAuth: true }
+        meta: { public: true }  // Public to view, auth checked when joining
     },
     // Catch-all redirect to landing
     {
