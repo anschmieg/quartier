@@ -56,6 +56,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Loader2, XCircle, FileText } from 'lucide-vue-next'
+import { devFetch } from '@/utils/devTools'
 
 const route = useRoute()
 const router = useRouter()
@@ -86,7 +87,8 @@ onMounted(async () => {
   const token = route.params.token as string
   
   try {
-    const res = await fetch(`/api/s/${token}`, {
+    // In dev mode, devFetch adds X-Dev-User header based on ?dev-user param
+    const res = await devFetch(`/api/s/${token}`, {
       credentials: 'include'
     })
     
@@ -111,7 +113,8 @@ async function joinSession() {
   joining.value = true
   
   try {
-    const res = await fetch(`/api/s/${token}`, {
+    // In dev mode, devFetch adds X-Dev-User header based on ?dev-user param
+    const res = await devFetch(`/api/s/${token}`, {
       method: 'POST',
       credentials: 'include'
     })
