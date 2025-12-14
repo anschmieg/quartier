@@ -166,8 +166,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             })
         }
 
-        // Check if path is within session.paths
-        if (!isPathAllowed(path, session.paths, owner, repo)) {
+        // Check if path is within session.paths (skip for owner)
+        if (!isOwner && !isPathAllowed(path, session.paths, owner, repo)) {
             return new Response(JSON.stringify({ error: 'Access denied to this path' }), {
                 status: 403,
                 headers: { 'Content-Type': 'application/json' }

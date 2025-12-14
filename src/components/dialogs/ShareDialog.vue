@@ -71,7 +71,7 @@
         <div v-if="!shareUrl">
           <Button @click="createSession" :disabled="loading" class="w-full">
             <Share2 class="h-4 w-4 mr-2" />
-            {{ loading ? 'Creating...' : 'Create Share Link' }}
+            {{ loading ? 'Creating & Syncing...' : 'Create Share Link' }}
           </Button>
         </div>
       </div>
@@ -97,6 +97,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Share2, Copy, Check, FileText, FolderOpen, FolderGit2 } from 'lucide-vue-next'
+import { githubService } from '@/services/github'
+import { kvSync } from '@/services/storage'
 
 const props = defineProps<{
   filePath: string // Full path: owner/repo/path/to/file.md
@@ -177,6 +179,64 @@ async function createSession() {
     if (!shareRes.ok) throw new Error('Failed to create share link')
     const data = await shareRes.json()
     shareUrl.value = data.shareUrl
+
+    // Perform initial sync of shared content to KV
+    // This ensures guests see files immediately without "lazy sync"
+    const [owner, repo] = pathParts.value.slice(0, 2)
+    if (owner && repo) {
+        try {
+            loading.value = true // Keep loading true
+            
+            // Determine path to sync
+            let filesToSync: string[] = []
+            
+            if (shareScope.value === 'file') {
+                // Sync specific file
+                const path = pathParts.value.slice(2).join('/')
+                filesToSync = [path]
+            } else {
+                // Folder or Repo: List files
+                // Derive folder path
+                let folderPath = ''
+                if (shareScope.value === 'folder') {
+                    if (urlPath.value) folderPath = urlPath.value
+                    else if (pathParts.value.length > 3) folderPath = pathParts.value.slice(2, -1).join('/')
+                    // else root (repo scope)
+                }
+                
+                // Fetch list from GitHub
+                // Note: This is shallow list. Recursive sync might be too heavy?
+                // User asked for "all shared files". Assuming single-level or user will nav.
+                // But Guest can't nav if folder doesn't exist in KV?
+                // Guest List logic handles subfolders if files exist.
+                // Let's list shallow for now.
+                const contents = await githubService.loadRepo(owner, repo, folderPath)
+                if (Array.isArray(contents)) {
+                    filesToSync = contents
+                        .filter((item: any) => item.type === 'file')
+                        .map((item: any) => item.path)
+                }
+            }
+            
+            console.log(`[ShareDialog] Syncing ${filesToSync.length} files...`)
+            
+            // Batch sync (sequential to be safe)
+            for (const path of filesToSync) {
+                try {
+                   // Read from GitHub (or local cache?)
+                   // Better to read fresh from GitHub or Cache to ensure consistency
+                   const content = await githubService.readFile(owner, repo, path)
+                   await kvSync.put(owner, repo, path, content)
+                } catch (err) {
+                   console.error(`Failed to sync ${path}:`, err)
+                }
+            }
+            console.log('[ShareDialog] Sync complete')
+        } catch (syncErr) {
+            console.error('[ShareDialog] Sync failed:', syncErr)
+            // Don't block UI, link is created
+        }
+    }
     
   } catch (error) {
     console.error('[ShareDialog] Error:', error)
