@@ -38,8 +38,7 @@
         <!-- Guest Mode Banner -->
         <div v-if="isAccessAuthenticated && !isHost" class="bg-blue-50/50 border-b border-blue-100 px-4 py-2 flex items-center justify-between text-xs text-blue-700">
           <span class="flex items-center gap-2">
-              <!-- Assuming 'Info' icon component is available, otherwise remove or replace -->
-              <!-- <Info class="w-4 h-4" /> -->
+              <Info class="w-4 h-4" />
               Guest Mode: You can edit files live, but cannot commit changes to GitHub.
           </span>
         </div>
