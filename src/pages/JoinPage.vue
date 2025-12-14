@@ -88,7 +88,7 @@ onMounted(async () => {
   
   try {
     // In dev mode, devFetch adds X-Dev-User header based on ?dev-user param
-    const res = await devFetch(`/api/s/${token}`, {
+    const res = await devFetch(`/share/${token}`, {
       credentials: 'include'
     })
     
@@ -114,7 +114,7 @@ async function joinSession() {
   
   try {
     // In dev mode, devFetch adds X-Dev-User header based on ?dev-user param
-    const res = await devFetch(`/api/s/${token}`, {
+    const res = await devFetch(`/share/${token}`, {
       method: 'POST',
       credentials: 'include'
     })
