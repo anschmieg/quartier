@@ -21,13 +21,23 @@ function generateSessionId(): string {
 
 interface Env {
     QUARTIER_KV: KVNamespace
+    DEV_USER_EMAIL?: string // For local dev without Cloudflare Access
+}
+
+/**
+ * Get authenticated user email (Cloudflare Access or dev fallback)
+ */
+function getAuthEmail(context: EventContext<Env, any, any>): string | null {
+    return context.request.headers.get('cf-access-authenticated-user-email')
+        || context.env.DEV_USER_EMAIL
+        || null
 }
 
 /**
  * Create a new session
  */
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-    const email = context.request.headers.get('cf-access-authenticated-user-email')
+    const email = getAuthEmail(context)
 
     if (!email) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -88,7 +98,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
  * List user's sessions
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-    const email = context.request.headers.get('cf-access-authenticated-user-email')
+    const email = getAuthEmail(context)
 
     if (!email) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
