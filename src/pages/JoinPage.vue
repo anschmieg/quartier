@@ -143,8 +143,8 @@ async function joinSession() {
   joining.value = true
   
   try {
-    // In dev mode, devFetch adds X-Dev-User header based on ?dev-user param
-    const res = await devFetch(`/share/${token}`, {
+    // Call protected API endpoint to ensure headers are injected
+    const res = await devFetch(`/api/share/${token}`, {
       method: 'POST',
       credentials: 'include'
     })

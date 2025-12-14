@@ -1,11 +1,10 @@
 /**
- * Share Token Validation & Join API
+ * Protected Share API
  * 
- * GET /api/share/:token - Validate token, get session info
- * POST /api/share/:token - Join session
+ * POST /api/share/:token - Join session (Requires Cloudflare Access Auth)
  */
 
-// Inlined types (Wrangler can't resolve imports from ../../types/)
+// Inlined types
 interface Session {
     id: string
     owner: string
@@ -26,16 +25,10 @@ interface ShareToken {
 
 interface Env {
     QUARTIER_KV: KVNamespace
-    DEV_USER_EMAIL?: string // For local dev without Cloudflare Access
+    DEV_USER_EMAIL?: string
 }
 
-/**
- * Get authenticated user email (Cloudflare Access or dev fallback)
- * In development, X-Dev-User header can override to test as different users
- * Use X-Dev-User: none to simulate unauthenticated requests
- */
 function getAuthEmail(context: EventContext<Env, any, any>): string | null {
-    // Check for dev user override header (local development only)
     const devUserOverride = context.request.headers.get('x-dev-user')
     if (devUserOverride === 'none') return null
     if (devUserOverride) return devUserOverride
@@ -45,10 +38,16 @@ function getAuthEmail(context: EventContext<Env, any, any>): string | null {
         || null
 }
 
-/**
- * Validate share token and get session info
- */
-export const onRequestGet: PagesFunction<Env> = async (context) => {
+export const onRequestPost: PagesFunction<Env> = async (context) => {
+    const email = getAuthEmail(context)
+
+    if (!email) {
+        return new Response(JSON.stringify({ error: 'Please sign in to join' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    }
+
     const token = context.params.token as string
 
     try {
@@ -80,13 +79,26 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             })
         }
 
-        // Return session info (hide owner email partially for privacy)
+        // Add user to members if not already
+        if (!session.members.includes(email)) {
+            session.members.push(email)
+            await context.env.QUARTIER_KV.put(`session:${session.id}`, JSON.stringify(session))
+
+            // Update member index
+            const memberOfRaw = await context.env.QUARTIER_KV.get(`member:${email}`)
+            const memberOf: string[] = memberOfRaw ? JSON.parse(memberOfRaw) : []
+            if (!memberOf.includes(session.id)) {
+                memberOf.push(session.id)
+                await context.env.QUARTIER_KV.put(`member:${email}`, JSON.stringify(memberOf))
+            }
+        }
+
         return new Response(JSON.stringify({
+            success: true,
             session: {
                 id: session.id,
                 name: session.name,
                 paths: session.paths,
-                owner: session.owner.split('@')[0] + '@***',
                 memberCount: session.members.length
             },
             permission: shareToken.permission
@@ -95,12 +107,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        console.error('[share] Validate error:', error)
-        return new Response(JSON.stringify({ error: 'Failed to validate link' }), {
+        console.error('[share] Join error:', error)
+        return new Response(JSON.stringify({ error: 'Failed to join session' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })
     }
 }
-
-
