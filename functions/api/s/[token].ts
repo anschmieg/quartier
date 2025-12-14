@@ -31,8 +31,15 @@ interface Env {
 
 /**
  * Get authenticated user email (Cloudflare Access or dev fallback)
+ * In development, X-Dev-User header can override to test as different users
+ * Use X-Dev-User: none to simulate unauthenticated requests
  */
 function getAuthEmail(context: EventContext<Env, any, any>): string | null {
+    // Check for dev user override header (local development only)
+    const devUserOverride = context.request.headers.get('x-dev-user')
+    if (devUserOverride === 'none') return null
+    if (devUserOverride) return devUserOverride
+
     return context.request.headers.get('cf-access-authenticated-user-email')
         || context.env.DEV_USER_EMAIL
         || null
