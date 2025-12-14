@@ -82,8 +82,27 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             expiresIn?: number // hours
         }
 
+        // Generate unique token with collision check
+        let token = generateShareToken()
+        let attempts = 0
+        const maxAttempts = 5
+
+        while (attempts < maxAttempts) {
+            const existing = await context.env.QUARTIER_KV.get(`share:${token}`)
+            if (!existing) break
+            token = generateShareToken()
+            attempts++
+        }
+
+        if (attempts >= maxAttempts) {
+            return new Response(JSON.stringify({ error: 'Failed to generate unique share link' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            })
+        }
+
         const shareToken: ShareToken = {
-            token: generateShareToken(),
+            token,
             sessionId: session.id,
             permission: body.permission || 'edit',
             createdBy: email,
