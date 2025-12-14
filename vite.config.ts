@@ -23,10 +23,15 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
   },
   build: {
-    chunkSizeWarningLimit: 3000,
     rollupOptions: {
       output: {
-        // manualChunks caused tree-shaking issues with veaury/react
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('@milkdown') || id.includes('prosemirror') || id.includes('yjs') || id.includes('y-websocket') || id.includes('y-indexeddb')) {
+              return 'editor-libs'
+            }
+          }
+        }
       }
     }
   }
