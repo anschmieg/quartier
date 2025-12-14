@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LandingPage from '@/components/landing/LandingPage.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import JoinPage from '@/pages/JoinPage.vue'
 
 const routes = [
     {
@@ -19,7 +18,7 @@ const routes = [
     {
         path: '/s/:token',
         name: 'share',
-        component: JoinPage,
+        component: AppLayout,
         meta: { public: true }  // Public to view, auth checked when joining
     },
     // Catch-all redirect to landing

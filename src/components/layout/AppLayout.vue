@@ -99,6 +99,7 @@
       v-model:open="showGuestWelcome" 
       @close="guestWelcomeSeen = true" 
     />
+    <JoinSessionDialog v-if="route.name === 'share'" @joined="handleJoined" />
     <Toast ref="toastRef" />
   </div>
 </template>
@@ -123,7 +124,12 @@ import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
 import { cachedFileSystem, kvSync } from '@/services/storage'
 
+import { useRoute } from 'vue-router'
 import GuestWelcomeDialog from '@/components/dialogs/GuestWelcomeDialog.vue'
+import JoinSessionDialog from '@/components/dialogs/JoinSessionDialog.vue'
+
+// Router
+const route = useRoute()
 
 // Persisted State (localStorage)
 const repo = useStorage<string | undefined>('quartier:repo', undefined)
@@ -491,5 +497,10 @@ function handlePaletteAction(action: string) {
     default:
       console.log('[AppLayout] Unknown palette action:', action)
   }
+}
+
+function handleJoined() {
+  // Redirect to app (cleans URL and loads session state)
+  window.location.href = '/app'
 }
 </script>

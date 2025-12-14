@@ -24,7 +24,7 @@
           <div class="space-y-1">
             <h4 class="text-sm font-medium">No File System Access</h4>
             <p class="text-xs text-muted-foreground">
-              As a guest, you cannot write directly to the underlying storage. The Host manages saving and persistence.
+              Files are not written to the original storage, but are saved online and synced to the host. Only files shared by the host are visible.
             </p>
           </div>
         </div>
