@@ -59,12 +59,14 @@ import { FileBrowser } from '@/components/file-browser'
 import UserMenu from './UserMenu.vue'
 import BranchSelector from './BranchSelector.vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   visible: boolean
   repo?: string
   selectedFile?: string | null
   isHost?: boolean
-}>( { isHost: false } )
+}>(), {
+  isHost: false
+})
 
 // Parse owner/repo from repo string
 const repoOwner = computed(() => props.repo?.split('/')[0] || '')
