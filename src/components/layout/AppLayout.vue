@@ -7,8 +7,10 @@
       :show-preview="showPreview"
       :editor-mode="editorMode"
       :get-editor="getEditorInstance"
+      :can-share="!!currentFile && !!repo"
       @command-palette="openCommandPalette"
       @save="saveFile"
+      @share="openShareDialog"
       @toggle-sidebar="showSidebar = !showSidebar"
       @update:show-preview="showPreview = $event"
       @update:editor-mode="editorMode = $event"
@@ -76,6 +78,10 @@
       :file-path="currentFile || ''" 
       @confirm="handleCommit"
     />
+    <ShareDialog 
+      ref="shareDialogRef"
+      :file-path="fullFilePath"
+    />
     <Toast ref="toastRef" />
   </div>
 </template>
@@ -90,6 +96,7 @@ import PreviewPanel from '@/components/preview/PreviewPanel.vue'
 import CommandPalette from '@/components/command/CommandPalette.vue'
 import RepoSelector from '@/components/github/RepoSelector.vue'
 import CommitDialog from '@/components/dialogs/CommitDialog.vue'
+import ShareDialog from '@/components/dialogs/ShareDialog.vue'
 import Toast from '@/components/ui/Toast.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
@@ -111,12 +118,19 @@ const toastRef = ref()
 const showRepoSelector = ref(false)
 const recentFiles = ref<string[]>([])
 const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
+const shareDialogRef = ref<InstanceType<typeof ShareDialog> | null>(null)
 const userEmail = ref<string | undefined>(undefined)
 
 // Computed room ID for collaboration
 const collabRoomId = computed(() => {
   if (!repo.value || !currentFile.value) return undefined
   return `quartier:${repo.value}/${currentFile.value}`
+})
+
+// Full file path for sharing (owner/repo/path)
+const fullFilePath = computed(() => {
+  if (!repo.value || !currentFile.value) return ''
+  return `${repo.value}/${currentFile.value}`
 })
 
 // Auto-sync state
@@ -185,6 +199,10 @@ onUnmounted(() => {
 
 function openCommandPalette() {
   commandPaletteRef.value?.open()
+}
+
+function openShareDialog() {
+  shareDialogRef.value?.open()
 }
 
 async function selectFile(path: string) {

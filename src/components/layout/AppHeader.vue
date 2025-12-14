@@ -74,6 +74,24 @@
     
     <!-- Right: actions & Preview -->
     <div class="flex items-center gap-1">
+      <!-- Share button -->
+      <TooltipProvider :delay-duration="0">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              :disabled="!canShare"
+              @click="emit('share')"
+            >
+              <Share2 class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Share</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <SaveButton :can-save="canSave" @save="emit('save')" />
       <ThemeToggle />
       <div class="w-px h-4 bg-border/50 mx-1" />
@@ -100,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { Eye, Code, Keyboard, PanelRightOpen } from 'lucide-vue-next'
+import { Eye, Code, Keyboard, PanelRightOpen, Share2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ThemeToggle, SidebarToggle, SaveButton } from '@/components/toolbar'
@@ -108,6 +126,7 @@ import EditorToolbar from '@/components/editor/EditorToolbar.vue'
 
 defineProps<{
   canSave: boolean
+  canShare: boolean
   sidebarVisible: boolean
   showPreview: boolean
   editorMode: 'visual' | 'source'
@@ -117,6 +136,7 @@ defineProps<{
 const emit = defineEmits<{
   'command-palette': []
   'save': []
+  'share': []
   'toggle-sidebar': []
   'update:showPreview': [show: boolean]
   'update:editorMode': [mode: 'visual' | 'source']
