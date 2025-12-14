@@ -5,7 +5,24 @@
  * POST /api/share/:token - Join session
  */
 
-import { Session, ShareToken } from '../../types/session'
+// Inlined types (Wrangler can't resolve imports from ../../types/)
+interface Session {
+    id: string
+    owner: string
+    files: string[]
+    members: string[]
+    created: number
+    name?: string
+}
+
+interface ShareToken {
+    token: string
+    sessionId: string
+    permission: 'edit' | 'view'
+    expiresAt?: number
+    createdBy: string
+    created: number
+}
 
 interface Env {
     QUARTIER_KV: KVNamespace

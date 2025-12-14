@@ -5,7 +5,19 @@
  * GET /api/sessions - List user's sessions
  */
 
-import { Session, generateSessionId } from '../types/session'
+// Inlined types (Wrangler can't resolve imports from ../types/)
+interface Session {
+    id: string
+    owner: string
+    files: string[]
+    members: string[]
+    created: number
+    name?: string
+}
+
+function generateSessionId(): string {
+    return `session_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
+}
 
 interface Env {
     QUARTIER_KV: KVNamespace

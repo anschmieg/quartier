@@ -4,7 +4,28 @@
  * POST /api/sessions/:id/share - Create share link
  */
 
-import { Session, ShareToken, generateShareToken } from '../../types/session'
+// Inlined types (Wrangler can't resolve imports from ../../types/)
+interface Session {
+    id: string
+    owner: string
+    files: string[]
+    members: string[]
+    created: number
+    name?: string
+}
+
+interface ShareToken {
+    token: string
+    sessionId: string
+    permission: 'edit' | 'view'
+    expiresAt?: number
+    createdBy: string
+    created: number
+}
+
+function generateShareToken(): string {
+    return `share_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
+}
 
 interface Env {
     QUARTIER_KV: KVNamespace
