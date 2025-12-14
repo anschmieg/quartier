@@ -17,8 +17,8 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
-        path: '/join/:token',
-        name: 'join',
+        path: '/s/:token',
+        name: 'share',
         component: JoinPage,
         meta: { requiresAuth: true }
     },
