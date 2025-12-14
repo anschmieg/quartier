@@ -31,7 +31,7 @@
 
       <!-- User Menu -->
       <div class="p-4 border-t border-border/50">
-        <UserMenu />
+        <UserMenu @open-shared="emit('open-shared', $event)" />
       </div>
     </div>
   </aside>
@@ -52,5 +52,6 @@ defineProps<{
 const emit = defineEmits<{
   'open-repo-selector': []
   'select-file': [path: string]
+  'open-shared': [mode: 'shared-with-me' | 'shared-by-me']
 }>()
 </script>

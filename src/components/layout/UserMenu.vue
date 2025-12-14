@@ -36,6 +36,15 @@
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem @select="emit('open-shared', 'shared-with-me')">
+          <FolderDown class="w-4 h-4 mr-2" />
+          Shared with me
+        </DropdownMenuItem>
+        <DropdownMenuItem @select="emit('open-shared', 'shared-by-me')">
+          <FolderUp class="w-4 h-4 mr-2" />
+          Shared by me
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem @select="logout" class="text-destructive">
           <LogOut class="w-4 h-4 mr-2" />
           Sign out
@@ -62,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { User, ChevronDown, LogOut, Github } from 'lucide-vue-next'
+import { User, ChevronDown, LogOut, Github, FolderDown, FolderUp } from 'lucide-vue-next'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,4 +83,8 @@ import {
 import { useAuth } from '@/composables/useAuth'
 
 const { user, isLoading, isAuthenticated, login, logout } = useAuth()
+
+const emit = defineEmits<{
+  'open-shared': [mode: 'shared-with-me' | 'shared-by-me']
+}>()
 </script>

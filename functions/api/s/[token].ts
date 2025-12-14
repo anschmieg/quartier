@@ -144,6 +144,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         if (!session.members.includes(email)) {
             session.members.push(email)
             await context.env.QUARTIER_KV.put(`session:${session.id}`, JSON.stringify(session))
+
+            // Update member index for "Shared with me" lookup
+            const memberOfRaw = await context.env.QUARTIER_KV.get(`member:${email}`)
+            const memberOf: string[] = memberOfRaw ? JSON.parse(memberOfRaw) : []
+            if (!memberOf.includes(session.id)) {
+                memberOf.push(session.id)
+                await context.env.QUARTIER_KV.put(`member:${email}`, JSON.stringify(memberOf))
+            }
+
             console.log(`[share] ${email} joined session ${session.id}`)
         }
 

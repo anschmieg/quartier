@@ -25,6 +25,7 @@
         :selected-file="currentFile"
         @open-repo-selector="showRepoSelector = true"
         @select-file="selectFile"
+        @open-shared="openSharedSessions"
       />
 
       <!-- Main Content -->
@@ -82,6 +83,7 @@
       ref="shareDialogRef"
       :file-path="fullFilePath"
     />
+    <SharedSessionsDialog ref="sharedSessionsDialogRef" />
     <Toast ref="toastRef" />
   </div>
 </template>
@@ -97,6 +99,7 @@ import CommandPalette from '@/components/command/CommandPalette.vue'
 import RepoSelector from '@/components/github/RepoSelector.vue'
 import CommitDialog from '@/components/dialogs/CommitDialog.vue'
 import ShareDialog from '@/components/dialogs/ShareDialog.vue'
+import SharedSessionsDialog from '@/components/dialogs/SharedSessionsDialog.vue'
 import Toast from '@/components/ui/Toast.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
@@ -119,6 +122,7 @@ const showRepoSelector = ref(false)
 const recentFiles = ref<string[]>([])
 const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 const shareDialogRef = ref<InstanceType<typeof ShareDialog> | null>(null)
+const sharedSessionsDialogRef = ref<InstanceType<typeof SharedSessionsDialog> | null>(null)
 const userEmail = ref<string | undefined>(undefined)
 
 // Computed room ID for collaboration
@@ -203,6 +207,10 @@ function openCommandPalette() {
 
 function openShareDialog() {
   shareDialogRef.value?.open()
+}
+
+function openSharedSessions(mode: 'shared-with-me' | 'shared-by-me') {
+  sharedSessionsDialogRef.value?.open(mode)
 }
 
 async function selectFile(path: string) {
