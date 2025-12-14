@@ -110,19 +110,72 @@ watch(() => props.repo, async (newRepo) => {
   }
 }, { immediate: true })
 
+import { useAuth } from '@/composables/useAuth'
+import { kvSync } from '@/services/storage'
+const { isHost } = useAuth()
+
+// ...
+
 async function loadRepoContents(repoFullName: string, path: string) {
   const [owner, name] = repoFullName.split('/')
   if (!owner || !name) return
   
+  // If Host, use GitHub API
+  if (isHost.value) {
+      try {
+        const contents = await githubService.loadRepo(owner, name, path)
+        files.value = contents.map((item: { path: string, type: string }) => ({
+          path: item.path,
+          type: item.type as 'file' | 'dir'
+        }))
+        currentPath.value = path
+      } catch (error) {
+        console.error('Failed to load repo contents from GitHub:', error)
+        // Fallback to KV? No, Host should use GitHub.
+      }
+      return
+  }
+  
+  // If Guest, use KV list
+  // KV returns flattened list of ALL files. We need to filter for the current path/folder.
   try {
-    const contents = await githubService.loadRepo(owner, name, path)
-    files.value = contents.map((item: { path: string, type: string }) => ({
-      path: item.path,
-      type: item.type as 'file' | 'dir'
-    }))
-    currentPath.value = path
+      const allFiles = await kvSync.list(owner, name)
+      if (!allFiles) {
+          files.value = []
+          return
+      }
+      
+      // Filter logic:
+      // If path is empty, show files with no slashes, OR folders (first part of path)
+      // If path is 'foo', show files starting with 'foo/'
+      
+      const filtered = new Map<string, FileItem>()
+      
+      allFiles.forEach(f => {
+          if (!f.path.startsWith(path ? path + '/' : '')) return
+          
+          const relative = path ? f.path.slice(path.length + 1) : f.path
+          const parts = relative.split('/')
+          
+          if (parts.length === 1) {
+              // It's a file in the current folder
+              filtered.set(parts[0], { path: f.path, type: 'file' })
+          } else {
+              // It's a folder
+              const folderName = parts[0]
+              const folderPath = path ? `${path}/${folderName}` : folderName
+              filtered.set(folderName, { path: folderPath, type: 'dir' })
+          }
+      })
+      
+      files.value = Array.from(filtered.values()).sort((a, b) => {
+          if (a.type === b.type) return a.path.localeCompare(b.path)
+          return a.type === 'dir' ? -1 : 1
+      })
+      
+      currentPath.value = path
   } catch (error) {
-    console.error('Failed to load repo contents:', error)
+      console.error('Failed to load guest contents:', error)
   }
 }
 
@@ -150,6 +203,47 @@ async function handleExpandFolder(folderPath: string) {
   const [owner, name] = props.repo.split('/')
   if (!owner || !name) return
   
+  // If Guest, use KV list
+  if (!isHost.value) {
+      try {
+          const allFiles = await kvSync.list(owner, name)
+          if (!allFiles) return
+          
+          const newItems: FileItem[] = []
+          const processedFolders = new Set<string>()
+
+          allFiles.forEach(f => {
+              // We want direct children of folderPath
+              if (!f.path.startsWith(folderPath + '/')) return
+              
+              const relative = f.path.slice(folderPath.length + 1)
+              const parts = relative.split('/')
+              
+              if (parts.length === 1) {
+                  // File
+                  newItems.push({ path: f.path, type: 'file' })
+              } else {
+                  // Subfolder
+                  const subFolderName = parts[0]
+                  if (!processedFolders.has(subFolderName)) {
+                      const subFolderPath = `${folderPath}/${subFolderName}`
+                      // Ensure not a duplicate of existing
+                      if (!files.value.some(ex => ex.path === subFolderPath)) {
+                           newItems.push({ path: subFolderPath, type: 'dir' })
+                      }
+                      processedFolders.add(subFolderName)
+                  }
+              }
+          })
+          
+          files.value = [...files.value, ...newItems]
+      } catch (error) {
+          console.error('Failed to expand folder (guest):', error)
+      }
+      return
+  }
+
+  // Host logic (GitHub)
   try {
     const contents = await githubService.loadRepo(owner, name, folderPath)
     const newItems = contents.map((item: { path: string, type: string }) => ({

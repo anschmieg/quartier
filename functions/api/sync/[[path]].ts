@@ -35,6 +35,30 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const url = new URL(context.request.url)
     const pathParts = url.pathname.replace('/api/sync/', '').split('/')
 
+    const pathParts = url.pathname.replace('/api/sync/', '').split('/')
+
+    // Case 1: List files (owner/repo)
+    if (pathParts.length === 2) {
+        const prefix = pathParts.join('/') + '/'
+        try {
+            const list = await context.env.QUARTIER_KV.list({ prefix })
+            // Return just the paths relative to the repo
+            const files = list.keys.map(k => ({
+                path: k.name.replace(prefix, ''),
+                // We can't easily know if it's a dir, but for KV everything is a file?
+                // Actually KV stores file content. So these are files.
+                type: 'file'
+            }))
+            return new Response(JSON.stringify(files), {
+                headers: { 'Content-Type': 'application/json' }
+            })
+        } catch (error) {
+            console.error('[sync] LIST error:', error)
+            return new Response(JSON.stringify({ error: 'Internal error' }), { status: 500 })
+        }
+    }
+
+    // Case 2: Get file content (owner/repo/path/to/file)
     if (pathParts.length < 3) {
         return new Response(JSON.stringify({ error: 'Invalid path: need owner/repo/filepath' }), {
             status: 400,

@@ -100,6 +100,23 @@ export const kvSync = {
   },
 
   /**
+   * List files from KV (for guests)
+   */
+  async list(owner: string, repo: string): Promise<Array<{ path: string, type: string }> | null> {
+    if (!isProduction) return null
+    try {
+      const response = await fetch(`/api/sync/${owner}/${repo}`, {
+        credentials: 'include'
+      })
+      if (!response.ok) return null
+      return await response.json()
+    } catch (e) {
+      console.error('[kvSync] LIST error:', e)
+      return null
+    }
+  },
+
+  /**
    * Save file content to KV (with optional Yjs state for conflict-free sync)
    */
   async put(
