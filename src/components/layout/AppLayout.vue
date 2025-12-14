@@ -432,7 +432,13 @@ function handlePaletteAction(action: string) {
       showRepoSelector.value = true
       break
     case 'new-file':
-      toastRef.value?.info('New file: Not yet implemented')
+      handleCreateFile('')
+      break
+    case 'rename-file':
+      if (currentFile.value) handleRenameFile(currentFile.value)
+      break
+    case 'delete-file':
+      if (currentFile.value) handleDeleteFile(currentFile.value)
       break
     default:
       console.log('[AppLayout] Unknown palette action:', action)

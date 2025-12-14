@@ -15,6 +15,14 @@
           <FilePlus class="mr-2 h-4 w-4" />
           <span>New File</span>
         </CommandItem>
+        <CommandItem v-if="currentFile" value="rename-file" @select="execute('rename-file')">
+          <Pencil class="mr-2 h-4 w-4" />
+          <span>Rename Current File</span>
+        </CommandItem>
+        <CommandItem v-if="currentFile" value="delete-file" @select="execute('delete-file')">
+          <Trash2 class="mr-2 h-4 w-4" />
+          <span>Delete Current File</span>
+        </CommandItem>
       </CommandGroup>
       
       <!-- View Commands -->
@@ -77,7 +85,9 @@ import {
   Eye, 
   ArrowLeftRight, 
   FolderGit2,
-  FileText
+  FileText,
+  Pencil,
+  Trash2
 } from 'lucide-vue-next'
 
 const props = defineProps<{
