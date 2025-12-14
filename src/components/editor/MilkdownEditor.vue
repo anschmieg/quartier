@@ -28,6 +28,7 @@ import { collab, collabServiceCtx } from '@milkdown/plugin-collab'
 import * as Y from 'yjs'
 import { WebrtcProvider } from 'y-webrtc'
 import { IndexeddbPersistence } from 'y-indexeddb'
+import { updateAwarenessState, clearAwarenessState } from '@/composables/useAwareness'
 
 
 // Import base styles for structure (optional, but nord helps with complex nodes)
@@ -145,6 +146,22 @@ const MilkdownInternal = defineComponent({
           })
         }
         console.log('[Collab] WebRTC connected:', props.roomId)
+        
+        // Listen for awareness changes and update global store
+        webrtcProvider.awareness.on('change', () => {
+          if (webrtcProvider) {
+            updateAwarenessState(
+              webrtcProvider.awareness.getStates(),
+              webrtcProvider.awareness.clientID
+            )
+          }
+        })
+        
+        // Initial update
+        updateAwarenessState(
+          webrtcProvider.awareness.getStates(),
+          webrtcProvider.awareness.clientID
+        )
       }
       
       // Connect collab service to Yjs
@@ -176,6 +193,7 @@ const MilkdownInternal = defineComponent({
         ydoc.destroy()
         ydoc = null
       }
+      clearAwarenessState()
       console.log('[Collab] Cleanup complete')
     })
 

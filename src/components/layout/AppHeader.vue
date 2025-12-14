@@ -74,8 +74,33 @@
     
     <!-- Right: actions & Preview -->
     <div class="flex items-center gap-1">
-      <!-- Collaborator indicator (when in shared session) -->
-      <TooltipProvider v-if="sessionMemberCount > 1" :delay-duration="0">
+      <!-- Live collaborator avatars from Yjs awareness -->
+      <div v-if="otherUsers.length > 0" class="flex items-center -space-x-2 mr-2">
+        <TooltipProvider v-for="user in otherUsers.slice(0, 3)" :key="user.clientId" :delay-duration="0">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <div 
+                class="w-6 h-6 rounded-full border-2 border-background flex items-center justify-center text-xs font-medium text-white shadow-sm"
+                :style="{ backgroundColor: user.color }"
+              >
+                {{ user.name.charAt(0).toUpperCase() }}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>{{ user.name }}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <div 
+          v-if="otherUsers.length > 3" 
+          class="w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium shadow-sm"
+        >
+          +{{ otherUsers.length - 3 }}
+        </div>
+      </div>
+      
+      <!-- Session member count (when no live awareness) -->
+      <TooltipProvider v-else-if="sessionMemberCount > 1" :delay-duration="0">
         <Tooltip>
           <TooltipTrigger as-child>
             <div class="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-sm">
@@ -138,6 +163,9 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ThemeToggle, SidebarToggle, SaveButton } from '@/components/toolbar'
 import EditorToolbar from '@/components/editor/EditorToolbar.vue'
+import { useAwareness } from '@/composables/useAwareness'
+
+const { otherUsers } = useAwareness()
 
 defineProps<{
   canSave: boolean
