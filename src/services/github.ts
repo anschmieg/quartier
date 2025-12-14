@@ -258,6 +258,29 @@ class ProxyGitHubService {
     // TODO: Implement status
     return null
   }
+
+  /**
+   * List branches for a repository
+   */
+  async listBranches(owner: string, repo: string): Promise<{
+    branches: { name: string; sha: string; protected: boolean; isDefault: boolean }[]
+    defaultBranch: string
+  }> {
+    try {
+      const url = `/api/github/branches?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        console.error('[ProxyGitHubService] Failed to fetch branches:', response.statusText)
+        return { branches: [], defaultBranch: 'main' }
+      }
+
+      return await response.json()
+    } catch (e) {
+      console.error('[ProxyGitHubService] listBranches error:', e)
+      return { branches: [], defaultBranch: 'main' }
+    }
+  }
 }
 
 // Use mock in development (if needed) or real service

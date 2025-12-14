@@ -20,6 +20,15 @@
         </Button>
       </div>
       
+      <!-- Branch Selector -->
+      <div v-if="repo" class="px-3 pb-2">
+        <BranchSelector 
+          :owner="repoOwner" 
+          :repo="repoName"
+          @change="emit('change-branch', $event)"
+        />
+      </div>
+      
       <!-- File Browser -->
       <div class="flex-1 overflow-auto p-3">
         <FileBrowser 
@@ -42,16 +51,22 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { BookMarked, ChevronDown } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { FileBrowser } from '@/components/file-browser'
 import UserMenu from './UserMenu.vue'
+import BranchSelector from './BranchSelector.vue'
 
-defineProps<{
+const props = defineProps<{
   visible: boolean
   repo?: string
   selectedFile?: string | null
 }>()
+
+// Parse owner/repo from repo string
+const repoOwner = computed(() => props.repo?.split('/')[0] || '')
+const repoName = computed(() => props.repo?.split('/')[1] || '')
 
 const emit = defineEmits<{
   'open-repo-selector': []
@@ -61,5 +76,6 @@ const emit = defineEmits<{
   'create-folder': [parentPath: string]
   'rename-file': [path: string]
   'delete-file': [path: string]
+  'change-branch': [branch: string]
 }>()
 </script>
