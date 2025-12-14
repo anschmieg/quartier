@@ -159,7 +159,10 @@ async function loadRepoContents(repoFullName: string, path: string) {
           
           if (parts.length === 1) {
               // It's a file in the current folder
-              filtered.set(parts[0], { path: f.path, type: 'file' })
+              const fileName = parts[0]
+              if (fileName) {
+                  filtered.set(fileName, { path: f.path, type: 'file' })
+              }
           } else {
               // It's a folder
               const subFolderName = parts[0]
