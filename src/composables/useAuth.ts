@@ -22,9 +22,11 @@ function getCookie(name: string): string | null {
  */
 export function useAuth() {
     const user = ref<GitHubUser | null>(null)
+    const accessUser = ref<{ email: string } | null>(null)
     const isLoading = ref(true)
 
     const isAuthenticated = computed(() => user.value !== null)
+    const isAccessAuthenticated = computed(() => accessUser.value !== null)
     const isHost = computed(() => isAuthenticated.value)
     const isGuest = computed(() => !isAuthenticated.value)
 
@@ -32,7 +34,6 @@ export function useAuth() {
      * Load user from cookie on mount
      */
     function loadUser() {
-        isLoading.value = true
         try {
             const userCookie = getCookie('gh_user')
             if (userCookie) {
@@ -43,6 +44,34 @@ export function useAuth() {
         } catch (error) {
             console.error('Failed to parse user cookie:', error)
             user.value = null
+        }
+    }
+
+    /**
+     * Check Cloudflare Access identity
+     */
+    async function checkAccessAuth() {
+        try {
+            const res = await fetch('/api/auth/me', { credentials: 'include' })
+            if (res.ok) {
+                const data = await res.json()
+                if (data.email) {
+                    accessUser.value = { email: data.email }
+                }
+            }
+        } catch (e) {
+            console.error('Failed to check access auth:', e)
+        }
+    }
+
+    /**
+     * Initialize auth state
+     */
+    async function init() {
+        isLoading.value = true
+        loadUser()
+        if (!user.value) {
+            await checkAccessAuth()
         }
         isLoading.value = false
     }
@@ -65,6 +94,7 @@ export function useAuth() {
         try {
             await fetch('/api/oauth/logout', { method: 'POST' })
             user.value = null
+            accessUser.value = null
             // Redirect to home or reload
             window.location.href = '/'
         } catch (error) {
@@ -74,13 +104,15 @@ export function useAuth() {
 
     // Load user on composable init
     onMounted(() => {
-        loadUser()
+        init()
     })
 
     return {
         user,
+        accessUser,
         isLoading,
         isAuthenticated,
+        isAccessAuthenticated,
         isHost,
         isGuest,
         login,

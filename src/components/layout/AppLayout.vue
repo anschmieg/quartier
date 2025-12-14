@@ -35,6 +35,15 @@
 
       <!-- Main Content -->
       <main class="flex-1 flex flex-col h-full min-w-0 bg-background/50 transition-all duration-150">
+        <!-- Guest Mode Banner -->
+        <div v-if="isAccessAuthenticated && !isHost" class="bg-blue-50/50 border-b border-blue-100 px-4 py-2 flex items-center justify-between text-xs text-blue-700">
+          <span class="flex items-center gap-2">
+              <!-- Assuming 'Info' icon component is available, otherwise remove or replace -->
+              <!-- <Info class="w-4 h-4" /> -->
+              Guest Mode: You can edit files live, but cannot commit changes to GitHub.
+          </span>
+        </div>
+
         <!-- Editor/Preview Split -->
         <div class="flex-1 flex overflow-hidden relative">
           <div 
@@ -96,7 +105,13 @@
 </template>
 
 <script setup lang="ts">
+import { Eye, Code, Keyboard, PanelRightOpen, Share2, Users, Info } from 'lucide-vue-next'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useAwareness } from '@/composables/useAwareness'
+import { useAuth } from '@/composables/useAuth'
+
+const { otherUsers } = useAwareness()
+const { isAuthenticated, isAccessAuthenticated, isHost, user, accessUser } = useAuth()
 import { useStorage } from '@vueuse/core'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
@@ -177,21 +192,23 @@ whenever(() => Meta_K?.value || Ctrl_K?.value, () => openCommandPalette())
 onMounted(async () => {
   console.log('[AppLayout] onMounted - repo:', repo.value, 'currentFile:', currentFile.value)
   
-  // Fetch user email for collaboration
-  try {
-    const res = await fetch('/api/auth/me', { credentials: 'include' })
-    if (res.ok) {
-      const data = await res.json()
-      userEmail.value = data.email
-      console.log('[AppLayout] User email:', userEmail.value)
-    }
-  } catch (error) {
-    console.log('[AppLayout] Not authenticated or running locally')
+  // Auth state allows checking if we are host or guest
+  // userEmail is largely redundant if we use useAuth, but we keep it for now
+  if (accessUser.value?.email) {
+    userEmail.value = accessUser.value.email
+    console.log('[AppLayout] User email:', userEmail.value)
+  } else if (user.value?.login) {
+    // If Github user, we might want their email too, but for now just log
+    console.log('[AppLayout] GitHub User:', user.value.login)
   }
   
   if (repo.value && currentFile.value) {
     console.log('[AppLayout] Restoring file on mount:', currentFile.value)
-    await selectFile(currentFile.value)
+    
+    // Only try to load file if we have auth (Host or Access)
+    if (isAuthenticated.value || isAccessAuthenticated.value) {
+        await selectFile(currentFile.value)
+    }
   } else {
     console.log('[AppLayout] No file to restore')
   }

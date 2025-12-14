@@ -52,7 +52,24 @@
       </DropdownMenuContent>
     </DropdownMenu>
 
-    <!-- Guest user -->
+    <!-- Cloudflare Access Authenticated (Guest) -->
+    <div v-else-if="isAccessAuthenticated" class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-xs">
+        {{ accessUser?.email?.charAt(0).toUpperCase() }}
+      </div>
+      <div class="text-sm">
+        <div class="font-medium truncate max-w-[120px]" :title="accessUser?.email">{{ accessUser?.email }}</div>
+        <div class="text-xs text-muted-foreground">Guest</div>
+        <button 
+          @click="login()" 
+          class="text-xs text-primary hover:underline"
+        >
+          Link GitHub Account
+        </button>
+      </div>
+    </div>
+
+    <!-- Unauthenticated Guest -->
     <div v-else class="flex items-center gap-2">
       <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
         <User class="w-4 h-4 text-slate-500" />
@@ -82,7 +99,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/composables/useAuth'
 
-const { user, isLoading, isAuthenticated, login, logout } = useAuth()
+const { user, accessUser, isLoading, isAuthenticated, isAccessAuthenticated, login, logout } = useAuth()
 
 const emit = defineEmits<{
   'open-shared': [mode: 'shared-with-me' | 'shared-by-me']
