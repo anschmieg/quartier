@@ -21,5 +21,13 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],
+  },
+  build: {
+    chunkSizeWarningLimit: 3000,
+    rollupOptions: {
+      output: {
+        // manualChunks caused tree-shaking issues with veaury/react
+      }
+    }
   }
 })
