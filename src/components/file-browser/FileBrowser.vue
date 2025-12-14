@@ -55,8 +55,10 @@ const props = withDefaults(defineProps<{
   repo?: string
   selectedPath?: string | null
   isHost?: boolean
+  allowedPaths?: string[]
 }>(), {
-  isHost: false
+  isHost: false,
+  allowedPaths: () => []
 })
 
 const emit = defineEmits<{
@@ -146,6 +148,19 @@ async function loadRepoContents(repoFullName: string, path: string) {
           files.value = []
           return
       }
+
+      // Filter by allowed paths (if guest/restricted)
+      const visibleFiles = allFiles.filter(f => {
+          if (!props.allowedPaths || props.allowedPaths.length === 0) return true
+          const fullPath = `${owner}/${name}/${f.path}`
+          return props.allowedPaths.some(allowed => {
+              if (allowed.endsWith('/*')) {
+                  const allowedDir = allowed.slice(0, -2)
+                  return fullPath.startsWith(allowedDir + '/')
+              }
+              return fullPath === allowed || fullPath.startsWith(allowed + '/')
+          })
+      })
       
       // Filter logic:
       // If path is empty, show files with no slashes, OR folders (first part of path)
@@ -153,7 +168,7 @@ async function loadRepoContents(repoFullName: string, path: string) {
       
       const filtered = new Map<string, FileItem>()
       
-      allFiles.forEach(f => {
+      visibleFiles.forEach(f => {
           if (!f.path.startsWith(path ? path + '/' : '')) return
           
           const relative = path ? f.path.slice(path.length + 1) : f.path
@@ -217,10 +232,23 @@ async function handleExpandFolder(folderPath: string) {
           const allFiles = await kvSync.list(owner, name)
           if (!allFiles) return
           
+          // Filter by allowed paths
+          const visibleFiles = allFiles.filter(f => {
+              if (!props.allowedPaths || props.allowedPaths.length === 0) return true
+              const fullPath = `${owner}/${name}/${f.path}`
+              return props.allowedPaths.some(allowed => {
+                  if (allowed.endsWith('/*')) {
+                      const allowedDir = allowed.slice(0, -2)
+                      return fullPath.startsWith(allowedDir + '/')
+                  }
+                  return fullPath === allowed || fullPath.startsWith(allowed + '/')
+              })
+          })
+
           const newItems: FileItem[] = []
           const processedFolders = new Set<string>()
 
-          allFiles.forEach(f => {
+          visibleFiles.forEach(f => {
               // We want direct children of folderPath
               if (!f.path.startsWith(folderPath + '/')) return
               

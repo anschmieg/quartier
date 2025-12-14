@@ -36,6 +36,7 @@
           :repo="repo" 
           :selected-path="selectedFile"
           :is-host="isHost"
+          :allowed-paths="allowedPaths"
           @select="emit('select-file', $event)"
           @create-file="emit('create-file', $event)"
           @create-folder="emit('create-folder', $event)"
@@ -65,8 +66,10 @@ const props = withDefaults(defineProps<{
   repo?: string
   selectedFile?: string | null
   isHost?: boolean
+  allowedPaths?: string[]
 }>(), {
-  isHost: false
+  isHost: false,
+  allowedPaths: () => []
 })
 
 // Parse owner/repo from repo string

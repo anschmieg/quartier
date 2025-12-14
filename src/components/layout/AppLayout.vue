@@ -25,6 +25,7 @@
         :repo="repo"
         :selected-file="currentFile"
         :is-host="isHost"
+        :allowed-paths="allowedPaths"
         @open-repo-selector="isHost ? showRepoSelector = true : null"
         @select-file="selectFile"
         @open-shared="openSharedSessions"
@@ -158,7 +159,6 @@ const fullFilePath = computed(() => {
   return `${repo.value}/${currentFile.value}`
 })
 
-// Get session member count from localStorage
 const sessionMemberCount = computed(() => {
   try {
     const activeSession = localStorage.getItem('quartier:activeSession')
@@ -168,6 +168,17 @@ const sessionMemberCount = computed(() => {
     }
   } catch (e) { /* ignore */ }
   return 1
+})
+
+const allowedPaths = computed(() => {
+  try {
+    const activeSession = localStorage.getItem('quartier:activeSession')
+    if (activeSession) {
+      const session = JSON.parse(activeSession)
+      return session.paths || []
+    }
+  } catch (e) { /* ignore */ }
+  return []
 })
 
 // Auto-sync state
