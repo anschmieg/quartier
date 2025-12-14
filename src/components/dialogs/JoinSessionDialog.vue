@@ -1,6 +1,6 @@
 <template>
   <Dialog :open="true">
-    <DialogContent class="sm:max-w-md" :class="{ 'opacity-0': false } /* Prevent flickering */" :close-button="false">
+    <DialogContent class="sm:max-w-md" :class="{ 'opacity-0': false } /* Prevent flickering */" :hide-close="true">
       <!-- Loading -->
       <div v-if="loading" class="text-center py-6">
         <Loader2 class="h-8 w-8 animate-spin mx-auto text-primary" />
@@ -18,7 +18,7 @@
       <div v-else-if="session" class="space-y-6">
         <DialogHeader>
             <div class="flex justify-center mb-2">
-                <Users class="h-12 w-12 text-primary" />
+                <Users class="h-16 w-16 text-primary" />
             </div>
             <DialogTitle class="text-center text-xl">Join Session</DialogTitle>
             <DialogDescription class="text-center">
@@ -31,7 +31,7 @@
           <div class="max-h-32 overflow-y-auto">
             <ul class="space-y-2">
                 <li v-for="path in session.paths" :key="path" class="text-sm font-mono flex items-center gap-3">
-                <FileText class="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <FileText class="h-7 w-7 text-muted-foreground flex-shrink-0" />
                 <span>{{ formatPath(path) }}</span>
                 </li>
             </ul>
@@ -43,44 +43,37 @@
            <h3 class="text-sm font-semibold text-foreground/90 pl-1">Guest Mode:</h3>
            
            <!-- Live Edits -->
-           <div class="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-              <Edit3 class="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+           <div class="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
+              <Edit3 class="w-8 h-8 text-primary flex-shrink-0" />
               <div class="space-y-1">
                 <h4 class="text-sm font-medium">Live Editing</h4>
-                <p class="text-xs text-muted-foreground">
+                <p class="text-xs text-muted-foreground leading-snug">
                   You can edit files in real-time. Changes are synced instantly with the host and other guests.
                 </p>
               </div>
             </div>
 
             <!-- File System -->
-            <div class="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-              <HardDrive class="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div class="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
+              <HardDrive class="w-8 h-8 text-muted-foreground flex-shrink-0" />
               <div class="space-y-1">
                 <h4 class="text-sm font-medium">No File System Access</h4>
-                <p class="text-xs text-muted-foreground">
+                <p class="text-xs text-muted-foreground leading-snug">
                   Files are not written to the original storage, but are saved online and synced to the host.
                 </p>
               </div>
             </div>
             
             <!-- Visibility -->
-            <div class="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-              <Eye class="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div class="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
+              <Eye class="w-8 h-8 text-muted-foreground flex-shrink-0" />
               <div class="space-y-1">
                 <h4 class="text-sm font-medium">Limited Visibility</h4>
-                <p class="text-xs text-muted-foreground">
+                <p class="text-xs text-muted-foreground leading-snug">
                   Only files explicitly shared by the host are visible to you, unless you have access to the original storage (e.g. GitHub Repo).
                 </p>
               </div>
             </div>
-        </div>
-        
-        <!-- Permission badge -->
-        <div class="flex justify-center">
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-            {{ permission === 'edit' ? 'Can edit' : 'View only' }}
-          </span>
         </div>
         
         <!-- Login note -->
