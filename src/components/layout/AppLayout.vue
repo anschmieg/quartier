@@ -24,7 +24,8 @@
         :visible="showSidebar"
         :repo="repo"
         :selected-file="currentFile"
-        @open-repo-selector="showRepoSelector = true"
+        :is-host="isHost"
+        @open-repo-selector="isHost ? showRepoSelector = true : null"
         @select-file="selectFile"
         @open-shared="openSharedSessions"
         @create-file="handleCreateFile"
@@ -447,7 +448,15 @@ function handlePaletteAction(action: string) {
       editorMode.value = editorMode.value === 'visual' ? 'source' : 'visual'
       break
     case 'go-to-repo':
-      showRepoSelector.value = true
+      if (!repo.value) {
+        // Only prompt to select repo if we are Host (Github user)
+        // Guests rely on session/share link to set the repo
+        if (isHost.value) {
+          showRepoSelector.value = true
+        } else {
+          console.log('[AppLayout] Guest user, waiting for session-based repo...')
+        }
+      }
       break
     case 'new-file':
       handleCreateFile('')

@@ -181,23 +181,35 @@ async function joinSession() {
     const data = await res.json()
     
     // Store session in localStorage and redirect to app
+    console.log('[JoinPage] Storing session:', data.session.id)
     localStorage.setItem('quartier:activeSession', JSON.stringify(data.session))
     
     // Redirect based on first path
     if (data.session.paths.length > 0) {
       const firstPath = data.session.paths[0].replace(/\/\*$/, '') // Remove trailing /*
+      console.log('[JoinPage] Processing path:', firstPath)
+      
       // Parse owner/repo from path
       const parts = firstPath.split('/')
       if (parts.length >= 2) {
-        localStorage.setItem('quartier:repo', `${parts[0]}/${parts[1]}`)
+        const repoSlug = `${parts[0]}/${parts[1]}`
+        console.log('[JoinPage] Setting repo:', repoSlug)
+        localStorage.setItem('quartier:repo', repoSlug)
+        
         // If it's a specific file (has extension), set it as current file
         if (parts.length > 2) {
           const filePath = parts.slice(2).join('/')
           if (filePath.includes('.')) {
-            localStorage.setItem('quartier:currentFile', JSON.stringify(filePath))
+            console.log('[JoinPage] Setting currentFile:', filePath)
+            localStorage.setItem('quartier:currentFile', JSON.stringify(filePath)) // useStorage standardizes on JSON string
+          } else {
+             // If it's a folder, we might want to clear currentFile so it doesn't persist old one
+             localStorage.removeItem('quartier:currentFile')
           }
         }
       }
+    } else {
+        console.warn('[JoinPage] Session has no paths!')
     }
     
     router.push('/app')

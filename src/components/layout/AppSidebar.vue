@@ -10,18 +10,19 @@
           variant="outline" 
           size="sm" 
           class="w-full justify-between px-2 h-8 text-xs font-normal border-dashed" 
-          @click="emit('open-repo-selector')"
+          :class="{ 'opacity-100 cursor-default hover:bg-background': !isHost }"
+          @click="isHost && emit('open-repo-selector')"
         >
           <div class="flex items-center truncate">
             <BookMarked class="w-3.5 h-3.5 mr-2 opacity-70" />
-            <span class="truncate">{{ repo || 'Select Repository...' }}</span>
+            <span class="truncate">{{ repo || (isHost ? 'Select Repository...' : 'Shared Session') }}</span>
           </div>
-          <ChevronDown class="w-3 h-3 opacity-50 ml-2 flex-shrink-0" />
+          <ChevronDown v-if="isHost" class="w-3 h-3 opacity-50 ml-2 flex-shrink-0" />
         </Button>
       </div>
       
-      <!-- Branch Selector -->
-      <div v-if="repo" class="px-3 pb-2">
+      <!-- Branch Selector (Host only) -->
+      <div v-if="repo && isHost" class="px-3 pb-2">
         <BranchSelector 
           :owner="repoOwner" 
           :repo="repoName"
@@ -62,7 +63,8 @@ const props = defineProps<{
   visible: boolean
   repo?: string
   selectedFile?: string | null
-}>()
+  isHost?: boolean
+}>( { isHost: false } )
 
 // Parse owner/repo from repo string
 const repoOwner = computed(() => props.repo?.split('/')[0] || '')
