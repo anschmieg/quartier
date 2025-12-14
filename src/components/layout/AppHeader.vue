@@ -74,6 +74,21 @@
     
     <!-- Right: actions & Preview -->
     <div class="flex items-center gap-1">
+      <!-- Collaborator indicator (when in shared session) -->
+      <TooltipProvider v-if="sessionMemberCount > 1" :delay-duration="0">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <div class="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-sm">
+              <Users class="w-3.5 h-3.5" />
+              <span>{{ sessionMemberCount }}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>{{ sessionMemberCount }} collaborator{{ sessionMemberCount !== 1 ? 's' : '' }} in session</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
       <!-- Share button -->
       <TooltipProvider :delay-duration="0">
         <Tooltip>
@@ -118,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { Eye, Code, Keyboard, PanelRightOpen, Share2 } from 'lucide-vue-next'
+import { Eye, Code, Keyboard, PanelRightOpen, Share2, Users } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ThemeToggle, SidebarToggle, SaveButton } from '@/components/toolbar'
@@ -130,6 +145,7 @@ defineProps<{
   sidebarVisible: boolean
   showPreview: boolean
   editorMode: 'visual' | 'source'
+  sessionMemberCount: number
   getEditor: () => any
 }>()
 

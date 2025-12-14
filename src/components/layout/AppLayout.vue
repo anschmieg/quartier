@@ -8,6 +8,7 @@
       :editor-mode="editorMode"
       :get-editor="getEditorInstance"
       :can-share="!!currentFile && !!repo"
+      :session-member-count="sessionMemberCount"
       @command-palette="openCommandPalette"
       @save="saveFile"
       @share="openShareDialog"
@@ -135,6 +136,18 @@ const collabRoomId = computed(() => {
 const fullFilePath = computed(() => {
   if (!repo.value || !currentFile.value) return ''
   return `${repo.value}/${currentFile.value}`
+})
+
+// Get session member count from localStorage
+const sessionMemberCount = computed(() => {
+  try {
+    const activeSession = localStorage.getItem('quartier:activeSession')
+    if (activeSession) {
+      const session = JSON.parse(activeSession)
+      return session.members?.length || session.memberCount || 1
+    }
+  } catch (e) { /* ignore */ }
+  return 1
 })
 
 // Auto-sync state
