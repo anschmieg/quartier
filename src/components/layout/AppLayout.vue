@@ -95,10 +95,6 @@
       :file-path="fullFilePath"
     />
     <SharedSessionsDialog ref="sharedSessionsDialogRef" />
-    <GuestWelcomeDialog 
-      v-model:open="showGuestWelcome" 
-      @close="guestWelcomeSeen = true" 
-    />
     <JoinSessionDialog v-if="route.name === 'share'" @joined="handleJoined" />
     <Toast ref="toastRef" />
   </div>
@@ -125,7 +121,6 @@ import { githubService } from '@/services/github'
 import { cachedFileSystem, kvSync } from '@/services/storage'
 
 import { useRoute } from 'vue-router'
-import GuestWelcomeDialog from '@/components/dialogs/GuestWelcomeDialog.vue'
 import JoinSessionDialog from '@/components/dialogs/JoinSessionDialog.vue'
 
 // Router
@@ -137,7 +132,6 @@ const currentFile = useStorage<string | null>('quartier:currentFile', null)
 const showSidebar = useStorage('quartier:showSidebar', true)
 const showPreview = useStorage('quartier:showPreview', false)
 const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visual')
-const guestWelcomeSeen = useStorage('quartier:guestWelcomeSeen', false)
 
 // Transient State (not persisted)
 const fileContent = ref('')
@@ -147,21 +141,11 @@ const commandPaletteRef = ref()
 const commitDialogRef = ref()
 const toastRef = ref()
 const showRepoSelector = ref(false)
-const showGuestWelcome = ref(false)
 const recentFiles = ref<string[]>([])
 const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 const shareDialogRef = ref<InstanceType<typeof ShareDialog> | null>(null)
 const sharedSessionsDialogRef = ref<InstanceType<typeof SharedSessionsDialog> | null>(null)
 const userEmail = ref<string | undefined>(undefined)
-
-// Watch for guest authentication to show welcome
-// Using watch effectively handles async auth loading
-import { watch } from 'vue'
-watch(() => [isAccessAuthenticated.value, isHost.value, guestWelcomeSeen.value], () => {
-  if (isAccessAuthenticated.value && !isHost.value && !guestWelcomeSeen.value) {
-    showGuestWelcome.value = true
-  }
-}, { immediate: true })
 
 // Computed room ID for collaboration
 const collabRoomId = computed(() => {

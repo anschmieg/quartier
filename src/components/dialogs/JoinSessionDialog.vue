@@ -22,14 +22,14 @@
             </div>
             <DialogTitle class="text-center text-xl">Join Session</DialogTitle>
             <DialogDescription class="text-center">
-                {{ session.owner }} invited you to collaborate
+                {{ session.owner }} invited you to collaborate on these files:
             </DialogDescription>
         </DialogHeader>
         
         <!-- Paths in session -->
         <div class="bg-muted/50 rounded-md p-3">
-          <p class="text-xs text-muted-foreground mb-2 font-medium">Shared contents:</p>
-          <div class="max-h-40 overflow-y-auto">
+          <!-- <p class="text-xs text-muted-foreground mb-2 font-medium">Shared contents:</p> -->
+          <div class="max-h-32 overflow-y-auto">
             <ul class="space-y-1">
                 <li v-for="path in session.paths" :key="path" class="text-sm font-mono flex items-center gap-2">
                 <FileText class="h-3.5 w-3.5 text-muted-foreground" />
@@ -37,6 +37,42 @@
                 </li>
             </ul>
           </div>
+        </div>
+        
+        <!-- Info Blocks -->
+        <div class="space-y-3">
+           <!-- Live Edits -->
+           <div class="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+              <Edit3 class="w-5 h-5 text-primary mt-0.5" />
+              <div class="space-y-1">
+                <h4 class="text-sm font-medium">Live Editing</h4>
+                <p class="text-xs text-muted-foreground">
+                  You can edit files in real-time. Changes are synced instantly with the host and other guests.
+                </p>
+              </div>
+            </div>
+
+            <!-- File System -->
+            <div class="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+              <HardDrive class="w-5 h-5 text-muted-foreground mt-0.5" />
+              <div class="space-y-1">
+                <h4 class="text-sm font-medium">No File System Access</h4>
+                <p class="text-xs text-muted-foreground">
+                  Files are not written to the original storage, but are saved online and synced to the host.
+                </p>
+              </div>
+            </div>
+            
+            <!-- Visibility -->
+            <div class="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+              <Eye class="w-5 h-5 text-muted-foreground mt-0.5" />
+              <div class="space-y-1">
+                <h4 class="text-sm font-medium">Limited Visibility</h4>
+                <p class="text-xs text-muted-foreground">
+                  Only files explicitly shared by the host are visible to you.
+                </p>
+              </div>
+            </div>
         </div>
         
         <!-- Permission badge -->
@@ -47,12 +83,8 @@
         </div>
         
         <!-- Login note -->
-        <div class="text-xs text-muted-foreground text-center space-y-1 bg-muted/30 p-2 rounded">
-          <p class="font-medium">Requires GitHub login to:</p>
-          <ul class="text-left inline-block list-disc pl-4 space-y-0.5">
-            <li>Track edits & contributions</li>
-            <li>Sync changes to host</li>
-          </ul>
+        <div class="text-xs text-muted-foreground text-center space-y-1 pt-1 opacity-80">
+          <p>Joining requires GitHub login to track contributions.</p>
         </div>
         
         <DialogFooter>
@@ -77,7 +109,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Loader2, XCircle, FileText } from 'lucide-vue-next'
+import { Loader2, XCircle, FileText, Edit3, HardDrive, Eye } from 'lucide-vue-next'
 import { devFetch } from '@/utils/devTools'
 import { useAuth } from '@/composables/useAuth'
 
