@@ -152,10 +152,12 @@ async function joinSession() {
     if (!res.ok) {
       const data = await res.json()
       
-      // If not authenticated, redirect to login with return URL
+      // If not authenticated, redirect to protected route to trigger Cloudflare Access login
       if (res.status === 401) {
         const returnUrl = encodeURIComponent(window.location.pathname)
-        window.location.href = `/api/oauth/login?return_to=${returnUrl}`
+        // Redirect to /app which is protected. Cloudflare will intercept -> Login -> /app
+        // We add return_to so the app knows to send us back here
+        window.location.href = `/app?return_to=${returnUrl}`
         return
       }
       

@@ -34,4 +34,21 @@ const router = createRouter({
     routes
 })
 
+// Handle return_to redirection after Cloudflare Access login
+router.beforeEach((to, from, next) => {
+    if (to.query.return_to) {
+        const returnTo = to.query.return_to as string
+        // Validate it's a relative path to prevent open redirect
+        if (returnTo.startsWith('/')) {
+            // Remove the param to clean up URL and redirect
+            const nextPath = returnTo
+            // Delete the query param from current navigation
+            delete to.query.return_to
+            next(nextPath)
+            return
+        }
+    }
+    next()
+})
+
 export default router
