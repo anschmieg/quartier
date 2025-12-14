@@ -35,8 +35,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const url = new URL(context.request.url)
     const pathParts = url.pathname.replace('/api/sync/', '').split('/')
 
-    const pathParts = url.pathname.replace('/api/sync/', '').split('/')
-
     // Case 1: List files (owner/repo)
     if (pathParts.length === 2) {
         const prefix = pathParts.join('/') + '/'
