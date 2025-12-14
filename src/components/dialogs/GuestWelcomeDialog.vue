@@ -20,11 +20,11 @@
         </div>
 
         <div class="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-          <GitCommit class="w-5 h-5 text-muted-foreground mt-0.5" />
+          <HardDrive class="w-5 h-5 text-muted-foreground mt-0.5" />
           <div class="space-y-1">
-            <h4 class="text-sm font-medium">No Commits</h4>
+            <h4 class="text-sm font-medium">No File System Access</h4>
             <p class="text-xs text-muted-foreground">
-              As a guest, you cannot commit changes directly to GitHub. The Host manages commits.
+              As a guest, you cannot write directly to the underlying storage. The Host manages saving and persistence.
             </p>
           </div>
         </div>
@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Edit3, GitCommit } from 'lucide-vue-next'
+import { Edit3, HardDrive } from 'lucide-vue-next'
 import {
   Dialog,
   DialogContent,
