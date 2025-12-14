@@ -66,9 +66,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Loader2, XCircle, FileText } from 'lucide-vue-next'
 import { devFetch } from '@/utils/devTools'
+import { useAuth } from '@/composables/useAuth'
 
 const route = useRoute()
 const router = useRouter()
+const { isAccessAuthenticated, checkAccessAuth } = useAuth()
 
 const loading = ref(true)
 const joining = ref(false)
@@ -143,7 +145,18 @@ async function joinSession() {
   joining.value = true
   
   try {
-    // Call protected API endpoint to ensure headers are injected
+    // 1. Check if we are authenticated (Cloudflare Access)
+    await checkAccessAuth()
+    
+    // 2. If not authenticated, redirect to trigger Cloudflare Login flow
+    // We redirect to /app but include return_to so we come back here
+    if (!isAccessAuthenticated.value) {
+      const returnUrl = encodeURIComponent(window.location.pathname)
+      window.location.href = `/app?return_to=${returnUrl}`
+      return
+    }
+
+    // 3. If authenticated, call the protected API to join
     const res = await devFetch(`/api/share/${token}`, {
       method: 'POST',
       credentials: 'include'

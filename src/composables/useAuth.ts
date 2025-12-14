@@ -118,5 +118,6 @@ export function useAuth() {
         login,
         logout,
         loadUser,
+        checkAccessAuth
     }
 }
