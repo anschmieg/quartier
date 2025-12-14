@@ -52,7 +52,9 @@ function isPathAllowed(requestedPath: string, sessionPaths: string[], owner: str
         }
 
         // Requesting a parent directory of an allowed path (for directory listing)
-        if (normalizedAllowed.startsWith(fullPath + '/')) {
+        // Handle empty path (root) case
+        const pathToCheck = requestedPath ? fullPath + '/' : `${owner}/${repo}/`
+        if (normalizedAllowed.startsWith(pathToCheck)) {
             return true
         }
     }
@@ -61,12 +63,40 @@ function isPathAllowed(requestedPath: string, sessionPaths: string[], owner: str
 }
 
 /**
- * Filter directory listing to only show allowed paths
+ * Filter directory listing to only show items within allowed paths
+ * This ensures guests only see files/folders on the way to or within allowed paths
  */
 function filterDirectoryListing(items: any[], sessionPaths: string[], owner: string, repo: string, currentPath: string): any[] {
+    const prefix = `${owner}/${repo}/`
+
     return items.filter(item => {
         const itemPath = currentPath ? `${currentPath}/${item.name}` : item.name
-        return isPathAllowed(itemPath, sessionPaths, owner, repo)
+        const fullItemPath = `${prefix}${itemPath}`.replace(/\/+/g, '/')
+
+        for (const allowed of sessionPaths) {
+            const normalizedAllowed = allowed.replace(/\/+/g, '/')
+
+            // Case 1: Item is within allowed path (e.g., src/components/* allows src/components/Button.vue)
+            if (normalizedAllowed.endsWith('/*')) {
+                const allowedPrefix = normalizedAllowed.slice(0, -1) // Remove *
+                if (fullItemPath.startsWith(allowedPrefix)) {
+                    return true
+                }
+            }
+
+            // Case 2: Item matches exactly
+            if (fullItemPath === normalizedAllowed) {
+                return true
+            }
+
+            // Case 3: Item is a directory on the path to an allowed location
+            // e.g., when at root listing "src" and allowed is "owner/repo/src/components/*"
+            if (normalizedAllowed.startsWith(fullItemPath + '/')) {
+                return true
+            }
+        }
+
+        return false
     })
 }
 
@@ -144,7 +174,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             })
         }
 
-        isGuest = !isOwner && !accessToken
+        isGuest = !isOwner // All non-owners get filtered view
 
         // Use owner's token for guests (stored in session or fallback to dev token)
         if (!accessToken && context.env.DEV_ACCESS_TOKEN) {
