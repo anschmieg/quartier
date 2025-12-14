@@ -30,6 +30,12 @@ export default defineConfig({
             if (id.includes('@milkdown') || id.includes('prosemirror') || id.includes('yjs') || id.includes('y-websocket') || id.includes('y-indexeddb')) {
               return 'editor-libs'
             }
+            if (id.includes('codemirror') || id.includes('vue-codemirror') || id.includes('vscode-icons')) {
+              return 'code-editor'
+            }
+            if (id.includes('lucide') || id.includes('radix') || id.includes('shadcn') || id.includes('reka-ui')) {
+              return 'ui-libs'
+            }
           }
         }
       }

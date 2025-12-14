@@ -53,9 +53,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import CodeEditor from './CodeEditor.vue'
-import MilkdownEditor from './MilkdownEditor.vue'
+import { ref, watch, defineAsyncComponent } from 'vue'
+
+// Lazy load editors to split bundles
+const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
+const MilkdownEditor = defineAsyncComponent(() => import('./MilkdownEditor.vue'))
 
 // Reference to the Milkdown component to access exposed methods
 const milkdownRef = ref<any>(null)
