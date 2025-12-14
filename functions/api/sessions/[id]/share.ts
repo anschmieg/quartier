@@ -23,16 +23,10 @@ interface ShareToken {
     created: number
 }
 
-// Word lists for generating memorable share tokens
-const adjectives = ['red', 'blue', 'green', 'gold', 'silver', 'swift', 'calm', 'bold', 'bright', 'dark', 'warm', 'cool', 'wild', 'soft', 'sharp', 'quiet', 'loud', 'quick', 'slow', 'tall', 'deep', 'wide', 'thin', 'rich', 'pure']
-const nouns = ['apple', 'river', 'mountain', 'forest', 'ocean', 'storm', 'moon', 'star', 'cloud', 'stone', 'leaf', 'flame', 'wave', 'wind', 'snow', 'rain', 'sun', 'tree', 'bird', 'fish', 'bear', 'wolf', 'fox', 'owl', 'hawk']
-const verbs = ['runs', 'flies', 'grows', 'shines', 'falls', 'rises', 'flows', 'drifts', 'leaps', 'glows', 'burns', 'floats', 'rolls', 'spins', 'soars', 'dives', 'climbs', 'rests', 'waits', 'moves', 'turns', 'stays', 'goes', 'comes', 'dreams']
+import { humanId } from 'human-id'
 
 function generateShareToken(): string {
-    const adj = adjectives[Math.floor(Math.random() * adjectives.length)]
-    const noun = nouns[Math.floor(Math.random() * nouns.length)]
-    const verb = verbs[Math.floor(Math.random() * verbs.length)]
-    return `${adj}-${noun}-${verb}`
+    return humanId({ separator: '-', capitalize: false })
 }
 
 interface Env {
