@@ -105,12 +105,10 @@
 </template>
 
 <script setup lang="ts">
-import { Eye, Code, Keyboard, PanelRightOpen, Share2, Users, Info } from 'lucide-vue-next'
+import { Info } from 'lucide-vue-next'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useAwareness } from '@/composables/useAwareness'
 import { useAuth } from '@/composables/useAuth'
 
-const { otherUsers } = useAwareness()
 const { isAuthenticated, isAccessAuthenticated, isHost, user, accessUser } = useAuth()
 import { useStorage } from '@vueuse/core'
 import AppHeader from './AppHeader.vue'
