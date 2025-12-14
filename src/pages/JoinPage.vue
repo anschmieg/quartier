@@ -96,22 +96,37 @@ onMounted(async () => {
   const token = route.params.token as string
   
   try {
-    // In dev mode, devFetch adds X-Dev-User header based on ?dev-user param
     console.log('[JoinPage] Fetching share token:', token)
     const res = await devFetch(`/share/${token}`, {
       credentials: 'include'
     })
     
     console.log('[JoinPage] Response status:', res.status)
+    console.log('[JoinPage] Content-Type:', res.headers.get('content-type'))
+    
+    // Read as text first to debug
+    const text = await res.text()
+    console.log('[JoinPage] Response text (first 200 chars):', text.substring(0, 200))
+    
+    // Check if response is JSON
+    if (!res.headers.get('content-type')?.includes('application/json')) {
+      // Likely Cloudflare Access HTML page
+      if (text.includes('cloudflare') || text.includes('access')) {
+        error.value = 'Share endpoint blocked by Cloudflare Access. Check Access policy for /share/'
+      } else {
+        error.value = 'Unexpected response format'
+      }
+      return
+    }
+    
+    const data = JSON.parse(text)
     
     if (!res.ok) {
-      const data = await res.json()
       console.log('[JoinPage] Error response:', data)
       error.value = data.error || 'Invalid link'
       return
     }
     
-    const data = await res.json()
     console.log('[JoinPage] Success:', data)
     session.value = data.session
     permission.value = data.permission
