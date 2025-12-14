@@ -42,6 +42,15 @@
           </span>
         </div>
         
+        <!-- Login note -->
+        <div class="text-xs text-muted-foreground text-center space-y-1 pt-2">
+          <p>Joining requires a GitHub login to:</p>
+          <ul class="text-left inline-block">
+            <li>• Track your edits and contributions</li>
+            <li>• Sync changes to the repository</li>
+          </ul>
+        </div>
+        
         <!-- Join button -->
         <Button @click="joinSession" :disabled="joining" class="w-full">
           {{ joining ? 'Joining...' : 'Join Session' }}
