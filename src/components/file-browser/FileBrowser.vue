@@ -44,6 +44,8 @@ import FileTree from './FileTree.vue'
 import PathBreadcrumbs from './PathBreadcrumbs.vue'
 import FileFilters from './FileFilters.vue'
 import { githubService } from '@/services/github'
+import { useAuth } from '@/composables/useAuth'
+import { kvSync } from '@/services/storage'
 
 interface FileItem {
   path: string
@@ -110,8 +112,6 @@ watch(() => props.repo, async (newRepo) => {
   }
 }, { immediate: true })
 
-import { useAuth } from '@/composables/useAuth'
-import { kvSync } from '@/services/storage'
 const { isHost } = useAuth()
 
 // ...
