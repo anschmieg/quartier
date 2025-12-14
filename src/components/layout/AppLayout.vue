@@ -27,6 +27,10 @@
         @open-repo-selector="showRepoSelector = true"
         @select-file="selectFile"
         @open-shared="openSharedSessions"
+        @create-file="handleCreateFile"
+        @create-folder="handleCreateFolder"
+        @rename-file="handleRenameFile"
+        @delete-file="handleDeleteFile"
       />
 
       <!-- Main Content -->
@@ -282,6 +286,73 @@ async function selectFile(path: string) {
     fileContent.value = `# Error loading file\n\nFailed to load ${path}:\n${error instanceof Error ? error.message : 'Unknown error'}`
   } finally {
     fileLoading.value = false
+  }
+}
+
+// File operation handlers
+async function handleCreateFile(parentPath: string) {
+  if (!repo.value) return
+  const [owner, name] = repo.value.split('/')
+  if (!owner || !name) return
+  
+  const fileName = window.prompt('Enter new file name:', 'new-file.qmd')
+  if (!fileName) return
+  
+  const fullPath = parentPath ? `${parentPath}/${fileName}` : fileName
+  const result = await githubService.createFile(owner, name, fullPath, '---\ntitle: "New Document"\n---\n\n')
+  
+  if (result.success) {
+    // Reload and select the new file
+    selectFile(fullPath)
+    window.location.reload() // Refresh file tree
+  } else {
+    alert(`Failed to create file: ${result.error}`)
+  }
+}
+
+async function handleCreateFolder(_parentPath: string) {
+  // GitHub doesn't have "folders" - they're created when a file is added
+  alert('To create a folder, create a new file with a path like "folder/file.qmd"')
+}
+
+async function handleRenameFile(path: string) {
+  if (!repo.value) return
+  const [owner, name] = repo.value.split('/')
+  if (!owner || !name) return
+  
+  const currentName = path.split('/').pop() || path
+  const newName = window.prompt('Enter new name:', currentName)
+  if (!newName || newName === currentName) return
+  
+  const parentPath = path.split('/').slice(0, -1).join('/')
+  const newPath = parentPath ? `${parentPath}/${newName}` : newName
+  
+  const result = await githubService.renameFile(owner, name, path, newPath)
+  
+  if (result.success) {
+    selectFile(newPath)
+    window.location.reload()
+  } else {
+    alert(`Failed to rename: ${result.error}`)
+  }
+}
+
+async function handleDeleteFile(path: string) {
+  if (!repo.value) return
+  const [owner, name] = repo.value.split('/')
+  if (!owner || !name) return
+  
+  const confirmed = window.confirm(`Delete "${path}"? This cannot be undone.`)
+  if (!confirmed) return
+  
+  const result = await githubService.deleteFile(owner, name, path)
+  
+  if (result.success) {
+    currentFile.value = null
+    fileContent.value = ''
+    window.location.reload()
+  } else {
+    alert(`Failed to delete: ${result.error}`)
   }
 }
 

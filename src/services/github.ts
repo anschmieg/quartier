@@ -146,6 +146,101 @@ class ProxyGitHubService {
     }
   }
 
+  /**
+   * Create a new file
+   */
+  async createFile(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string = '',
+    message: string = `Create ${path}`
+  ): Promise<{ success: boolean; error?: string }> {
+    // Uses the commit endpoint which handles creation when no SHA exists
+    const result = await this.commitChanges(owner, repo, path, content, message)
+    return { success: result.success, error: result.error }
+  }
+
+  /**
+   * Get file SHA (needed for delete/rename)
+   */
+  async getFileSha(owner: string, repo: string, path: string): Promise<string | null> {
+    try {
+      const sessionParam = this.getSessionParam()
+      const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}${sessionParam}`
+      const response = await fetch(url)
+      if (!response.ok) return null
+      const data = await response.json() as { sha?: string }
+      return data.sha || null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Delete a file
+   */
+  async deleteFile(
+    owner: string,
+    repo: string,
+    path: string,
+    message: string = `Delete ${path}`
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const sha = await this.getFileSha(owner, repo, path)
+      if (!sha) {
+        return { success: false, error: 'File not found or unable to get SHA' }
+      }
+
+      const response = await fetch('/api/github/file', {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner, repo, path, message, sha })
+      })
+
+      const result = await response.json() as { success?: boolean; error?: string }
+      if (!response.ok) {
+        return { success: false, error: result.error || 'Delete failed' }
+      }
+      return { success: true }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Unknown error' }
+    }
+  }
+
+  /**
+   * Rename a file (copy + delete)
+   */
+  async renameFile(
+    owner: string,
+    repo: string,
+    oldPath: string,
+    newPath: string,
+    message: string = `Rename ${oldPath} to ${newPath}`
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Read existing file content
+      const content = await this.readFile(owner, repo, oldPath)
+
+      // Create new file
+      const createResult = await this.createFile(owner, repo, newPath, content, message)
+      if (!createResult.success) {
+        return { success: false, error: createResult.error || 'Failed to create new file' }
+      }
+
+      // Delete old file
+      const deleteResult = await this.deleteFile(owner, repo, oldPath, message)
+      if (!deleteResult.success) {
+        return { success: false, error: `Created new file but failed to delete old: ${deleteResult.error}` }
+      }
+
+      return { success: true }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Unknown error' }
+    }
+  }
+
   async hasQuartierWorkflow(_owner: string, _repo: string): Promise<boolean> {
     // TODO: Implement check
     return false

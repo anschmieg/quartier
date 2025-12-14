@@ -26,6 +26,10 @@
           :repo="repo" 
           :selected-path="selectedFile"
           @select="emit('select-file', $event)"
+          @create-file="emit('create-file', $event)"
+          @create-folder="emit('create-folder', $event)"
+          @rename="emit('rename-file', $event)"
+          @delete="emit('delete-file', $event)"
         />
       </div>
 
@@ -53,5 +57,9 @@ const emit = defineEmits<{
   'open-repo-selector': []
   'select-file': [path: string]
   'open-shared': [mode: 'shared-with-me' | 'shared-by-me']
+  'create-file': [parentPath: string]
+  'create-folder': [parentPath: string]
+  'rename-file': [path: string]
+  'delete-file': [path: string]
 }>()
 </script>
