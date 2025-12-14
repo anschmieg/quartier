@@ -97,21 +97,27 @@ onMounted(async () => {
   
   try {
     // In dev mode, devFetch adds X-Dev-User header based on ?dev-user param
+    console.log('[JoinPage] Fetching share token:', token)
     const res = await devFetch(`/share/${token}`, {
       credentials: 'include'
     })
     
+    console.log('[JoinPage] Response status:', res.status)
+    
     if (!res.ok) {
       const data = await res.json()
+      console.log('[JoinPage] Error response:', data)
       error.value = data.error || 'Invalid link'
       return
     }
     
     const data = await res.json()
+    console.log('[JoinPage] Success:', data)
     session.value = data.session
     permission.value = data.permission
   } catch (e) {
-    error.value = 'Failed to load session'
+    console.error('[JoinPage] Catch error:', e)
+    error.value = e instanceof Error ? e.message : 'Failed to load session'
   } finally {
     loading.value = false
   }
