@@ -18,7 +18,7 @@
       <div v-else-if="session" class="space-y-6">
         <DialogHeader>
             <div class="flex justify-center mb-2">
-                <FileText class="h-10 w-10 text-primary" />
+                <Users class="h-12 w-12 text-primary" />
             </div>
             <DialogTitle class="text-center text-xl">Join Session</DialogTitle>
             <DialogDescription class="text-center">
@@ -28,12 +28,11 @@
         
         <!-- Paths in session -->
         <div class="bg-muted/50 rounded-md p-3">
-          <!-- <p class="text-xs text-muted-foreground mb-2 font-medium">Shared contents:</p> -->
           <div class="max-h-32 overflow-y-auto">
-            <ul class="space-y-1">
-                <li v-for="path in session.paths" :key="path" class="text-sm font-mono flex items-center gap-2">
-                <FileText class="h-3.5 w-3.5 text-muted-foreground" />
-                {{ formatPath(path) }}
+            <ul class="space-y-2">
+                <li v-for="path in session.paths" :key="path" class="text-sm font-mono flex items-center gap-3">
+                <FileText class="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <span>{{ formatPath(path) }}</span>
                 </li>
             </ul>
           </div>
@@ -41,9 +40,11 @@
         
         <!-- Info Blocks -->
         <div class="space-y-3">
+           <h3 class="text-sm font-semibold text-foreground/90 pl-1">Guest Mode:</h3>
+           
            <!-- Live Edits -->
            <div class="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-              <Edit3 class="w-5 h-5 text-primary mt-0.5" />
+              <Edit3 class="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
               <div class="space-y-1">
                 <h4 class="text-sm font-medium">Live Editing</h4>
                 <p class="text-xs text-muted-foreground">
@@ -54,7 +55,7 @@
 
             <!-- File System -->
             <div class="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-              <HardDrive class="w-5 h-5 text-muted-foreground mt-0.5" />
+              <HardDrive class="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
               <div class="space-y-1">
                 <h4 class="text-sm font-medium">No File System Access</h4>
                 <p class="text-xs text-muted-foreground">
@@ -65,11 +66,11 @@
             
             <!-- Visibility -->
             <div class="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-              <Eye class="w-5 h-5 text-muted-foreground mt-0.5" />
+              <Eye class="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
               <div class="space-y-1">
                 <h4 class="text-sm font-medium">Limited Visibility</h4>
                 <p class="text-xs text-muted-foreground">
-                  Only files explicitly shared by the host are visible to you.
+                  Only files explicitly shared by the host are visible to you, unless you have access to the original storage (e.g. GitHub Repo).
                 </p>
               </div>
             </div>
@@ -84,7 +85,7 @@
         
         <!-- Login note -->
         <div class="text-xs text-muted-foreground text-center space-y-1 pt-1 opacity-80">
-          <p>Joining requires GitHub login to track contributions.</p>
+          <p>Joining requires you to log in to synchronize changes.</p>
         </div>
         
         <DialogFooter>
@@ -109,7 +110,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Loader2, XCircle, FileText, Edit3, HardDrive, Eye } from 'lucide-vue-next'
+import { Loader2, XCircle, FileText, Edit3, HardDrive, Eye, Users } from 'lucide-vue-next'
 import { devFetch } from '@/utils/devTools'
 import { useAuth } from '@/composables/useAuth'
 
