@@ -8,7 +8,7 @@
 interface Session {
     id: string
     owner: string
-    files: string[]
+    paths: string[]
     members: string[]
     created: number
     name?: string

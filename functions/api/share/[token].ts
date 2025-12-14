@@ -9,7 +9,7 @@
 interface Session {
     id: string
     owner: string
-    files: string[]
+    paths: string[]
     members: string[]
     created: number
     name?: string
@@ -78,7 +78,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             session: {
                 id: session.id,
                 name: session.name,
-                files: session.files,
+                paths: session.paths,
                 owner: session.owner.split('@')[0] + '@***',
                 memberCount: session.members.length
             },
@@ -152,7 +152,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             session: {
                 id: session.id,
                 name: session.name,
-                files: session.files,
+                paths: session.paths,
                 memberCount: session.members.length
             },
             permission: shareToken.permission

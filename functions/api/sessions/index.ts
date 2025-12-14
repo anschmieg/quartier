@@ -9,7 +9,12 @@
 interface Session {
     id: string
     owner: string
-    files: string[]
+    // Path patterns: 
+    // - "owner/repo" = entire repo
+    // - "owner/repo/folder" = folder and subfolders  
+    // - "owner/repo/folder/*" = explicit wildcard
+    // - "owner/repo/file.md" = single file
+    paths: string[]
     members: string[]
     created: number
     name?: string
@@ -48,21 +53,34 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     try {
         const body = await context.request.json() as {
-            files: string[]
+            paths: string[]
             name?: string
         }
 
-        if (!body.files || body.files.length === 0) {
-            return new Response(JSON.stringify({ error: 'At least one file required' }), {
+        if (!body.paths || body.paths.length === 0) {
+            return new Response(JSON.stringify({ error: 'At least one path required' }), {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' }
             })
         }
 
+        // Validate path format (must be owner/repo or owner/repo/...)
+        for (const path of body.paths) {
+            const parts = path.replace(/\/\*$/, '').split('/')
+            if (parts.length < 2) {
+                return new Response(JSON.stringify({
+                    error: `Invalid path format: ${path}. Must be owner/repo or owner/repo/path`
+                }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                })
+            }
+        }
+
         const session: Session = {
             id: generateSessionId(),
             owner: email,
-            files: body.files,
+            paths: body.paths,
             members: [email], // Owner is first member
             created: Date.now(),
             name: body.name

@@ -81,7 +81,7 @@ async function createSession() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: [props.filePath] })
+      body: JSON.stringify({ paths: [props.filePath] })
     })
     
     if (!sessionRes.ok) throw new Error('Failed to create session')

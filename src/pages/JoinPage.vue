@@ -24,13 +24,13 @@
           </p>
         </div>
         
-        <!-- Files in session -->
+        <!-- Paths in session -->
         <div class="bg-muted rounded-md p-3">
-          <p class="text-xs text-muted-foreground mb-2">Files to edit:</p>
+          <p class="text-xs text-muted-foreground mb-2">Shared paths:</p>
           <ul class="space-y-1">
-            <li v-for="file in session.files" :key="file" class="text-sm font-mono flex items-center gap-2">
+            <li v-for="path in session.paths" :key="path" class="text-sm font-mono flex items-center gap-2">
               <FileText class="h-4 w-4 text-muted-foreground" />
-              {{ file.split('/').pop() }}
+              {{ formatPath(path) }}
             </li>
           </ul>
         </div>
@@ -65,6 +65,22 @@ const joining = ref(false)
 const error = ref<string | null>(null)
 const session = ref<any>(null)
 const permission = ref<string>('edit')
+
+/**
+ * Format a path for display
+ * owner/repo → repo (entire repo)
+ * owner/repo/folder → folder/ 
+ * owner/repo/folder/* → folder/*
+ * owner/repo/file.md → file.md
+ */
+function formatPath(path: string): string {
+  const parts = path.split('/')
+  if (parts.length === 2) return `${parts[1]} (entire repo)`
+  const lastPart = parts.slice(2).join('/')
+  if (lastPart.includes('.')) return lastPart // File
+  if (lastPart.endsWith('/*')) return lastPart // Wildcard
+  return `${lastPart}/` // Folder
+}
 
 onMounted(async () => {
   const token = route.params.token as string
@@ -111,14 +127,20 @@ async function joinSession() {
     // Store session in localStorage and redirect to app
     localStorage.setItem('quartier:activeSession', JSON.stringify(data.session))
     
-    // Redirect to first file
-    if (data.session.files.length > 0) {
-      const file = data.session.files[0]
-      // Parse owner/repo from file path
-      const parts = file.split('/')
-      if (parts.length >= 3) {
+    // Redirect based on first path
+    if (data.session.paths.length > 0) {
+      const firstPath = data.session.paths[0].replace(/\/\*$/, '') // Remove trailing /*
+      // Parse owner/repo from path
+      const parts = firstPath.split('/')
+      if (parts.length >= 2) {
         localStorage.setItem('quartier:repo', `${parts[0]}/${parts[1]}`)
-        localStorage.setItem('quartier:currentFile', JSON.stringify(parts.slice(2).join('/')))
+        // If it's a specific file (has extension), set it as current file
+        if (parts.length > 2) {
+          const filePath = parts.slice(2).join('/')
+          if (filePath.includes('.')) {
+            localStorage.setItem('quartier:currentFile', JSON.stringify(filePath))
+          }
+        }
       }
     }
     
