@@ -53,7 +53,8 @@
           </p>
           <div class="flex items-center gap-2">
             <Input 
-              :value="shareUrl" 
+              :model-value="shareUrl ?? ''" 
+              :default-value="shareUrl ?? ''"
               readonly 
               class="flex-1 font-mono text-sm"
             />
