@@ -59,7 +59,9 @@
       </div>
       <div class="text-sm">
         <div class="font-medium truncate max-w-[120px]" :title="accessUser?.email">{{ accessUser?.email }}</div>
-        <div class="text-xs text-muted-foreground">Guest</div>
+        <div class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 w-fit">
+          Guest
+        </div>
         <button 
           @click="login()" 
           class="text-xs text-primary hover:underline"

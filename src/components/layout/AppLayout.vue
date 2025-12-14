@@ -37,13 +37,7 @@
 
       <!-- Main Content -->
       <main class="flex-1 flex flex-col h-full min-w-0 bg-background/50 transition-all duration-150">
-        <!-- Guest Mode Banner -->
-        <div v-if="isAccessAuthenticated && !isHost" class="bg-blue-50/50 border-b border-blue-100 px-4 py-2 flex items-center justify-between text-xs text-blue-700">
-          <span class="flex items-center gap-2">
-              <Info class="w-4 h-4" />
-              Guest Mode: You can edit files live, but cannot commit changes to GitHub.
-          </span>
-        </div>
+
 
         <!-- Editor/Preview Split -->
         <div class="flex-1 flex overflow-hidden relative">
@@ -101,12 +95,15 @@
       :file-path="fullFilePath"
     />
     <SharedSessionsDialog ref="sharedSessionsDialogRef" />
+    <GuestWelcomeDialog 
+      v-model:open="showGuestWelcome" 
+      @close="guestWelcomeSeen = true" 
+    />
     <Toast ref="toastRef" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Info } from 'lucide-vue-next'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 
@@ -126,12 +123,15 @@ import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
 import { cachedFileSystem, kvSync } from '@/services/storage'
 
+import GuestWelcomeDialog from '@/components/dialogs/GuestWelcomeDialog.vue'
+
 // Persisted State (localStorage)
 const repo = useStorage<string | undefined>('quartier:repo', undefined)
 const currentFile = useStorage<string | null>('quartier:currentFile', null)
 const showSidebar = useStorage('quartier:showSidebar', true)
 const showPreview = useStorage('quartier:showPreview', false)
 const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visual')
+const guestWelcomeSeen = useStorage('quartier:guestWelcomeSeen', false)
 
 // Transient State (not persisted)
 const fileContent = ref('')
@@ -141,11 +141,21 @@ const commandPaletteRef = ref()
 const commitDialogRef = ref()
 const toastRef = ref()
 const showRepoSelector = ref(false)
+const showGuestWelcome = ref(false)
 const recentFiles = ref<string[]>([])
 const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 const shareDialogRef = ref<InstanceType<typeof ShareDialog> | null>(null)
 const sharedSessionsDialogRef = ref<InstanceType<typeof SharedSessionsDialog> | null>(null)
 const userEmail = ref<string | undefined>(undefined)
+
+// Watch for guest authentication to show welcome
+// Using watch effectively handles async auth loading
+import { watch } from 'vue'
+watch(() => [isAccessAuthenticated.value, isHost.value, guestWelcomeSeen.value], () => {
+  if (isAccessAuthenticated.value && !isHost.value && !guestWelcomeSeen.value) {
+    showGuestWelcome.value = true
+  }
+}, { immediate: true })
 
 // Computed room ID for collaboration
 const collabRoomId = computed(() => {
