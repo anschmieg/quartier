@@ -86,7 +86,7 @@ onMounted(async () => {
   const token = route.params.token as string
   
   try {
-    const res = await fetch(`/api/share/${token}`, {
+    const res = await fetch(`/api/s/${token}`, {
       credentials: 'include'
     })
     
@@ -111,7 +111,7 @@ async function joinSession() {
   joining.value = true
   
   try {
-    const res = await fetch(`/api/share/${token}`, {
+    const res = await fetch(`/api/s/${token}`, {
       method: 'POST',
       credentials: 'include'
     })
