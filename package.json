@@ -1,7 +1,7 @@
 {
   "name": "quartier",
   "private": true,
-  "version": "0.9.23",
+  "version": "0.9.24",
   "type": "module",
   "scripts": {
     "dev": "npx wrangler pages dev dist --port 8788 & bun vite",
