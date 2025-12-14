@@ -1,10 +1,87 @@
 /**
  * Fetch repository contents from GitHub
- * GET /api/github/content?owner=xxx&repo=xxx&path=xxx
+ * GET /api/github/content?owner=xxx&repo=xxx&path=xxx&session=xxx
+ * 
+ * Access Control (Deny-by-Default):
+ * - Has gh_token cookie → Full access (authenticated owner/collaborator)
+ * - No token + has session → Filtered to session.paths only
+ * - No token + no session → 403 Forbidden
  */
 
+interface Session {
+    id: string
+    owner: string
+    paths: string[]
+    members: string[]
+    created: number
+}
+
 interface Env {
+    QUARTIER_KV: KVNamespace
     DEV_ACCESS_TOKEN?: string
+    DEV_USER_EMAIL?: string
+}
+
+/**
+ * Check if a path is allowed by session paths
+ * Session paths can be: owner/repo/* (entire repo), owner/repo/folder/* (folder), owner/repo/file.md (file)
+ */
+function isPathAllowed(requestedPath: string, sessionPaths: string[], owner: string, repo: string): boolean {
+    const fullPath = `${owner}/${repo}/${requestedPath}`.replace(/\/+/g, '/')
+
+    for (const allowed of sessionPaths) {
+        // Normalize the allowed path
+        const normalizedAllowed = allowed.replace(/\/+/g, '/')
+
+        // Entire repo access
+        if (normalizedAllowed === `${owner}/${repo}` || normalizedAllowed === `${owner}/${repo}/*`) {
+            return true
+        }
+
+        // Wildcard folder access (e.g., owner/repo/src/*)
+        if (normalizedAllowed.endsWith('/*')) {
+            const prefix = normalizedAllowed.slice(0, -1) // Remove the *
+            if (fullPath.startsWith(prefix) || fullPath === prefix.slice(0, -1)) {
+                return true
+            }
+        }
+
+        // Exact file match
+        if (fullPath === normalizedAllowed) {
+            return true
+        }
+
+        // Requesting a parent directory of an allowed path (for directory listing)
+        if (normalizedAllowed.startsWith(fullPath + '/')) {
+            return true
+        }
+    }
+
+    return false
+}
+
+/**
+ * Filter directory listing to only show allowed paths
+ */
+function filterDirectoryListing(items: any[], sessionPaths: string[], owner: string, repo: string, currentPath: string): any[] {
+    return items.filter(item => {
+        const itemPath = currentPath ? `${currentPath}/${item.name}` : item.name
+        return isPathAllowed(itemPath, sessionPaths, owner, repo)
+    })
+}
+
+/**
+ * Get user email from request (Cloudflare Access or dev override)
+ */
+function getUserEmail(context: EventContext<Env, any, any>): string | null {
+    // Check for dev user override header (local development only)
+    const devUserOverride = context.request.headers.get('x-dev-user')
+    if (devUserOverride === 'none') return null
+    if (devUserOverride) return devUserOverride
+
+    return context.request.headers.get('cf-access-authenticated-user-email')
+        || context.env.DEV_USER_EMAIL
+        || null
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -12,11 +89,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const owner = url.searchParams.get('owner')
     const repo = url.searchParams.get('repo')
     const path = url.searchParams.get('path') || ''
+    const sessionId = url.searchParams.get('session')
 
     if (!owner || !repo) {
         return new Response('Missing owner or repo parameter', { status: 400 })
     }
 
+    // Check for user's own GitHub token (authenticated owner/collaborator)
     const cookieHeader = context.request.headers.get('Cookie')
     const tokenMatch = cookieHeader ? cookieHeader.match(/(^| )gh_token=([^;]+)/) : null
     let accessToken = tokenMatch ? tokenMatch[2] : null
@@ -26,8 +105,64 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         accessToken = context.env.DEV_ACCESS_TOKEN
     }
 
+    let session: Session | null = null
+    let isGuest = false
+
+    // If user has their own token, they get full access
+    if (accessToken && !sessionId) {
+        // User has token = authenticated, full access
+        isGuest = false
+    } else if (sessionId) {
+        // Guest flow - verify session
+        session = await context.env.QUARTIER_KV.get(`session:${sessionId}`, 'json') as Session | null
+
+        if (!session) {
+            return new Response(JSON.stringify({ error: 'Invalid session' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            })
+        }
+
+        const userEmail = getUserEmail(context)
+
+        // Check if user is session owner or member
+        const isOwner = session.owner === userEmail
+        const isMember = session.members.includes(userEmail || '')
+
+        if (!isOwner && !isMember) {
+            return new Response(JSON.stringify({ error: 'Not a member of this session' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            })
+        }
+
+        // Check if path is within session.paths
+        if (!isPathAllowed(path, session.paths, owner, repo)) {
+            return new Response(JSON.stringify({ error: 'Access denied to this path' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            })
+        }
+
+        isGuest = !isOwner && !accessToken
+
+        // Use owner's token for guests (stored in session or fallback to dev token)
+        if (!accessToken && context.env.DEV_ACCESS_TOKEN) {
+            accessToken = context.env.DEV_ACCESS_TOKEN
+        }
+    } else {
+        // No token and no session = unauthorized
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    }
+
     if (!accessToken) {
-        return new Response('Unauthorized', { status: 401 })
+        return new Response(JSON.stringify({ error: 'No valid access token' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+        })
     }
 
     try {
@@ -46,7 +181,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             return new Response(`GitHub API error: ${response.statusText}`, { status: response.status })
         }
 
-        const data = await response.json()
+        let data = await response.json()
+
+        // Filter directory listing for guests with session
+        if (session && isGuest && Array.isArray(data)) {
+            data = filterDirectoryListing(data, session.paths, owner, repo, path)
+        }
+
         return new Response(JSON.stringify(data), {
             headers: { 'Content-Type': 'application/json' },
         })

@@ -36,8 +36,27 @@ class ProxyGitHubService {
     }
   }
 
+  /**
+   * Get active session ID from localStorage if available
+   */
+  private getSessionParam(): string {
+    try {
+      const activeSession = localStorage.getItem('quartier:activeSession')
+      if (activeSession) {
+        const session = JSON.parse(activeSession)
+        if (session.id) {
+          return `&session=${encodeURIComponent(session.id)}`
+        }
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+    return ''
+  }
+
   async loadRepo(owner: string, repo: string, path: string = '') {
-    const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`
+    const sessionParam = this.getSessionParam()
+    const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}${sessionParam}`
     const response = await fetch(url)
     if (!response.ok) {
       throw new Error(`Failed to load repo: ${response.statusText}`)
@@ -46,7 +65,8 @@ class ProxyGitHubService {
   }
 
   async readFile(owner: string, repo: string, path: string): Promise<string> {
-    const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`
+    const sessionParam = this.getSessionParam()
+    const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}${sessionParam}`
     console.log('[ProxyGitHubService] Reading file:', { owner, repo, path })
 
     try {
