@@ -9,11 +9,7 @@
     "dev:frontend": "bun vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts",
-    "lint:fix": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "format": "prettier --write \"src/**/*.{js,ts,vue,json}\" \"functions/**/*.{js,ts}\" \"docs/**/*.md\"",
-    "format:check": "prettier --check \"src/**/*.{js,ts,vue,json}\" \"functions/**/*.{js,ts}\" \"docs/**/*.md\""
+    "test": "vitest"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
