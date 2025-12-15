@@ -8,7 +8,8 @@ Quartier is a collaborative, web-based editor for Quarto documents with real-tim
 - **Editor**: Milkdown (WYSIWYG) + CodeMirror (Source mode)
 - **Backend**: Cloudflare Pages Functions (serverless)
 - **Database**: Cloudflare KV (Key-Value storage)
-- **Auth**: GitHub OAuth + Cloudflare Access
+- **Storage**: Unstorage (abstraction layer supporting multiple backends: GitHub, Google Drive, etc.)
+- **Auth**: Cloudflare Access + OAuth (GitHub, Google, etc.)
 - **Collaboration**: Yjs for CRDT-based real-time editing
 - **UI**: Tailwind CSS + shadcn-vue components
 - **Package Manager**: Bun
@@ -17,21 +18,23 @@ Quartier is a collaborative, web-based editor for Quarto documents with real-tim
 
 ### Dual Authentication System
 The application supports two authentication modes:
-1. **Host Mode**: Full GitHub access via OAuth for repository owners
-   - Uses `gh_token` cookie for API requests
-   - Can commit/push changes to GitHub
+1. **Host Mode**: Full access to storage backends for document owners
+   - Authenticated via OAuth (GitHub, Google, etc.) or Cloudflare Access
+   - Can read/write/commit changes to storage backend
    - Can create and manage sessions
+   - Storage backend abstracted via unstorage (supports GitHub, Google Drive, etc.)
 
-2. **Guest Mode**: Read-only GitHub access via Cloudflare Access
-   - Authenticated via Google or email OTP
+2. **Guest Mode**: Session-scoped access for collaborators
+   - Authenticated via Cloudflare Access (Google, email OTP, etc.)
    - Access scoped to specific sessions and paths
-   - Cannot commit directly to GitHub
    - Can collaborate in real-time via Yjs
+   - Cannot commit directly to storage backend
 
-### Backend Proxy Pattern
-- Frontend NEVER calls GitHub API directly
-- All GitHub operations go through `/api/github/*` endpoints
-- Functions validate authentication and session membership before proxying requests
+### Storage Abstraction Pattern
+- Frontend uses unstorage abstraction for all storage operations
+- Storage backends (GitHub, Google Drive, etc.) are pluggable via unstorage drivers
+- Backend API endpoints (e.g., `/api/github/*`) validate authentication before proxying requests
+- Never expose storage backend tokens or credentials to the frontend
 
 ### KV Database Patterns
 Follow these key patterns:
@@ -106,7 +109,7 @@ vue-tsc -b            # Type-check TypeScript
 - Run tests before committing: `bun run test`
 
 ## Security Considerations
-- Never expose GitHub tokens to the frontend
+- Never expose storage backend tokens (GitHub, Google Drive, etc.) to the frontend
 - Always validate session membership in backend functions
 - Use secure, HttpOnly cookies for authentication
 - Sanitize user inputs
@@ -125,16 +128,18 @@ vue-tsc -b            # Type-check TypeScript
 - Include JSDoc comments for complex functions
 
 ## Common Patterns
-- **GitHub API calls**: Always go through backend proxy at `/api/github/*`
-- **Session validation**: Check both host tokens and guest session membership
-- **File operations**: Use KV for caching, commit to GitHub when ready
+- **Storage operations**: Use unstorage abstraction for all file operations
+- **Backend API calls**: Storage backend operations go through backend API (e.g., `/api/github/*`)
+- **Session validation**: Check both host authentication and guest session membership
+- **File operations**: Use KV for caching, commit to storage backend when ready
 - **State management**: Use Vue composables for shared state
-- **Routing**: Protected routes require authentication via Cloudflare Access or GitHub OAuth
+- **Routing**: Protected routes require authentication via Cloudflare Access or OAuth
 
 ## Best Practices
 - Keep changes minimal and focused
 - Follow existing code patterns and conventions
 - Test authentication flows for both Host and Guest modes
-- Consider rate limits when calling GitHub API
+- Use unstorage drivers to support multiple storage backends as first-class citizens
+- Consider rate limits when calling storage backend APIs
 - Use environment variables (`.dev.vars`) for local development
 - Ensure changes work with Cloudflare Pages deployment model
