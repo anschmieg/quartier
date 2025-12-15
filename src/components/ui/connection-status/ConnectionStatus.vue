@@ -4,6 +4,8 @@
     class="connection-status"
     :class="statusClass"
     :title="statusText"
+    role="status"
+    :aria-label="`Connection status: ${statusText}`"
   >
     <div class="status-dot" :class="dotClass"></div>
     <span v-if="showText" class="status-text">{{ statusText }}</span>

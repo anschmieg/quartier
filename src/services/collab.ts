@@ -28,8 +28,14 @@ const connectionStatus = new Map<string, ConnectionStatus>()
 const statusCallbacks = new Map<string, Set<(status: ConnectionStatus) => void>>()
 
 // Signaling servers configuration
-// TODO: Replace with private signaling server for production
-// For now, use public Yjs signaling as fallback
+// IMPORTANT: Using public signaling server (yjs.dev) for development only
+// TODO: HIGH PRIORITY - Replace with private signaling server for production
+// Security considerations:
+// - Public server may log room IDs and connections
+// - Not guaranteed to be available 24/7
+// - No SLA or support
+// Recommendation: Deploy y-websocket server on your infrastructure
+// See: https://github.com/yjs/y-websocket
 const SIGNALING_SERVERS = [
     'wss://signaling.yjs.dev',
     // Add custom signaling server here when available:

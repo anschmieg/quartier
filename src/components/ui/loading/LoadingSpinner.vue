@@ -16,7 +16,7 @@
         :stroke-width="strokeWidth"
       />
     </svg>
-    <span v-if="message" class="loading-message">{{ message }}</span>
+    <span v-if="message" class="loading-message" role="status" aria-live="polite">{{ message }}</span>
   </div>
 </template>
 

@@ -57,16 +57,30 @@
       <p v-if="details" class="error-details">{{ details }}</p>
       
       <div v-if="actionText" class="error-actions">
-        <button @click="$emit('action')" class="error-action-button">
+        <button 
+          @click="$emit('action')" 
+          class="error-action-button"
+          :aria-label="`${actionText} - ${title || message}`"
+        >
           {{ actionText }}
         </button>
-        <button v-if="dismissible" @click="$emit('dismiss')" class="error-dismiss-button">
+        <button 
+          v-if="dismissible" 
+          @click="$emit('dismiss')" 
+          class="error-dismiss-button"
+          :aria-label="`Dismiss ${variant} message`"
+        >
           Dismiss
         </button>
       </div>
     </div>
     
-    <button v-if="dismissible && !actionText" @click="$emit('dismiss')" class="error-close">
+    <button 
+      v-if="dismissible && !actionText" 
+      @click="$emit('dismiss')" 
+      class="error-close"
+      :aria-label="`Close ${variant} message`"
+    >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="16"
@@ -77,6 +91,7 @@
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
+        aria-hidden="true"
       >
         <line x1="18" y1="6" x2="6" y2="18" />
         <line x1="6" y1="6" x2="18" y2="18" />
