@@ -165,7 +165,7 @@ const MilkdownInternal = defineComponent({
         .use(indent)
         .use(upload)
         .use(escapePlugin)
-        // .use(collab)
+        .use(collab)
     })
 
     // Setup collaboration after editor is ready
@@ -182,11 +182,9 @@ const MilkdownInternal = defineComponent({
         console.log('[Collab] IndexedDB connected:', props.roomId)
         
         // Setup WebRTC provider (peer-to-peer real-time sync)
-        /*
-        // Setup WebRTC provider (peer-to-peer real-time sync)
-         const webrtcProvider = new WebrtcProvider('milkdown-yjs-quartier-test', ydoc, {
-           signaling: ['wss://signaling.yjs.dev'],
-         })
+        webrtcProvider = new WebrtcProvider(props.roomId, ydoc, {
+          signaling: ['wss://signaling.yjs.dev'],
+        })
         
         // Set user awareness for cursor presence
         if (props.userEmail) {
@@ -209,39 +207,42 @@ const MilkdownInternal = defineComponent({
           }
         })
         
-        // Initial update
+        // Initial awareness update
         updateAwarenessState(
           webrtcProvider.awareness.getStates(),
           webrtcProvider.awareness.clientID
         )
-        */
-      }
-      
-      // Connect collab service to Yjs
-      try {
-        /*
-        editor.action((ctx) => {
-          const collabService = ctx.get(collabServiceCtx)
-          collabService
-            .bindDoc(ydoc!)
-            .setAwareness(webrtcProvider!.awareness)
-            .connect()
+        
+        // Wait for IndexedDB to sync before connecting collab service
+        idbProvider.whenSynced.then(() => {
+          console.log('[Collab] IndexedDB synced, connecting collab service...')
+          
+          try {
+            editor.action((ctx) => {
+              const collabService = ctx.get(collabServiceCtx)
+              collabService
+                .bindDoc(ydoc!)
+                .setAwareness(webrtcProvider!.awareness)
+                .connect()
+              
+              // Apply initial content if Yjs doc is empty
+              // This uses the editor's current content (from the file) as the template
+              collabService.applyTemplate(initialValue)
+            })
+            console.log('[Collab] Editor connected to Yjs')
+          } catch (error) {
+            console.error('[Collab] Failed to connect:', error)
+          }
         })
-        console.log('[Collab] Editor connected to Yjs')
-        */
-      } catch (error) {
-        console.error('[Collab] Failed to connect:', error)
       }
     })
 
     // Cleanup on unmount
     onUnmounted(() => {
-      /*
       if (webrtcProvider) {
         webrtcProvider.destroy()
         webrtcProvider = null
       }
-      */
       if (idbProvider) {
         idbProvider.destroy()
         idbProvider = null

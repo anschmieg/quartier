@@ -35,6 +35,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `sync:${email}`, 100, 60)
     if (!rateLimit.allowed) {
         return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
+    }
 
     // Extract path from URL: /api/sync/owner/repo/path/to/file.md
     const url = new URL(context.request.url)
