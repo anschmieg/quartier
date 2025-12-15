@@ -1,19 +1,22 @@
 <template>
   <MilkdownProvider>
-    <MilkdownInternal 
-      ref="internalRef"
-      :modelValue="modelValue" 
-      :editable="editable"
-      :roomId="roomId"
-      :userEmail="userEmail"
-      @update:modelValue="emit('update:modelValue', $event)" 
-    />
+    <ProsemirrorAdapterProvider>
+      <MilkdownInternal 
+        ref="internalRef"
+        :modelValue="modelValue" 
+        :editable="editable"
+        :roomId="roomId"
+        :userEmail="userEmail"
+        @update:modelValue="emit('update:modelValue', $event)" 
+      />
+    </ProsemirrorAdapterProvider>
   </MilkdownProvider>
 </template>
 
 <script setup lang="ts">
 import { defineComponent, h, watch, watchEffect, ref, onUnmounted } from 'vue'
 import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
+import { useNodeViewFactory, ProsemirrorAdapterProvider } from '@prosemirror-adapter/vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
@@ -22,9 +25,15 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { math } from '@milkdown/plugin-math'
 import { diagram } from '@milkdown/plugin-diagram'
 import { nord } from '@milkdown/theme-nord'
-import { replaceAll, $prose } from '@milkdown/utils'
+import { replaceAll, $prose, $view } from '@milkdown/utils'
 import { keymap } from '@milkdown/prose/keymap'
 import { collab, collabServiceCtx } from '@milkdown/plugin-collab'
+import { prism } from '@milkdown/plugin-prism'
+import { emoji } from '@milkdown/plugin-emoji'
+import { indent } from '@milkdown/plugin-indent'
+import { upload, uploadConfig } from '@milkdown/plugin-upload'
+import { remarkFrontmatterPlugin, frontmatterNode, frontmatterSyntax } from './plugins/frontmatter'
+import FrontmatterNode from './plugins/frontmatter/FrontmatterNode.vue'
 import * as Y from 'yjs'
 import { WebrtcProvider } from 'y-webrtc'
 import { IndexeddbPersistence } from 'y-indexeddb'
@@ -85,6 +94,13 @@ const MilkdownInternal = defineComponent({
     // Track pending content that arrives before editor is ready
     const pendingContent = ref<string | null>(null)
 
+    const nodeViewFactory = useNodeViewFactory()
+
+    // Create the View Plugin here, so it's available for .use()
+    const frontmatterView = $view(frontmatterNode.node, () => nodeViewFactory({
+        component: FrontmatterNode 
+    }))
+
     const { get } = useEditor((root) => {
       return Editor.make()
         .config((configCtx) => {
@@ -97,6 +113,8 @@ const MilkdownInternal = defineComponent({
             ...prev,
             editable: () => props.editable ?? true,
           }))
+
+
           
           // Setup listener for v-model
           configCtx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
@@ -106,16 +124,48 @@ const MilkdownInternal = defineComponent({
               ctx.emit('update:modelValue', markdown)
             }
           })
+
+          // Configure upload plugin
+          configCtx.update(uploadConfig.key, (prev) => ({
+             ...prev,
+             uploader: async (files, _schema) => {
+               const images: any[] = []
+               
+               for (let i = 0; i < files.length; i++) {
+                 const file = files.item(i)
+                 if (!file) continue
+                 
+                 // Placeholder: return a fake URL for now as we don't have a backend storage yet
+                 // In a real app, this would upload to R2/S3 and return the URL
+                 console.log('[Upload] Mock upload for:', file.name)
+                 
+                 images.push({
+                   url: 'https://placehold.co/600x400?text=' + encodeURIComponent(file.name),
+                   alt: file.name,
+                 })
+               }
+               
+               return images
+             }
+          }))
         })
         .config(nord)
         .use(commonmark)
+        .use(remarkFrontmatterPlugin)
+        .use(frontmatterNode)
+        .use(frontmatterView)
+        .use(frontmatterSyntax)
         .use(gfm)
         .use(history)
         .use(listener)
         .use(math)
         .use(diagram)
+        .use(prism)
+        .use(emoji)
+        .use(indent)
+        .use(upload)
         .use(escapePlugin)
-        .use(collab)
+        // .use(collab)
     })
 
     // Setup collaboration after editor is ready
@@ -132,9 +182,11 @@ const MilkdownInternal = defineComponent({
         console.log('[Collab] IndexedDB connected:', props.roomId)
         
         // Setup WebRTC provider (peer-to-peer real-time sync)
-        webrtcProvider = new WebrtcProvider(props.roomId, ydoc, {
-          signaling: ['wss://signaling.yjs.dev'],
-        })
+        /*
+        // Setup WebRTC provider (peer-to-peer real-time sync)
+         const webrtcProvider = new WebrtcProvider('milkdown-yjs-quartier-test', ydoc, {
+           signaling: ['wss://signaling.yjs.dev'],
+         })
         
         // Set user awareness for cursor presence
         if (props.userEmail) {
@@ -162,10 +214,12 @@ const MilkdownInternal = defineComponent({
           webrtcProvider.awareness.getStates(),
           webrtcProvider.awareness.clientID
         )
+        */
       }
       
       // Connect collab service to Yjs
       try {
+        /*
         editor.action((ctx) => {
           const collabService = ctx.get(collabServiceCtx)
           collabService
@@ -174,6 +228,7 @@ const MilkdownInternal = defineComponent({
             .connect()
         })
         console.log('[Collab] Editor connected to Yjs')
+        */
       } catch (error) {
         console.error('[Collab] Failed to connect:', error)
       }
@@ -181,10 +236,12 @@ const MilkdownInternal = defineComponent({
 
     // Cleanup on unmount
     onUnmounted(() => {
+      /*
       if (webrtcProvider) {
         webrtcProvider.destroy()
         webrtcProvider = null
       }
+      */
       if (idbProvider) {
         idbProvider.destroy()
         idbProvider = null
@@ -326,6 +383,85 @@ const MilkdownInternal = defineComponent({
   padding: 0;
   color: hsl(var(--foreground));
   font-size: 0.875em;
+}
+
+/* Prism Syntax Highlighting (Nord-like) */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #616e88;
+}
+
+.token.punctuation {
+  color: #81a1c1;
+}
+
+.token.namespace {
+  opacity: 0.7;
+}
+
+.token.property,
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #81a1c1;
+}
+
+.token.number {
+  color: #b48ead;
+}
+
+.token.boolean {
+  color: #81a1c1;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #a3be8c;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string,
+.token.variable {
+  color: #81a1c1;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.function,
+.token.class-name {
+  color: #88c0d0;
+}
+
+.token.keyword {
+  color: #81a1c1;
+}
+
+.token.regex,
+.token.important {
+  color: #ebcb8b;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
 }
 
 /* Tables */
