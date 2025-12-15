@@ -35,7 +35,7 @@ import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { remarkFrontmatterPlugin, frontmatterNode, frontmatterSyntax } from './plugins/frontmatter'
 import FrontmatterNode from './plugins/frontmatter/FrontmatterNode.vue'
 import * as Y from 'yjs'
-import { WebrtcProvider } from 'y-webrtc'
+import YPartyKitProvider from 'y-partykit/provider'
 import { IndexeddbPersistence } from 'y-indexeddb'
 import { updateAwarenessState, clearAwarenessState } from '@/composables/useAwareness'
 
@@ -69,7 +69,8 @@ const MilkdownInternal = defineComponent({
   setup(props, ctx) {
     // Yjs document and providers for collaboration
     let ydoc: Y.Doc | null = null
-    let webrtcProvider: WebrtcProvider | null = null
+    // let webrtcProvider: WebrtcProvider | null = null // Replaced by PartyKit
+    let partyProvider: YPartyKitProvider | null = null
     let idbProvider: IndexeddbPersistence | null = null
     
     // Plugin to handle Escape key -> Blur
@@ -181,36 +182,42 @@ const MilkdownInternal = defineComponent({
         idbProvider = new IndexeddbPersistence(props.roomId, ydoc)
         console.log('[Collab] IndexedDB connected:', props.roomId)
         
-        // Setup WebRTC provider (peer-to-peer real-time sync)
-        webrtcProvider = new WebrtcProvider(props.roomId, ydoc, {
-          signaling: ['wss://signaling.yjs.dev'],
-        })
+        // Setup PartyKit provider (WebSocket signaling)
+        // Uses local server in dev (localhost:1999) and deployed server in prod
+        const host = import.meta.env.DEV ? 'localhost:1999' : 'quartier-collab.partykit.dev'
+        
+        partyProvider = new YPartyKitProvider(
+          host,
+          props.roomId,
+          ydoc,
+          {
+            connect: false, // Wait for IndexedDB sync
+          }
+        )
         
         // Set user awareness for cursor presence
         if (props.userEmail) {
           const hue = props.userEmail.split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0) % 360
-          webrtcProvider.awareness.setLocalStateField('user', {
+          partyProvider.awareness.setLocalStateField('user', {
             name: props.userEmail.split('@')[0],
             email: props.userEmail,
             color: `hsl(${hue}, 70%, 50%)`,
           })
         }
-        console.log('[Collab] WebRTC connected:', props.roomId)
+        console.log('[Collab] PartyKit initialized:', host)
         
         // Listen for awareness changes and update global store
-        webrtcProvider.awareness.on('change', () => {
-          if (webrtcProvider) {
-            updateAwarenessState(
-              webrtcProvider.awareness.getStates(),
-              webrtcProvider.awareness.clientID
-            )
-          }
+        partyProvider.awareness.on('change', () => {
+             updateAwarenessState(
+               partyProvider!.awareness.getStates(),
+               partyProvider!.awareness.clientID
+             )
         })
         
         // Initial awareness update
         updateAwarenessState(
-          webrtcProvider.awareness.getStates(),
-          webrtcProvider.awareness.clientID
+          partyProvider.awareness.getStates(),
+          partyProvider.awareness.clientID
         )
         
         // Wait for IndexedDB to sync before connecting collab service
@@ -222,9 +229,13 @@ const MilkdownInternal = defineComponent({
               const collabService = ctx.get(collabServiceCtx)
               collabService
                 .bindDoc(ydoc!)
-                .setAwareness(webrtcProvider!.awareness)
+                .setAwareness(partyProvider!.awareness)
                 .connect()
               
+              // Connect PartyKit provider to start syncing
+              partyProvider!.connect()
+              console.log('[Collab] PartyKit connected')
+
               // Apply initial content if Yjs doc is empty
               // This uses the editor's current content (from the file) as the template
               collabService.applyTemplate(initialValue)
@@ -239,9 +250,8 @@ const MilkdownInternal = defineComponent({
 
     // Cleanup on unmount
     onUnmounted(() => {
-      if (webrtcProvider) {
-        webrtcProvider.destroy()
-        webrtcProvider = null
+      if (partyProvider) {
+        partyProvider.destroy()
       }
       if (idbProvider) {
         idbProvider.destroy()

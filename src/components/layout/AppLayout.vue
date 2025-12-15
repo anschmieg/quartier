@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 
 const { isAuthenticated, isAccessAuthenticated, isHost, user, accessUser } = useAuth()
@@ -121,7 +121,7 @@ import Toast from '@/components/ui/Toast.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
 import { cachedFileSystem, kvSync } from '@/services/storage'
-import { getConnectionStatus, onConnectionStatusChange, type ConnectionStatus } from '@/services/collab'
+// import { getConnectionStatus, onConnectionStatusChange, type ConnectionStatus } from '@/services/collab'
 
 import { useRoute } from 'vue-router'
 import JoinSessionDialog from '@/components/dialogs/JoinSessionDialog.vue'
@@ -149,7 +149,8 @@ const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 const shareDialogRef = ref<InstanceType<typeof ShareDialog> | null>(null)
 const sharedSessionsDialogRef = ref<InstanceType<typeof SharedSessionsDialog> | null>(null)
 const userEmail = ref<string | undefined>(undefined)
-const connectionStatus = ref<ConnectionStatus>('disconnected')
+// const connectionStatus = ref<ConnectionStatus>('disconnected')
+const connectionStatus = ref<'connecting' | 'connected' | 'disconnected' | 'error'>('connected') // TODO: Wire up real status from MilkdownEditor
 const autoSaveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 
 // Computed room ID for collaboration
@@ -203,36 +204,38 @@ const { Meta_K, Ctrl_K } = useMagicKeys()
 whenever(() => Meta_K?.value || Ctrl_K?.value, () => openCommandPalette())
 
 // Track connection status for current file
-let unsubscribeConnectionStatus: (() => void) | null = null
+// let unsubscribeConnectionStatus: (() => void) | null = null
 
-watch([repo, currentFile], ([newRepo, newFile]: [string | undefined, string | null]) => {
-  // Unsubscribe from previous file
-  if (unsubscribeConnectionStatus) {
-    unsubscribeConnectionStatus()
-    unsubscribeConnectionStatus = null
-  }
+// watch([repo, currentFile], ([newRepo, newFile]: [string | undefined, string | null]) => {
+//   // Unsubscribe from previous file
+//   if (unsubscribeConnectionStatus) {
+//     unsubscribeConnectionStatus()
+//     unsubscribeConnectionStatus = null
+//   }
   
-  // Subscribe to new file if both repo and file are set
-  if (newRepo && newFile) {
-    const [owner, name] = newRepo.split('/')
-    if (owner && name) {
-      // Get initial status
-      connectionStatus.value = getConnectionStatus(owner, name, newFile)
+//   // Subscribe to new file if both repo and file are set
+//   if (newRepo && newFile) {
+//     const [owner, name] = newRepo.split('/')
+//     if (owner && name) {
+//       // Get initial status
+//       // connectionStatus.value = getConnectionStatus(owner, name, newFile)
       
-      // Subscribe to status changes
-      unsubscribeConnectionStatus = onConnectionStatusChange(
-        owner,
-        name,
-        newFile,
-        (status) => {
-          connectionStatus.value = status
-        }
-      )
-    }
-  } else {
-    connectionStatus.value = 'disconnected'
-  }
-})
+//       // Subscribe to status changes
+//       /*
+//       unsubscribeConnectionStatus = onConnectionStatusChange(
+//         owner,
+//         name,
+//         newFile,
+//         (status) => {
+//           connectionStatus.value = status
+//         }
+//       )
+//       */
+//     }
+//   } else {
+//     connectionStatus.value = 'disconnected'
+//   }
+// })
 
 // Restore file content on mount
 onMounted(async () => {
@@ -295,10 +298,10 @@ onUnmounted(() => {
     clearInterval(autoSyncInterval)
     autoSyncInterval = null
   }
-  if (unsubscribeConnectionStatus) {
-    unsubscribeConnectionStatus()
-    unsubscribeConnectionStatus = null
-  }
+  // if (unsubscribeConnectionStatus) {
+  //   unsubscribeConnectionStatus()
+  //   unsubscribeConnectionStatus = null
+  // }
 })
 
 function handleBeforeUnload(e: BeforeUnloadEvent) {
