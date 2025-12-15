@@ -1,0 +1,45 @@
+# Wrangler Configuration Template
+# Copy this to wrangler.toml and fill in your values
+# Note: wrangler.toml is gitignored to prevent accidental secret exposure
+
+name = "quartier"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+# KV Namespace for sessions and file caching
+# Create with: wrangler kv:namespace create QUARTIER_KV
+[[kv_namespaces]]
+binding = "QUARTIER_KV"
+id = "your-kv-namespace-id-here"
+
+# Preview environment (optional, for testing)
+[env.preview]
+[[env.preview.kv_namespaces]]
+binding = "QUARTIER_KV"
+id = "your-preview-kv-namespace-id-here"
+
+# Production environment
+[env.production]
+[[env.production.kv_namespaces]]
+binding = "QUARTIER_KV"
+id = "your-production-kv-namespace-id-here"
+
+# Environment variables are configured via Cloudflare Dashboard
+# or using: wrangler pages secret put <KEY>
+# Required secrets:
+# - GITHUB_CLIENT_ID
+# - GITHUB_CLIENT_SECRET
+
+# Optional: Durable Objects (for future WebSocket/signaling server)
+# [[durable_objects.bindings]]
+# name = "COLLAB_ROOM"
+# class_name = "CollabRoom"
+# script_name = "quartier"
+
+# Optional: Analytics (if you want to track usage)
+# [analytics_engine_datasets]
+# binding = "ANALYTICS"
+
+# Build configuration
+[build]
+command = "npm run build"

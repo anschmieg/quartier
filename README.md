@@ -6,9 +6,15 @@ Quartier is a collaborative, web-based editor for Quarto documents. It combines 
 
 ## Documentation
 
+### Core Documentation
 - **[Architecture & System Design](docs/ARCHITECTURE.md)**: Detailed overview of Dual Auth modes (Host/Guest), Backend Proxy, and Collaboration logic.
 - **[KV Schema](docs/KV_SCHEMA.md)**: Database structure for sessions, tokens, and verification.
 - **[Contributing](docs/CONTRIBUTING.md)**: Development setup and deployment guide.
+
+### Additional Resources
+- **[API Documentation](docs/API.md)**: Complete API reference with endpoints, request/response formats, and examples.
+- **[Environment Variables](docs/ENVIRONMENT.md)**: Configuration guide for all environment variables and deployment settings.
+- **[Security Best Practices](docs/SECURITY.md)**: Security guidelines, authentication, authorization, and incident response.
 
 ## Features
 
