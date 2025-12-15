@@ -124,12 +124,28 @@ function getValidationDecorations(doc: Node): DecorationSet {
                     })
                 }
 
+                // Check for indented closing fences (common mistake causing "swallowed" document)
+                const indentedFenceRegex = /(^|\n)([ \t]+---)(\s|$)/g
+                let match
+                while ((match = indentedFenceRegex.exec(text)) !== null) {
+                    const start = match.index + match[1]!.length
+                    const end = start + match[2]!.length
+
+                    decorations.push(
+                        Decoration.inline(pos + 1 + start, pos + 1 + end, {
+                            class: 'squiggly-error',
+                            title: 'Indented closing fence detected. Remove indentation to close frontmatter block.',
+                            nodeName: 'span'
+                        })
+                    )
+                }
+
                 // Also handle YAML Syntax Errors
                 if (yamlDoc.errors.length > 0) {
                     const offset = pos + 1
                     yamlDoc.errors.forEach(err => {
-                        if (err.pos) {
-                            const [start, end] = err.pos
+                        if (err && err.pos) {
+                            const [start, end] = err.pos as [number, number]
                             decorations.push(
                                 Decoration.inline(offset + start, offset + end + 1, { // +1 to ensure visibility
                                     class: 'squiggly-error',

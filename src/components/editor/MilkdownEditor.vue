@@ -14,11 +14,11 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, watch, watchEffect, ref, onUnmounted } from 'vue'
+import { defineComponent, h, watch, watchEffect, ref, shallowRef, onUnmounted } from 'vue'
 import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
 import { useNodeViewFactory, ProsemirrorAdapterProvider } from '@prosemirror-adapter/vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx } from '@milkdown/kit/core'
-import { commonmark } from '@milkdown/preset-commonmark'
+import { commonmark, codeBlockSchema } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { history } from '@milkdown/plugin-history'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
@@ -33,7 +33,10 @@ import { emoji } from '@milkdown/plugin-emoji'
 import { indent } from '@milkdown/plugin-indent'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { remarkFrontmatterPlugin, frontmatterNode, frontmatterSyntax, frontmatterValidation } from './plugins/frontmatter'
+import { createCompletionPlugin, type CompletionState, type CompletionItem } from './plugins/frontmatter/completion-plugin'
+import FrontmatterCompletion from './plugins/frontmatter/FrontmatterCompletion.vue'
 import FrontmatterNode from './plugins/frontmatter/FrontmatterNode.vue'
+import CodeCell from './CodeCell.vue'
 import './plugins/frontmatter/style.css'
 import * as Y from 'yjs'
 import YPartyKitProvider from 'y-partykit/provider'
@@ -96,11 +99,48 @@ const MilkdownInternal = defineComponent({
     // Track pending content that arrives before editor is ready
     const pendingContent = ref<string | null>(null)
 
+    // --- Frontmatter Completion ---
+    const completionState = shallowRef<CompletionState>({
+        active: false,
+        items: [],
+        index: 0,
+        coords: null,
+        query: '',
+        range: null
+    })
+
+    const onCompletionUpdate = (newState: CompletionState) => {
+        completionState.value = newState
+    }
+    
+    const onCompletionSelect = (item: CompletionItem) => {
+        const editorInstance = get()
+        if (!editorInstance) return
+
+        editorInstance.action(ctx => {
+            const view = ctx.get(editorViewCtx)
+            const range = completionState.value.range
+            if (range) {
+                const tr = view.state.tr.insertText(item.insertText || item.label, range.from, range.to)
+                view.dispatch(tr)
+                view.focus()
+            }
+        })
+        completionState.value = { ...completionState.value, active: false }
+    }
+
     const nodeViewFactory = useNodeViewFactory()
 
     // Create the View Plugin here, so it's available for .use()
     const frontmatterView = $view(frontmatterNode.node, () => nodeViewFactory({
         component: FrontmatterNode 
+    }))
+
+    // Create executable code view for code blocks
+    // The CodeCell component checks the language and renders appropriately
+    const executableCodeView = $view(codeBlockSchema.node, () => nodeViewFactory({
+        component: CodeCell,
+        as: 'div',
     }))
 
     const { get } = useEditor((root) => {
@@ -158,6 +198,8 @@ const MilkdownInternal = defineComponent({
         .use(frontmatterView)
         .use(frontmatterSyntax)
         .use(frontmatterValidation)
+        .use(createCompletionPlugin(onCompletionUpdate, onCompletionSelect))
+        .use(executableCodeView)
         .use(gfm)
         .use(history)
         .use(listener)
@@ -320,10 +362,16 @@ const MilkdownInternal = defineComponent({
       })
     }
 
-    return () => h(Milkdown, { 
-      class: 'prose prose-slate dark:prose-invert max-w-none h-full outline-none',
-      onClick: focusEditor
-    })
+    return () => h('div', { class: 'h-full w-full relative' }, [
+      h(Milkdown, { 
+        class: 'prose prose-slate dark:prose-invert max-w-none h-full outline-none',
+        onClick: focusEditor
+      }),
+      h(FrontmatterCompletion, {
+        state: completionState.value,
+        onSelect: onCompletionSelect
+      })
+    ])
   }
 })
 </script>
