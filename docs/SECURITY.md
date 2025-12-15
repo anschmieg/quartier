@@ -1,0 +1,448 @@
+# Security Best Practices
+
+This document outlines security considerations and best practices for Quartier.
+
+## Table of Contents
+
+- [Authentication & Authorization](#authentication--authorization)
+- [Data Protection](#data-protection)
+- [API Security](#api-security)
+- [Collaboration Security](#collaboration-security)
+- [Deployment Security](#deployment-security)
+- [Incident Response](#incident-response)
+
+---
+
+## Authentication & Authorization
+
+### GitHub OAuth Security
+
+**Best Practices**:
+
+1. **Use separate OAuth Apps for dev and production**
+   ```
+   Dev:  http://localhost:8788/api/oauth/callback
+   Prod: https://your-domain.com/api/oauth/callback
+   ```
+
+2. **Rotate OAuth secrets regularly** (every 90 days)
+   - Generate new secrets in GitHub settings
+   - Update Cloudflare Pages environment variables
+   - Monitor for failed authentication attempts
+
+3. **Limit OAuth scopes to minimum required**
+   - Only request `repo` and `read:user` scopes
+   - Never request `admin` or `delete_repo` scopes
+
+4. **Validate OAuth state parameter**
+   - Prevents CSRF attacks during OAuth flow
+   - State is generated and verified server-side
+
+### Cloudflare Access
+
+**Configuration**:
+
+1. **Enable identity verification**
+   - Require email verification
+   - Use corporate email domains when possible
+   - Configure MFA for sensitive operations
+
+2. **Implement access policies**
+   ```
+   Policy: Quartier Users
+   - Allow: emails ending in @your-company.com
+   - Require: Email verification
+   ```
+
+3. **Session duration**
+   - Set appropriate session timeout (24 hours recommended)
+   - Require re-authentication for sensitive operations
+
+### Session Management
+
+**Security Measures**:
+
+1. **Session ID generation**
+   - Use cryptographically secure random IDs
+   - Format: `session_{12-char-hex}`
+   - Never expose internal session data to clients
+
+2. **Session expiration**
+   - Default: 90 days
+   - Implement sliding expiration for active sessions
+   - Clean up expired sessions regularly
+
+3. **Access control validation**
+   - Verify user membership on every request
+   - Check path permissions for guest users
+   - Deny by default, allow explicitly
+
+---
+
+## Data Protection
+
+### Sensitive Data Handling
+
+**GitHub Tokens**:
+
+1. **Never expose tokens to frontend**
+   - Store in HttpOnly cookies only
+   - Proxy all GitHub API calls through backend
+   - Validate token on every API request
+
+2. **Token storage**
+   - Use Cloudflare Workers environment variables
+   - Never log tokens
+   - Encrypt tokens if storing in KV (not currently implemented)
+
+3. **Token scope limitation**
+   - Use fine-grained personal access tokens when possible
+   - Limit token lifetime
+   - Revoke tokens immediately when compromised
+
+**File Content**:
+
+1. **Cache security**
+   - KV cached content accessible only to session members
+   - Implement cache invalidation on access revocation
+   - Set TTL on all cached data (30 days default)
+
+2. **Content validation**
+   - Sanitize file paths (prevent directory traversal)
+   - Validate file types
+   - Limit file sizes (enforce on frontend and backend)
+
+### Encryption
+
+**In Transit**:
+- Enforce HTTPS only (Cloudflare automatic)
+- Use TLS 1.3 minimum
+- Enable HSTS headers
+
+**At Rest**:
+- KV data encrypted by Cloudflare
+- IndexedDB encrypted by browser
+- No additional encryption currently (consider for sensitive repos)
+
+---
+
+## API Security
+
+### Input Validation
+
+**All API endpoints must validate**:
+
+1. **Parameter types and formats**
+   ```typescript
+   // Example validation
+   if (!isValidSessionId(sessionId)) {
+     return createErrorResponse('Invalid session ID', 400)
+   }
+   ```
+
+2. **Required fields**
+   ```typescript
+   const validation = validateRequiredFields(body, ['owner', 'repo', 'path'])
+   if (!validation.valid) {
+     return createErrorResponse('Missing fields', 400)
+   }
+   ```
+
+3. **Path sanitization**
+   ```typescript
+   const safePath = sanitizeFilePath(requestPath)
+   ```
+
+### Rate Limiting
+
+**Implementation**:
+
+```typescript
+const rateLimit = await checkRateLimit(
+  kv,
+  `user:${email}`,
+  60, // limit
+  60  // window in seconds
+)
+
+if (!rateLimit.allowed) {
+  return createErrorResponse('Rate limit exceeded', 429)
+}
+```
+
+**Recommended Limits**:
+- GET requests: 60/minute per user
+- POST/PUT requests: 10/minute per user
+- DELETE requests: 5/minute per user
+- Session creation: 5/minute per user
+
+### CSRF Protection
+
+**Current Measures**:
+- SameSite cookies for GitHub OAuth
+- Origin validation in API endpoints
+- State parameter in OAuth flow
+
+**TODO**: Implement CSRF tokens for state-changing operations
+
+### Error Handling
+
+**Security Principles**:
+
+1. **Don't leak sensitive information**
+   ```typescript
+   // Bad
+   return { error: `Database query failed: ${dbError}` }
+   
+   // Good
+   return { error: 'Internal server error' }
+   // Log detailed error server-side only
+   ```
+
+2. **Consistent error responses**
+   - Use standardized error format
+   - Return appropriate HTTP status codes
+   - Include error codes, not stack traces
+
+3. **Logging**
+   - Log all authentication failures
+   - Log authorization denials
+   - Never log tokens or passwords
+
+---
+
+## Collaboration Security
+
+### WebRTC Provider
+
+**Current Setup**:
+- Uses public signaling server (yjs.dev)
+- Peer-to-peer connections
+- No end-to-end encryption
+
+**Recommendations for Production**:
+
+1. **Deploy private signaling server**
+   ```typescript
+   const SIGNALING_SERVERS = [
+     'wss://signaling.your-domain.com',
+   ]
+   ```
+
+2. **Enable room passwords**
+   ```typescript
+   new WebrtcProvider(roomId, doc, {
+     signaling: SIGNALING_SERVERS,
+     password: generateRoomPassword(sessionId),
+   })
+   ```
+
+3. **Implement access validation**
+   - Verify session membership before allowing WebRTC connection
+   - Disconnect unauthorized peers automatically
+
+### Yjs Document Security
+
+**Best Practices**:
+
+1. **Validate updates**
+   - Check user permissions before applying updates
+   - Implement operation filtering for read-only users
+   - Log all document modifications
+
+2. **State encryption** (future enhancement)
+   - Encrypt Yjs state before storing in KV
+   - Use session-specific encryption keys
+   - Decrypt only for authorized users
+
+### Awareness Information
+
+**Privacy Considerations**:
+
+1. **Limit exposed user data**
+   ```typescript
+   // Only share necessary information
+   awareness.setLocalStateField('user', {
+     name: user.name,  // Display name only
+     color: user.color, // For cursor
+     // Never share: email, token, internal IDs
+   })
+   ```
+
+2. **Clean up on disconnect**
+   ```typescript
+   // Always clear awareness state
+   provider.awareness.setLocalState(null)
+   provider.destroy()
+   ```
+
+---
+
+## Deployment Security
+
+### Cloudflare Pages
+
+**Configuration**:
+
+1. **Environment variables**
+   - Use Cloudflare Pages secrets for sensitive data
+   - Never commit `.dev.vars` to git
+   - Rotate secrets regularly
+
+2. **Custom domains**
+   - Use custom domain with HTTPS
+   - Enable automatic HTTPS redirects
+   - Configure CAA DNS records
+
+3. **Headers**
+   ```
+   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'
+   X-Frame-Options: DENY
+   X-Content-Type-Options: nosniff
+   Referrer-Policy: strict-origin-when-cross-origin
+   ```
+
+### KV Namespace Security
+
+**Best Practices**:
+
+1. **Key naming conventions**
+   - Use predictable patterns for access control
+   - Include owner/session in key names
+   - Avoid exposing internal structure
+
+2. **Access patterns**
+   - Validate user access before KV operations
+   - Use list operations sparingly (expensive)
+   - Implement pagination for large result sets
+
+3. **Data retention**
+   - Set expiration (TTL) on all keys
+   - Implement automatic cleanup
+   - Delete sessions on user request
+
+### GitHub Integration
+
+**Security Checklist**:
+
+- [ ] OAuth App uses HTTPS callback only
+- [ ] Minimal scopes requested
+- [ ] Token validation on every request
+- [ ] Rate limiting implemented
+- [ ] Webhook signature verification (if used)
+- [ ] Regular security audits of GitHub access
+
+---
+
+## Incident Response
+
+### Detecting Security Issues
+
+**Monitor for**:
+
+1. **Unusual access patterns**
+   - Multiple failed authentication attempts
+   - Rapid session creation
+   - Access to many repositories in short time
+
+2. **API abuse**
+   - Rate limit hits
+   - Invalid session access attempts
+   - Unauthorized file access
+
+3. **Data exfiltration**
+   - Large file downloads
+   - Bulk repository access
+   - Suspicious collaboration patterns
+
+### Response Procedures
+
+**If OAuth token is compromised**:
+
+1. Revoke token in GitHub settings immediately
+2. Generate new OAuth client secret
+3. Update environment variables in Cloudflare
+4. Force logout all users
+5. Notify affected users
+6. Review access logs
+
+**If session is compromised**:
+
+1. Delete session from KV
+2. Invalidate all share tokens
+3. Notify session owner
+4. Review collaboration logs
+5. Assess data exposure
+
+**If vulnerability is discovered**:
+
+1. Assess severity and impact
+2. Develop and test fix
+3. Deploy fix to production
+4. Notify users if data was exposed
+5. Document incident and lessons learned
+
+### Reporting Security Issues
+
+**Contact**: security@your-domain.com (configure this)
+
+**Please include**:
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if any)
+
+**We commit to**:
+- Acknowledge receipt within 24 hours
+- Provide status update within 7 days
+- Credit reporter (if desired) in fix announcement
+
+---
+
+## Security Checklist
+
+### Before Deployment
+
+- [ ] All secrets configured in environment variables
+- [ ] OAuth callback URLs configured correctly
+- [ ] Cloudflare Access policies configured
+- [ ] Rate limiting implemented and tested
+- [ ] Input validation on all API endpoints
+- [ ] Error messages don't leak sensitive info
+- [ ] HTTPS enforced on all routes
+- [ ] Security headers configured
+- [ ] KV expiration set on all keys
+- [ ] Token validation working correctly
+
+### Regular Maintenance
+
+- [ ] Review access logs weekly
+- [ ] Rotate OAuth secrets quarterly
+- [ ] Update dependencies monthly
+- [ ] Review and remove inactive sessions
+- [ ] Audit access policies
+- [ ] Test incident response procedures
+- [ ] Review and update this document
+
+### Monitoring
+
+- [ ] Set up alerts for failed authentications
+- [ ] Monitor rate limit violations
+- [ ] Track API error rates
+- [ ] Monitor KV storage usage
+- [ ] Alert on unusual GitHub API usage
+
+---
+
+## Additional Resources
+
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [Cloudflare Security Best Practices](https://developers.cloudflare.com/fundamentals/security/)
+- [GitHub OAuth Best Practices](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/best-practices-for-oauth-apps)
+- [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
+
+---
+
+## Version History
+
+- v1.0 (2024-12): Initial security documentation

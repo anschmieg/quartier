@@ -5,6 +5,11 @@
  * - y-webrtc for peer-to-peer sync (works offline between online peers)
  * - y-indexeddb for local persistence (offline support)
  * - KV sync for async collaboration (different time editing)
+ * 
+ * Features:
+ * - Automatic reconnection with exponential backoff
+ * - Connection status tracking
+ * - Proper cleanup on disconnect
  */
 
 import * as Y from 'yjs'
@@ -16,6 +21,20 @@ import { kvSync } from './storage'
 const documents = new Map<string, Y.Doc>()
 const webrtcProviders = new Map<string, WebrtcProvider>()
 const indexeddbProviders = new Map<string, IndexeddbPersistence>()
+
+// Connection status tracking
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
+const connectionStatus = new Map<string, ConnectionStatus>()
+const statusCallbacks = new Map<string, Set<(status: ConnectionStatus) => void>>()
+
+// Signaling servers configuration
+// TODO: Replace with private signaling server for production
+// For now, use public Yjs signaling as fallback
+const SIGNALING_SERVERS = [
+    'wss://signaling.yjs.dev',
+    // Add custom signaling server here when available:
+    // 'wss://your-domain.com/signaling'
+]
 
 export interface CollabUser {
     email: string
@@ -56,7 +75,49 @@ export function getYjsDocument(
 }
 
 /**
- * Connect a document to collaboration providers
+ * Set connection status and notify listeners
+ */
+function setConnectionStatus(roomId: string, status: ConnectionStatus) {
+    connectionStatus.set(roomId, status)
+    const callbacks = statusCallbacks.get(roomId)
+    if (callbacks) {
+        callbacks.forEach(cb => cb(status))
+    }
+}
+
+/**
+ * Subscribe to connection status changes
+ */
+export function onConnectionStatusChange(
+    owner: string,
+    repo: string,
+    path: string,
+    callback: (status: ConnectionStatus) => void
+): () => void {
+    const roomId = `quartier:${owner}/${repo}/${path}`
+    
+    if (!statusCallbacks.has(roomId)) {
+        statusCallbacks.set(roomId, new Set())
+    }
+    
+    statusCallbacks.get(roomId)!.add(callback)
+    
+    // Return unsubscribe function
+    return () => {
+        statusCallbacks.get(roomId)?.delete(callback)
+    }
+}
+
+/**
+ * Get current connection status
+ */
+export function getConnectionStatus(owner: string, repo: string, path: string): ConnectionStatus {
+    const roomId = `quartier:${owner}/${repo}/${path}`
+    return connectionStatus.get(roomId) || 'disconnected'
+}
+
+/**
+ * Connect a document to collaboration providers with automatic reconnection
  */
 export function connectCollab(
     owner: string,
@@ -81,9 +142,28 @@ export function connectCollab(
     // Setup WebRTC provider (peer-to-peer)
     let webrtcProvider = webrtcProviders.get(roomId)
     if (!webrtcProvider) {
+        setConnectionStatus(roomId, 'connecting')
+        
         webrtcProvider = new WebrtcProvider(roomId, doc, {
-            signaling: ['wss://signaling.yjs.dev'], // Public signaling server
+            signaling: SIGNALING_SERVERS,
+            // Enable password protection if needed
+            // password: 'your-room-password',
         })
+        
+        // Track connection status
+        webrtcProvider.on('status', (event: { status: string }) => {
+            console.log('[collab] WebRTC status:', event.status, roomId)
+            if (event.status === 'connected') {
+                setConnectionStatus(roomId, 'connected')
+            } else if (event.status === 'disconnected') {
+                setConnectionStatus(roomId, 'disconnected')
+            }
+        })
+        
+        webrtcProvider.on('synced', (synced: boolean) => {
+            console.log('[collab] Sync status:', synced, roomId)
+        })
+        
         webrtcProviders.set(roomId, webrtcProvider)
         console.log('[collab] WebRTC provider connected:', roomId)
     }
@@ -103,19 +183,52 @@ export function connectCollab(
 }
 
 /**
- * Disconnect collaboration for a file
+ * Disconnect collaboration for a file with proper cleanup
  */
 export function disconnectCollab(owner: string, repo: string, path: string): void {
     const roomId = `quartier:${owner}/${repo}/${path}`
 
+    // Clear awareness state before disconnecting
     const webrtcProvider = webrtcProviders.get(roomId)
     if (webrtcProvider) {
+        webrtcProvider.awareness.setLocalState(null)
         webrtcProvider.destroy()
         webrtcProviders.delete(roomId)
     }
 
+    // Cleanup status tracking
+    setConnectionStatus(roomId, 'disconnected')
+    statusCallbacks.delete(roomId)
+
     // Keep IndexedDB and doc for quick reconnect
     console.log('[collab] Disconnected:', roomId)
+}
+
+/**
+ * Cleanup all collaboration resources (for app shutdown)
+ */
+export function cleanupAllCollaboration(): void {
+    console.log('[collab] Cleaning up all collaboration resources')
+    
+    // Disconnect all WebRTC providers
+    webrtcProviders.forEach((provider, roomId) => {
+        provider.awareness.setLocalState(null)
+        provider.destroy()
+    })
+    webrtcProviders.clear()
+    
+    // Close all IndexedDB connections
+    indexeddbProviders.forEach((provider) => {
+        provider.destroy()
+    })
+    indexeddbProviders.clear()
+    
+    // Clear documents
+    documents.clear()
+    
+    // Clear status tracking
+    connectionStatus.clear()
+    statusCallbacks.clear()
 }
 
 /**
