@@ -2,17 +2,20 @@
   <Dialog :open="true">
     <DialogContent class="sm:max-w-md" :class="{ 'opacity-0': false } /* Prevent flickering */" :hide-close="true">
       <!-- Loading -->
-      <div v-if="loading" class="text-center py-6">
-        <Loader2 class="h-8 w-8 animate-spin mx-auto text-primary" />
-        <p class="mt-4 text-muted-foreground">Loading session...</p>
+      <div v-if="loading" class="flex justify-center py-6">
+        <LoadingSpinner size="lg" message="Loading session..." />
       </div>
       
       <!-- Error -->
-      <div v-else-if="error" class="text-center space-y-4 py-4">
-        <XCircle class="h-12 w-12 mx-auto text-destructive" />
-        <h1 class="text-xl font-semibold text-foreground">{{ error }}</h1>
-        <Button @click="router.push('/')" variant="outline">Go Home</Button>
-      </div>
+      <ErrorMessage 
+        v-else-if="error"
+        variant="error"
+        :title="error"
+        message="Please check the link and try again"
+        actionText="Go Home"
+        @action="router.push('/')"
+        class="py-4"
+      />
       
       <!-- Session Info -->
       <div v-else-if="session" class="space-y-6">
@@ -103,7 +106,9 @@ import {
   DialogFooter
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Loader2, XCircle, FileText, Edit3, HardDrive, Eye, Users } from 'lucide-vue-next'
+import { FileText, Edit3, HardDrive, Eye, Users } from 'lucide-vue-next'
+import { LoadingSpinner } from '@/components/ui/loading'
+import { ErrorMessage } from '@/components/ui/error'
 import { devFetch } from '@/utils/devTools'
 import { useAuth } from '@/composables/useAuth'
 

@@ -14,15 +14,17 @@
           autofocus
         />
 
-        <div v-if="loading" class="flex items-center justify-center py-8 text-muted-foreground">
-          <Loader2 class="w-6 h-6 animate-spin mr-2" />
-          Loading repositories...
+        <div v-if="loading" class="flex justify-center py-8">
+          <LoadingSpinner size="md" message="Loading repositories..." />
         </div>
 
-        <div v-else-if="error" class="text-center py-8 text-destructive">
-          {{ error }}
-          <Button variant="link" @click="loadRepos" class="mt-2 text-destructive">Retry</Button>
-        </div>
+        <ErrorMessage
+          v-else-if="error"
+          variant="error"
+          :message="error"
+          actionText="Retry"
+          @action="loadRepos"
+        />
 
         <div v-else class="h-[300px] overflow-y-auto -mx-2 px-2 space-y-1">
           <button
@@ -41,9 +43,13 @@
             <Check v-if="repo.full_name === currentRepo" class="w-4 h-4 ml-2 text-primary" />
           </button>
           
-          <div v-if="filteredRepos.length === 0" class="text-center py-8 text-muted-foreground text-sm">
-            No repositories found
-          </div>
+          <EmptyState
+            v-if="filteredRepos.length === 0"
+            :icon="BookMarked"
+            :title="searchQuery ? 'No matching repositories' : 'No repositories found'"
+            :description="searchQuery ? 'Try a different search term' : 'Create a repository on GitHub to get started'"
+            class="py-8"
+          />
         </div>
       </div>
     </DialogContent>
@@ -54,8 +60,10 @@
 import { ref, computed, watch } from 'vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Loader2, BookMarked, Check } from 'lucide-vue-next'
+import { BookMarked, Check } from 'lucide-vue-next'
+import { LoadingSpinner } from '@/components/ui/loading'
+import { ErrorMessage } from '@/components/ui/error'
+import { EmptyState } from '@/components/ui/empty-state'
 import { githubService } from '@/services/github'
 
 const props = defineProps<{

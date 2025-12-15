@@ -114,6 +114,14 @@
         </Tooltip>
       </TooltipProvider>
       
+      <!-- Connection Status (when collaborating) -->
+      <ConnectionStatus
+        v-if="sessionMemberCount > 1 || otherUsers.length > 0"
+        :status="props.connectionStatus"
+        :show-text="false"
+        :show-always="false"
+      />
+      
       <!-- Share button -->
       <TooltipProvider :delay-duration="0">
         <Tooltip>
@@ -132,7 +140,7 @@
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <SaveButton :can-save="canSave" @save="emit('save')" />
+      <SaveButton :can-save="canSave" :auto-save-status="props.autoSaveStatus" @save="emit('save')" />
       <ThemeToggle />
       <div class="w-px h-4 bg-border/50 mx-1" />
       <!-- Preview toggle -->
@@ -161,19 +169,22 @@
 import { Eye, Code, Keyboard, PanelRightOpen, Share2, Users } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { ConnectionStatus } from '@/components/ui/connection-status'
 import { ThemeToggle, SidebarToggle, SaveButton } from '@/components/toolbar'
 import EditorToolbar from '@/components/editor/EditorToolbar.vue'
 import { useAwareness } from '@/composables/useAwareness'
 
 const { otherUsers } = useAwareness()
 
-defineProps<{
+const props = defineProps<{
   canSave: boolean
   canShare: boolean
   sidebarVisible: boolean
   showPreview: boolean
   editorMode: 'visual' | 'source'
   sessionMemberCount: number
+  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error'
+  autoSaveStatus: 'idle' | 'saving' | 'saved'
   getEditor: () => any
 }>()
 

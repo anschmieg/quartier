@@ -157,17 +157,17 @@ export function connectCollab(
         })
         
         // Track connection status
-        webrtcProvider.on('status', (event: { status: string }) => {
-            console.log('[collab] WebRTC status:', event.status, roomId)
-            if (event.status === 'connected') {
+        webrtcProvider.on('status', (event: { connected: boolean }) => {
+            console.log('[collab] WebRTC status:', event.connected ? 'connected' : 'disconnected', roomId)
+            if (event.connected) {
                 setConnectionStatus(roomId, 'connected')
-            } else if (event.status === 'disconnected') {
+            } else {
                 setConnectionStatus(roomId, 'disconnected')
             }
         })
         
-        webrtcProvider.on('synced', (synced: boolean) => {
-            console.log('[collab] Sync status:', synced, roomId)
+        webrtcProvider.on('synced', (event: { synced: boolean }) => {
+            console.log('[collab] Sync status:', event.synced, roomId)
         })
         
         webrtcProviders.set(roomId, webrtcProvider)
@@ -217,7 +217,7 @@ export function cleanupAllCollaboration(): void {
     console.log('[collab] Cleaning up all collaboration resources')
     
     // Disconnect all WebRTC providers
-    webrtcProviders.forEach((provider, roomId) => {
+    webrtcProviders.forEach((provider) => {
         provider.awareness.setLocalState(null)
         provider.destroy()
     })

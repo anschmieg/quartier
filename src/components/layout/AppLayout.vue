@@ -9,6 +9,8 @@
       :get-editor="getEditorInstance"
       :can-share="!!currentFile && !!repo"
       :session-member-count="sessionMemberCount"
+      :connection-status="connectionStatus"
+      :auto-save-status="autoSaveStatus"
       @command-palette="openCommandPalette"
       @save="saveFile"
       @share="openShareDialog"
@@ -101,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 
 const { isAuthenticated, isAccessAuthenticated, isHost, user, accessUser } = useAuth()
@@ -119,6 +121,7 @@ import Toast from '@/components/ui/Toast.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { githubService } from '@/services/github'
 import { cachedFileSystem, kvSync } from '@/services/storage'
+import { getConnectionStatus, onConnectionStatusChange, type ConnectionStatus } from '@/services/collab'
 
 import { useRoute } from 'vue-router'
 import JoinSessionDialog from '@/components/dialogs/JoinSessionDialog.vue'
@@ -146,6 +149,8 @@ const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
 const shareDialogRef = ref<InstanceType<typeof ShareDialog> | null>(null)
 const sharedSessionsDialogRef = ref<InstanceType<typeof SharedSessionsDialog> | null>(null)
 const userEmail = ref<string | undefined>(undefined)
+const connectionStatus = ref<ConnectionStatus>('disconnected')
+const autoSaveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 
 // Computed room ID for collaboration
 const collabRoomId = computed(() => {
@@ -197,6 +202,38 @@ const getEditorInstance = () => {
 const { Meta_K, Ctrl_K } = useMagicKeys()
 whenever(() => Meta_K?.value || Ctrl_K?.value, () => openCommandPalette())
 
+// Track connection status for current file
+let unsubscribeConnectionStatus: (() => void) | null = null
+
+watch([repo, currentFile], ([newRepo, newFile]: [string | undefined, string | null]) => {
+  // Unsubscribe from previous file
+  if (unsubscribeConnectionStatus) {
+    unsubscribeConnectionStatus()
+    unsubscribeConnectionStatus = null
+  }
+  
+  // Subscribe to new file if both repo and file are set
+  if (newRepo && newFile) {
+    const [owner, name] = newRepo.split('/')
+    if (owner && name) {
+      // Get initial status
+      connectionStatus.value = getConnectionStatus(owner, name, newFile)
+      
+      // Subscribe to status changes
+      unsubscribeConnectionStatus = onConnectionStatusChange(
+        owner,
+        name,
+        newFile,
+        (status) => {
+          connectionStatus.value = status
+        }
+      )
+    }
+  } else {
+    connectionStatus.value = 'disconnected'
+  }
+})
+
 // Restore file content on mount
 onMounted(async () => {
   console.log('[AppLayout] onMounted - repo:', repo.value, 'currentFile:', currentFile.value)
@@ -231,11 +268,20 @@ onMounted(async () => {
     const [owner, name] = repo.value.split('/')
     if (!owner || !name) return
     
+    autoSaveStatus.value = 'saving'
     console.log('[AutoSync] Saving to KV...')
     const saved = await kvSync.put(owner, name, currentFile.value, fileContent.value)
     if (saved) {
       lastSyncedContent = fileContent.value
+      autoSaveStatus.value = 'saved'
       console.log('[AutoSync] Saved successfully')
+      
+      // Reset to idle after 2 seconds
+      setTimeout(() => {
+        autoSaveStatus.value = 'idle'
+      }, 2000)
+    } else {
+      autoSaveStatus.value = 'idle'
     }
   }, 60000) // Every 60 seconds
 })
@@ -244,6 +290,10 @@ onUnmounted(() => {
   if (autoSyncInterval) {
     clearInterval(autoSyncInterval)
     autoSyncInterval = null
+  }
+  if (unsubscribeConnectionStatus) {
+    unsubscribeConnectionStatus()
+    unsubscribeConnectionStatus = null
   }
 })
 

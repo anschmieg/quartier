@@ -12,15 +12,19 @@
       
       <div class="flex-1 overflow-auto py-2">
         <!-- Loading -->
-        <div v-if="loading" class="flex items-center justify-center py-8">
-          <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+        <div v-if="loading" class="flex justify-center py-8">
+          <LoadingSpinner size="md" message="Loading sessions..." />
         </div>
         
         <!-- Empty state -->
-        <div v-else-if="sessions.length === 0" class="text-center py-8 text-muted-foreground">
-          <Share2 class="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No shared sessions yet</p>
-        </div>
+        <EmptyState
+          v-else-if="sessions.length === 0"
+          :icon="Share2"
+          title="No shared sessions yet"
+          :description="mode === 'shared-with-me' 
+            ? 'When someone shares files with you, they\'ll appear here' 
+            : 'Start collaborating by sharing files from the editor'"
+        />
         
         <!-- Session list -->
         <div v-else class="space-y-2">
@@ -138,7 +142,9 @@ import {
   DialogFooter 
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Loader2, Share2, FileText, FolderOpen, FolderGit2, Link, Trash2, Copy, Check, X } from 'lucide-vue-next'
+import { Share2, FileText, FolderOpen, FolderGit2, Link, Trash2, Copy, Check, X } from 'lucide-vue-next'
+import { LoadingSpinner } from '@/components/ui/loading'
+import { EmptyState } from '@/components/ui/empty-state'
 
 interface SharedSession {
   id: string

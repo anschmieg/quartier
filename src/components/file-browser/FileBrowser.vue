@@ -6,6 +6,15 @@
       <FileFilters v-if="repo" v-model:showAll="showAllFiles" />
     </div>
     
+    <!-- Search input -->
+    <div v-if="repo" class="px-2 mb-2">
+      <Input 
+        v-model="searchQuery"
+        placeholder="Search files..."
+        class="h-7 text-xs"
+      />
+    </div>
+    
     <!-- Breadcrumb navigation -->
     <PathBreadcrumbs 
       v-if="repo"
@@ -15,14 +24,18 @@
     />
     
     <!-- Empty state -->
-    <div v-if="!repo" class="text-sm text-muted-foreground px-2 py-4 text-center">
-      No repository selected.
-    </div>
+    <EmptyState
+      v-if="!repo"
+      :icon="FolderOpen"
+      title="No repository selected"
+      description="Select a repository from the header to get started"
+      class="px-2 py-4"
+    />
     
     <!-- File tree -->
     <FileTree 
       v-else
-      :files="filteredFiles" 
+      :files="searchedFiles" 
       :selected-path="selectedPath"
       :expanded-folders="currentExpandedFolders"
       @select="handleSelect"
@@ -40,9 +53,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useStorage } from '@vueuse/core'
+import { FolderOpen } from 'lucide-vue-next'
 import FileTree from './FileTree.vue'
 import PathBreadcrumbs from './PathBreadcrumbs.vue'
 import FileFilters from './FileFilters.vue'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Input } from '@/components/ui/input'
 import { githubService } from '@/services/github'
 import { kvSync } from '@/services/storage'
 
@@ -73,6 +89,7 @@ const emit = defineEmits<{
 const files = ref<FileItem[]>([])
 const currentPath = ref('')
 const showAllFiles = ref(false)
+const searchQuery = ref('')
 
 // Persisted expanded folders (per repo)
 const expandedFolders = useStorage<Record<string, string[]>>('quartier:expandedFolders', {})
@@ -104,6 +121,18 @@ const filteredFiles = computed(() => {
         return QUARTO_EXTENSIONS.has(ext)
       })
   return items
+})
+
+const searchedFiles = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return filteredFiles.value
+  }
+  
+  const query = searchQuery.value.toLowerCase()
+  return filteredFiles.value.filter(f => {
+    const fileName = f.path.split('/').pop()?.toLowerCase() || ''
+    return fileName.includes(query)
+  })
 })
 
 // Watch for repo changes
