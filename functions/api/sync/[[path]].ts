@@ -7,7 +7,10 @@
  * - DELETE /api/sync/{owner}/{repo}/{path} - Delete cached content
  * 
  * Authentication: Requires Cloudflare Access (cf-access-authenticated-user-email header)
+ * Rate Limiting: 100 requests per minute per user
  */
+
+import { checkRateLimit, createErrorResponse } from '../../utils/validation'
 
 interface Env {
     QUARTIER_KV: KVNamespace
@@ -25,11 +28,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const email = context.request.headers.get('cf-access-authenticated-user-email')
 
     if (!email) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-        })
+        return createErrorResponse('Unauthorized', 401, 'UNAUTHORIZED')
     }
+
+    // Rate limiting: 100 requests per minute per user
+    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `sync:${email}`, 100, 60)
+    if (!rateLimit.allowed) {
+        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
 
     // Extract path from URL: /api/sync/owner/repo/path/to/file.md
     const url = new URL(context.request.url)
@@ -92,10 +97,13 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const email = context.request.headers.get('cf-access-authenticated-user-email')
 
     if (!email) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-        })
+        return createErrorResponse('Unauthorized', 401, 'UNAUTHORIZED')
+    }
+
+    // Rate limiting: 100 requests per minute per user
+    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `sync:${email}`, 100, 60)
+    if (!rateLimit.allowed) {
+        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
     }
 
     const url = new URL(context.request.url)
@@ -153,10 +161,13 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     const email = context.request.headers.get('cf-access-authenticated-user-email')
 
     if (!email) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-        })
+        return createErrorResponse('Unauthorized', 401, 'UNAUTHORIZED')
+    }
+
+    // Rate limiting: 100 requests per minute per user
+    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `sync:${email}`, 100, 60)
+    if (!rateLimit.allowed) {
+        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
     }
 
     const url = new URL(context.request.url)

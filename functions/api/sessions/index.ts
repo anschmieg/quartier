@@ -3,7 +3,11 @@
  * 
  * POST /api/sessions - Create a new session
  * GET /api/sessions - List user's sessions
+ * 
+ * Rate Limiting: 20 POST requests per minute per user, 50 GET requests per minute per user
  */
+
+import { checkRateLimit, createErrorResponse } from '../../utils/validation'
 
 // Inlined types (Wrangler can't resolve imports from ../types/)
 interface Session {
@@ -45,10 +49,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const email = getAuthEmail(context)
 
     if (!email) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-        })
+        return createErrorResponse('Unauthorized', 401, 'UNAUTHORIZED')
+    }
+
+    // Rate limiting: 20 POST requests per minute per user
+    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `sessions:post:${email}`, 20, 60)
+    if (!rateLimit.allowed) {
+        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
     }
 
     try {
@@ -119,10 +126,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const email = getAuthEmail(context)
 
     if (!email) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-        })
+        return createErrorResponse('Unauthorized', 401, 'UNAUTHORIZED')
+    }
+
+    // Rate limiting: 50 GET requests per minute per user
+    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `sessions:get:${email}`, 50, 60)
+    if (!rateLimit.allowed) {
+        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
     }
 
     try {

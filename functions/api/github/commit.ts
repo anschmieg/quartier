@@ -3,11 +3,15 @@
  * PUT /api/github/commit
  * 
  * Body: { owner, repo, path, content, message, sha? }
+ * 
+ * Rate Limiting: 30 commits per minute per user
  */
+
+import { checkRateLimit, createErrorResponse } from '../../utils/validation'
 
 interface Env {
     DEV_ACCESS_TOKEN?: string
-    QUARTIER_KV?: KVNamespace
+    QUARTIER_KV: KVNamespace
 }
 
 interface CommitRequest {
@@ -30,10 +34,15 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     if (!accessToken) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-        })
+        return createErrorResponse('Unauthorized', 401, 'UNAUTHORIZED')
+    }
+
+    // Rate limiting: 30 commits per minute per user (use token as identifier)
+    const tokenHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(accessToken))
+    const tokenId = Array.from(new Uint8Array(tokenHash)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('')
+    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `commit:${tokenId}`, 30, 60)
+    if (!rateLimit.allowed) {
+        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
     }
 
     try {
