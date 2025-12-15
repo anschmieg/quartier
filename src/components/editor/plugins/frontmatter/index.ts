@@ -60,3 +60,4 @@ export const frontmatterNode = $nodeSchema(frontmatterSchemaName, () => ({
 }))
 
 export { frontmatterSyntax } from './syntax'
+export { frontmatterValidation } from './validation'

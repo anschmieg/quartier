@@ -32,8 +32,9 @@ import { prism } from '@milkdown/plugin-prism'
 import { emoji } from '@milkdown/plugin-emoji'
 import { indent } from '@milkdown/plugin-indent'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
-import { remarkFrontmatterPlugin, frontmatterNode, frontmatterSyntax } from './plugins/frontmatter'
+import { remarkFrontmatterPlugin, frontmatterNode, frontmatterSyntax, frontmatterValidation } from './plugins/frontmatter'
 import FrontmatterNode from './plugins/frontmatter/FrontmatterNode.vue'
+import './plugins/frontmatter/style.css'
 import * as Y from 'yjs'
 import YPartyKitProvider from 'y-partykit/provider'
 import { IndexeddbPersistence } from 'y-indexeddb'
@@ -156,6 +157,7 @@ const MilkdownInternal = defineComponent({
         .use(frontmatterNode)
         .use(frontmatterView)
         .use(frontmatterSyntax)
+        .use(frontmatterValidation)
         .use(gfm)
         .use(history)
         .use(listener)
