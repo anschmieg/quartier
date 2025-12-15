@@ -7,7 +7,7 @@
     </div>
     
     <!-- Search input -->
-    <div v-if="repo" class="px-2 mb-2">
+    <div v-if="repo && !error" class="px-2 mb-2">
       <Input 
         v-model="searchQuery"
         placeholder="Search files..."
@@ -17,21 +17,50 @@
     
     <!-- Breadcrumb navigation -->
     <PathBreadcrumbs 
-      v-if="repo"
+      v-if="repo && !error"
       :current-path="currentPath" 
       @navigate="navigateToPath"
       class="px-2"
     />
     
+    <!-- Error State -->
+    <div v-if="error" class="px-2 py-4">
+      <ErrorMessage 
+        title="Failed to load files"
+        :message="error"
+        action-label="Retry"
+        @action="retryLoad"
+      />
+    </div>
+
+    <!-- Loading State -->
+    <div v-else-if="loading" class="flex-1 flex items-center justify-center p-8">
+      <LoadingSpinner size="md" message="Loading files..." />
+    </div>
+    
     <!-- Empty state -->
     <EmptyState
-      v-if="!repo"
+      v-else-if="!repo"
       :icon="FolderOpen"
       title="No repository selected"
       description="Select a repository from the header to get started"
       class="px-2 py-4"
     />
     
+    <EmptyState
+      v-else-if="files.length === 0"
+      :icon="searchQuery ? SearchX : FolderOpen"
+      title="No files found"
+      :description="searchQuery ? 'No files match your search' : 'This folder is empty'"
+      class="px-2 py-4"
+    >
+        <template #actions v-if="!searchQuery && repo">
+             <Button size="sm" variant="outline" @click="emit('create-file', currentPath)">
+                Create File
+             </Button>
+        </template>
+    </EmptyState>
+
     <!-- File tree -->
     <FileTree 
       v-else
@@ -53,11 +82,14 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useStorage } from '@vueuse/core'
-import { FolderOpen } from 'lucide-vue-next'
+import { FolderOpen, SearchX } from 'lucide-vue-next'
 import FileTree from './FileTree.vue'
 import PathBreadcrumbs from './PathBreadcrumbs.vue'
 import FileFilters from './FileFilters.vue'
 import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingSpinner } from '@/components/ui/loading'
+import { ErrorMessage } from '@/components/ui/error'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { githubService } from '@/services/github'
 import { kvSync } from '@/services/storage'
@@ -90,6 +122,8 @@ const files = ref<FileItem[]>([])
 const currentPath = ref('')
 const showAllFiles = ref(false)
 const searchQuery = ref('')
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 // Persisted expanded folders (per repo)
 const expandedFolders = useStorage<Record<string, string[]>>('quartier:expandedFolders', {})
@@ -142,16 +176,22 @@ watch(() => props.repo, async (newRepo) => {
   } else {
     files.value = []
     currentPath.value = ''
+    error.value = null
   }
 }, { immediate: true })
 
-// ...
-
-// ...
+async function retryLoad() {
+    if (props.repo) {
+        await loadRepoContents(props.repo, currentPath.value)
+    }
+}
 
 async function loadRepoContents(repoFullName: string, path: string) {
   const [owner, name] = repoFullName.split('/')
   if (!owner || !name) return
+  
+  loading.value = true
+  error.value = null
   
   // If Host, use GitHub API
   if (props.isHost) {
@@ -162,9 +202,11 @@ async function loadRepoContents(repoFullName: string, path: string) {
           type: item.type as 'file' | 'dir'
         }))
         currentPath.value = path
-      } catch (error) {
-        console.error('Failed to load repo contents from GitHub:', error)
-        // Fallback to KV? No, Host should use GitHub.
+      } catch (e: any) {
+        console.error('Failed to load repo contents from GitHub:', e)
+        error.value = e.message || 'Failed to load repository contents'
+      } finally {
+        loading.value = false
       }
       return
   }
@@ -175,6 +217,7 @@ async function loadRepoContents(repoFullName: string, path: string) {
       const allFiles = await kvSync.list(owner, name)
       if (!allFiles) {
           files.value = []
+          loading.value = false
           return
       }
 
@@ -226,8 +269,11 @@ async function loadRepoContents(repoFullName: string, path: string) {
       })
       
       currentPath.value = path
-  } catch (error) {
-      console.error('Failed to load guest contents:', error)
+  } catch (e: any) {
+      console.error('Failed to load guest contents:', e)
+      error.value = e.message || 'Failed to load files'
+  } finally {
+      loading.value = false
   }
 }
 
@@ -254,6 +300,10 @@ async function handleExpandFolder(folderPath: string) {
   
   const [owner, name] = props.repo.split('/')
   if (!owner || !name) return
+  
+  // Don't show full page loading spinner for expansion
+  // But maybe show a toast or small indicator if it fails?
+  // For now we just log errors as before
   
   // If Guest, use KV list
   if (!props.isHost) {

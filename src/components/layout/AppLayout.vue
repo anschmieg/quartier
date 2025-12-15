@@ -284,9 +284,13 @@ onMounted(async () => {
       autoSaveStatus.value = 'idle'
     }
   }, 60000) // Every 60 seconds
+
+  // Warn about unsaved changes before unload
+  window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
 onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
   if (autoSyncInterval) {
     clearInterval(autoSyncInterval)
     autoSyncInterval = null
@@ -296,6 +300,14 @@ onUnmounted(() => {
     unsubscribeConnectionStatus = null
   }
 })
+
+function handleBeforeUnload(e: BeforeUnloadEvent) {
+  if (fileContent.value !== lastSyncedContent || autoSaveStatus.value === 'saving') {
+    e.preventDefault()
+    e.returnValue = ''
+    return ''
+  }
+}
 
 function openCommandPalette() {
   commandPaletteRef.value?.open()
@@ -331,6 +343,7 @@ async function selectFile(path: string) {
       // Both exist - use KV since it's the server source of truth
       console.log('[AppLayout] Loaded from KV (cross-device):', path)
       fileContent.value = kvData.content
+      lastSyncedContent = kvData.content
       // Update local cache with KV content
       await cachedFileSystem.setCache(owner, name, path, kvData.content)
       fileLoading.value = false
@@ -340,6 +353,7 @@ async function selectFile(path: string) {
     if (kvData) {
       console.log('[AppLayout] Loaded from KV:', path)
       fileContent.value = kvData.content
+      lastSyncedContent = kvData.content
       await cachedFileSystem.setCache(owner, name, path, kvData.content)
       fileLoading.value = false
       return
@@ -348,6 +362,7 @@ async function selectFile(path: string) {
     if (localContent !== null) {
       console.log('[AppLayout] Loaded from local cache:', path)
       fileContent.value = localContent
+      lastSyncedContent = localContent
       fileLoading.value = false
       return
     }
@@ -359,6 +374,7 @@ async function selectFile(path: string) {
     await cachedFileSystem.setCache(owner, name, path, content)
     
     fileContent.value = content
+    lastSyncedContent = content
     originalFileContent.value = content // Track original for diff
     console.log('File loaded from GitHub, length:', content.length)
   } catch (error) {
@@ -479,6 +495,7 @@ async function handleCommit(message: string) {
   
   if (result.success) {
     console.log('[AppLayout] Commit successful:', result.commitSha)
+    lastSyncedContent = fileContent.value
     // Clear local cache since it's now committed
     await cachedFileSystem.clearCache(owner, name, currentFile.value)
     toastRef.value?.success(`Committed: ${result.commitSha?.slice(0, 7)}`)

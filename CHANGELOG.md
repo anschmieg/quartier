@@ -7,13 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2025-12-15
+
 ### Added
+- **UI Integration**: `LoadingSpinner`, `EmptyState`, and `ErrorMessage` components integrated into FileBrowser
+- **UX**: Auto-save indicators in toolbar (Saving... / Saved)
+- **UX**: Unsaved changes warning (browser beforeunload event)
 - Comprehensive API documentation with all endpoints and examples
 - Environment variables documentation for configuration
 - Security best practices guide with incident response procedures
 - User guide with tutorials and troubleshooting
 - Input validation utilities for API endpoints
-- Rate limiting framework for abuse prevention
+- Rate limiting framework for abuse prevention (Global Rate Limiting implemented)
 - Connection status tracking for collaboration
 - ConnectionStatus UI component for real-time status display
 - ESLint configuration for code quality

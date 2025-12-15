@@ -2,10 +2,13 @@
  * Fetch user repositories from GitHub
  */
 
+import { checkRateLimit, createErrorResponse } from '../../utils/validation'
+
 interface Env {
     GITHUB_CLIENT_ID: string
     GITHUB_CLIENT_SECRET: string
     DEV_ACCESS_TOKEN?: string
+    QUARTIER_KV: KVNamespace
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -26,6 +29,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     if (!accessToken) {
         console.log('No access token found')
         return new Response('Unauthorized - No token', { status: 401 })
+    }
+
+    // Rate limiting: 30 requests per minute per user
+    const tokenHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(accessToken))
+    const tokenId = Array.from(new Uint8Array(tokenHash)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('')
+    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `repos:${tokenId}`, 30, 60)
+    if (!rateLimit.allowed) {
+        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
     }
 
     try {

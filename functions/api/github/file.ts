@@ -5,9 +5,11 @@
  * Body: { owner, repo, path, message, sha }
  */
 
+import { checkRateLimit, createErrorResponse } from '../../utils/validation'
+
 interface Env {
     DEV_ACCESS_TOKEN?: string
-    QUARTIER_KV?: KVNamespace
+    QUARTIER_KV: KVNamespace
 }
 
 interface DeleteRequest {
@@ -32,6 +34,14 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
             status: 401,
             headers: { 'Content-Type': 'application/json' }
         })
+    }
+
+    // Rate limiting: 30 requests per minute per user
+    const tokenHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(accessToken))
+    const tokenId = Array.from(new Uint8Array(tokenHash)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('')
+    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `delete:${tokenId}`, 30, 60)
+    if (!rateLimit.allowed) {
+        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
     }
 
     try {

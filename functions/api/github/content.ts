@@ -8,6 +8,8 @@
  * - No token + no session → 403 Forbidden
  */
 
+import { checkRateLimit, createErrorResponse } from '../../utils/validation'
+
 interface Session {
     id: string
     owner: string
@@ -193,6 +195,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             status: 401,
             headers: { 'Content-Type': 'application/json' }
         })
+    }
+
+    // Rate limiting: 60 requests per minute per user (use token as identifier)
+    const tokenHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(accessToken))
+    const tokenId = Array.from(new Uint8Array(tokenHash)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('')
+    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `content:${tokenId}`, 60, 60)
+    if (!rateLimit.allowed) {
+        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
     }
 
     try {
