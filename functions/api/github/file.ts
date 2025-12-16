@@ -8,7 +8,7 @@
 import { checkRateLimit, createErrorResponse } from '../../utils/validation'
 
 interface Env {
-    DEV_ACCESS_TOKEN?: string
+    DEV_GITHUB_TOKEN?: string
     QUARTIER_KV: KVNamespace
 }
 
@@ -25,8 +25,8 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     const tokenMatch = cookieHeader ? cookieHeader.match(/(^| )gh_token=([^;]+)/) : null
     let accessToken = tokenMatch ? tokenMatch[2] : null
 
-    if (!accessToken && context.env.DEV_ACCESS_TOKEN) {
-        accessToken = context.env.DEV_ACCESS_TOKEN
+    if (!accessToken && context.env.DEV_GITHUB_TOKEN) {
+        accessToken = context.env.DEV_GITHUB_TOKEN
     }
 
     if (!accessToken) {

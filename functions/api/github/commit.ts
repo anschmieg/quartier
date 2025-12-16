@@ -10,7 +10,7 @@
 import { checkRateLimit, createErrorResponse } from '../../utils/validation'
 
 interface Env {
-    DEV_ACCESS_TOKEN?: string
+    DEV_GITHUB_TOKEN?: string
     QUARTIER_KV: KVNamespace
 }
 
@@ -29,8 +29,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     let accessToken = tokenMatch ? tokenMatch[2] : null
 
     // Fallback for local development
-    if (!accessToken && context.env.DEV_ACCESS_TOKEN) {
-        accessToken = context.env.DEV_ACCESS_TOKEN
+    if (!accessToken && context.env.DEV_GITHUB_TOKEN) {
+        accessToken = context.env.DEV_GITHUB_TOKEN
     }
 
     if (!accessToken) {

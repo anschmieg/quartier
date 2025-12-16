@@ -35,7 +35,7 @@ This document describes all environment variables used by Quartier.
 - Example: `developer@example.com`
 - Use case: Testing Guest mode locally without Cloudflare Access
 
-**DEV_ACCESS_TOKEN**
+**DEV_GITHUB_TOKEN**
 - Description: GitHub Personal Access Token for local API testing
 - Required: No (development only)
 - Default: None
@@ -89,7 +89,7 @@ GITHUB_CLIENT_SECRET=your_client_secret_here
 
 # Development overrides (optional)
 DEV_USER_EMAIL=local@quartier.dev
-DEV_ACCESS_TOKEN=ghp_your_github_personal_access_token
+DEV_GITHUB_TOKEN=ghp_your_github_personal_access_token
 ```
 
 ### wrangler.toml (Cloudflare Pages)
@@ -185,7 +185,7 @@ Add to `.gitignore`:
 **Problem**: API returns 401 Unauthorized
 
 **Solutions**:
-1. Check that `DEV_ACCESS_TOKEN` is set in `.dev.vars`
+1. Check that `DEV_GITHUB_TOKEN` is set in `.dev.vars`
 2. Verify token has correct permissions
 3. Check that token hasn't expired
 4. Ensure `.dev.vars` is in the project root
@@ -227,7 +227,7 @@ Add to `.gitignore`:
 ### Development
 - Uses `.dev.vars` for configuration
 - `DEV_USER_EMAIL` simulates Cloudflare Access
-- `DEV_ACCESS_TOKEN` provides GitHub API access
+- `DEV_GITHUB_TOKEN` provides GitHub API access
 - IndexedDB and localStorage work normally
 
 ### Production

@@ -578,7 +578,7 @@ For local development:
    GITHUB_CLIENT_ID=your_client_id
    GITHUB_CLIENT_SECRET=your_secret
    DEV_USER_EMAIL=local@quartier.dev
-   DEV_ACCESS_TOKEN=your_github_token
+   DEV_GITHUB_TOKEN=your_github_token
    ```
 
 2. Start development server:

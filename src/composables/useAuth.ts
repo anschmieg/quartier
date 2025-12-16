@@ -81,8 +81,15 @@ export function useAuth() {
 
     /**
      * Redirect to GitHub OAuth login
+     * In development, uses the dev-login endpoint instead
      */
     function login(returnTo?: string) {
+        // In development, use the dev-login endpoint
+        if (import.meta.env.DEV) {
+            window.location.href = '/api/oauth/dev-login'
+            return
+        }
+
         const url = new URL('/api/oauth/login', window.location.origin)
         if (returnTo) {
             url.searchParams.set('return_to', returnTo)

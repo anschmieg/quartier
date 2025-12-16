@@ -1,19 +1,19 @@
 /**
  * Development login endpoint
  * 
- * Uses DEV_ACCESS_TOKEN to authenticate and set cookies for local development.
- * Only works when DEV_ACCESS_TOKEN is set (local development).
+ * Uses DEV_GITHUB_TOKEN to authenticate and set cookies for local development.
+ * Only works when DEV_GITHUB_TOKEN is set (local development).
  */
 
 interface Env {
-    DEV_ACCESS_TOKEN?: string
+    DEV_GITHUB_TOKEN?: string
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-    const devToken = context.env.DEV_ACCESS_TOKEN
+    const devToken = context.env.DEV_GITHUB_TOKEN
 
     if (!devToken) {
-        return new Response('DEV_ACCESS_TOKEN not configured. This endpoint only works in local development.', {
+        return new Response('DEV_GITHUB_TOKEN not configured. This endpoint only works in local development.', {
             status: 400
         })
     }

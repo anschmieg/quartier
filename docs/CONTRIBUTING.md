@@ -47,7 +47,7 @@ Thank you for your interest in contributing to Quartier! This guide will help yo
    # Optional: Simulate generic user
    DEV_USER_EMAIL=local@quartier.dev
    # Optional: GitHub personal access token for API testing
-   # DEV_ACCESS_TOKEN=ghp_your_token
+   # DEV_GITHUB_TOKEN=ghp_your_token
    ```
 
 4. **Configure Wrangler** (optional):

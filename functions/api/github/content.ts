@@ -20,7 +20,7 @@ interface Session {
 
 interface Env {
     QUARTIER_KV: KVNamespace
-    DEV_ACCESS_TOKEN?: string
+    DEV_GITHUB_TOKEN?: string
     DEV_USER_EMAIL?: string
 }
 
@@ -133,8 +133,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     let accessToken = tokenMatch ? tokenMatch[2] : null
 
     // Fallback for local development
-    if (!accessToken && context.env.DEV_ACCESS_TOKEN) {
-        accessToken = context.env.DEV_ACCESS_TOKEN
+    if (!accessToken && context.env.DEV_GITHUB_TOKEN) {
+        accessToken = context.env.DEV_GITHUB_TOKEN
     }
 
     let session: Session | null = null
@@ -179,8 +179,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         isGuest = !isOwner // All non-owners get filtered view
 
         // Use owner's token for guests (stored in session or fallback to dev token)
-        if (!accessToken && context.env.DEV_ACCESS_TOKEN) {
-            accessToken = context.env.DEV_ACCESS_TOKEN
+        if (!accessToken && context.env.DEV_GITHUB_TOKEN) {
+            accessToken = context.env.DEV_GITHUB_TOKEN
         }
     } else {
         // No token and no session = unauthorized
