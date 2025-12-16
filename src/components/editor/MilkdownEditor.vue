@@ -37,6 +37,8 @@ import { createCompletionPlugin, type CompletionState, type CompletionItem } fro
 import FrontmatterCompletion from './plugins/frontmatter/FrontmatterCompletion.vue'
 import FrontmatterNode from './plugins/frontmatter/FrontmatterNode.vue'
 import CodeCell from './CodeCell.vue'
+import { remarkCallout, remarkCalloutTransform, calloutNode } from './plugins/callout'
+import CalloutNode from './plugins/callout/CalloutNode.vue'
 import './plugins/frontmatter/style.css'
 import * as Y from 'yjs'
 import YPartyKitProvider from 'y-partykit/provider'
@@ -143,6 +145,12 @@ const MilkdownInternal = defineComponent({
         as: 'div',
     }))
 
+    // Create callout view for ::: {.callout-*} blocks
+    const calloutView = $view(calloutNode.node, () => nodeViewFactory({
+        component: CalloutNode,
+        as: 'div',
+    }))
+
     const { get } = useEditor((root) => {
       return Editor.make()
         .config((configCtx) => {
@@ -200,6 +208,10 @@ const MilkdownInternal = defineComponent({
         .use(frontmatterValidation)
         .use(createCompletionPlugin(onCompletionUpdate, onCompletionSelect))
         .use(executableCodeView)
+        .use(remarkCallout)
+        .use(remarkCalloutTransform)
+        .use(calloutNode)
+        .use(calloutView)
         .use(gfm)
         .use(history)
         .use(listener)
