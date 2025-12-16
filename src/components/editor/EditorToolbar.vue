@@ -36,35 +36,8 @@
     </TooltipProvider>
 
     <Separator orientation="vertical" class="h-6 mx-1" />
-    <!-- Headings Dropdown -->
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" class="gap-1">
-          <Heading class="w-4 h-4" />
-          <span class="text-xs">Heading</span>
-          <ChevronDown class="w-3 h-3" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuItem @click="setHeading(1)">
-          <span class="text-lg font-bold">Heading 1</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem @click="setHeading(2)">
-          <span class="text-base font-bold">Heading 2</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem @click="setHeading(3)">
-          <span class="text-sm font-bold">Heading 3</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem @click="setParagraph">
-          <span>Paragraph</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
 
-    <Separator orientation="vertical" class="h-6" />
-
-    <!-- Text Formatting -->
+    <!-- Formatting (Always Visible) -->
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -99,80 +72,9 @@
       </Tooltip>
     </TooltipProvider>
 
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            :class="{ 'bg-muted': isActive('inline_code') }"
-            @mousedown.prevent
-            @click="toggleInlineCode"
-          >
-            <Code2 class="w-4 h-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Inline Code (Ctrl+E)</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Separator orientation="vertical" class="h-6 mx-1" />
 
-    <Separator orientation="vertical" class="h-6" />
-
-    <!-- List Buttons -->
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            :class="{ 'bg-muted': isActive('bullet_list') }"
-            @mousedown.prevent
-            @click="toggleBulletList"
-          >
-            <List class="w-4 h-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Bullet List (Ctrl+Shift+8)</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            :class="{ 'bg-muted': isActive('ordered_list') }"
-            @mousedown.prevent
-            @click="toggleOrderedList"
-          >
-            <ListOrdered class="w-4 h-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Ordered List (Ctrl+Shift+7)</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-
-    <Separator orientation="vertical" class="h-6" />
-
-    <!-- Block Elements -->
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            :class="{ 'bg-muted': isActive('blockquote') }"
-            @mousedown.prevent
-            @click="toggleBlockquote"
-          >
-            <Quote class="w-4 h-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Blockquote</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-
+    <!-- Code Block (Always Visible) -->
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -190,47 +92,227 @@
       </Tooltip>
     </TooltipProvider>
 
-    <Separator orientation="vertical" class="h-6" />
+    <Separator orientation="vertical" class="h-6 mx-1" />
 
-    <!-- Link & Image -->
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            :class="{ 'bg-muted': isActive('link') }"
-            @mousedown.prevent
-            @click="handleSetLink"
-          >
-            <Link class="w-4 h-4" />
+    <!-- FULL TOOLBAR ONLY (!condensed) -->
+    <template v-if="!condensed">
+      <!-- Headings Dropdown -->
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" class="gap-1">
+            <Heading class="w-4 h-4" />
+            <span class="text-xs">Heading</span>
+            <ChevronDown class="w-3 h-3" />
           </Button>
-        </TooltipTrigger>
-        <TooltipContent>Insert Link (Ctrl+K)</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem @click="setHeading(1)">
+            <span class="text-lg font-bold">Heading 1</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="setHeading(2)">
+            <span class="text-base font-bold">Heading 2</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="setHeading(3)">
+            <span class="text-sm font-bold">Heading 3</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem @click="setParagraph">
+            <span>Paragraph</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" @mousedown.prevent @click="addImage">
-            <Image class="w-4 h-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Insert Image</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+      <Separator orientation="vertical" class="h-6" />
 
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" @mousedown.prevent @click="insertCallout">
-            <MessageSquare class="w-4 h-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Insert Callout</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+      <!-- Inline Code -->
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              :class="{ 'bg-muted': isActive('inline_code') }"
+              @mousedown.prevent
+              @click="toggleInlineCode"
+            >
+              <Code2 class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Inline Code (Ctrl+E)</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <Separator orientation="vertical" class="h-6" />
+
+      <!-- List Buttons -->
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              :class="{ 'bg-muted': isActive('bullet_list') }"
+              @mousedown.prevent
+              @click="toggleBulletList"
+            >
+              <List class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Bullet List (Ctrl+Shift+8)</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              :class="{ 'bg-muted': isActive('ordered_list') }"
+              @mousedown.prevent
+              @click="toggleOrderedList"
+            >
+              <ListOrdered class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Ordered List (Ctrl+Shift+7)</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <Separator orientation="vertical" class="h-6" />
+
+      <!-- Block Elements -->
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              :class="{ 'bg-muted': isActive('blockquote') }"
+              @mousedown.prevent
+              @click="toggleBlockquote"
+            >
+              <Quote class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Blockquote</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <Separator orientation="vertical" class="h-6" />
+
+      <!-- Link & Image -->
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              :class="{ 'bg-muted': isActive('link') }"
+              @mousedown.prevent
+              @click="handleSetLink"
+            >
+              <Link class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Insert Link (Ctrl+K)</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" @mousedown.prevent @click="addImage">
+              <Image class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Insert Image</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" @mousedown.prevent @click="insertCallout">
+              <MessageSquare class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Insert Callout</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </template>
+
+    <!-- OVERFLOW MENU (isSmall) -->
+    <DropdownMenu v-else>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <MoreHorizontal class="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Heading class="w-4 h-4 mr-2" />
+            <span>Headings</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem @click="setHeading(1)">
+              <span class="text-lg font-bold">Heading 1</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="setHeading(2)">
+              <span class="text-base font-bold">Heading 2</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="setHeading(3)">
+              <span class="text-sm font-bold">Heading 3</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="setParagraph">
+              <span>Paragraph</span>
+            </DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem @click="toggleInlineCode">
+          <Code2 class="w-4 h-4 mr-2" />
+          <span>Inline Code</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem @click="toggleBulletList">
+          <List class="w-4 h-4 mr-2" />
+          <span>Bullet List</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem @click="toggleOrderedList">
+          <ListOrdered class="w-4 h-4 mr-2" />
+          <span>Ordered List</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem @click="toggleBlockquote">
+          <Quote class="w-4 h-4 mr-2" />
+          <span>Blockquote</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem @click="handleSetLink">
+          <Link class="w-4 h-4 mr-2" />
+          <span>Link</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem @click="addImage">
+          <Image class="w-4 h-4 mr-2" />
+          <span>Image</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem @click="insertCallout">
+          <MessageSquare class="w-4 h-4 mr-2" />
+          <span>Callout</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   </div>
 </template>
 
@@ -238,7 +320,7 @@
 import { type Editor } from '@milkdown/kit/core'
 import { 
   Heading, ChevronDown, List, ListOrdered, Quote, Code, 
-  Link, Image, Undo, Redo, Bold, Italic, Code2, MessageSquare
+  Link, Image, Undo, Redo, Bold, Italic, Code2, MessageSquare, MoreHorizontal
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -248,12 +330,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useMilkdownCommands } from './useMilkdownCommands'
 
 const props = defineProps<{
   getEditor: () => Editor | undefined
+  condensed?: boolean
 }>()
 
 const { 

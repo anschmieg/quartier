@@ -1,5 +1,5 @@
 <template>
-  <header class="h-12 border-b border-border/50 flex items-center px-4 gap-2">
+  <header class="h-12 border-b border-border/50 flex items-center px-4 gap-4">
     <!-- Left: Sidebar Toggle & Command Palette -->
     <div class="flex items-center gap-2">
       <SidebarToggle :visible="sidebarVisible" @toggle="emit('toggle-sidebar')" />
@@ -19,8 +19,8 @@
     </div>
     
     <!-- Center: Editor Mode Toggle + Toolbar (centered via flex) -->
-    <div class="flex-1 flex items-center justify-center gap-2">
-      <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg">
+    <div ref="toolbarContainer" class="flex-1 flex items-center justify-center gap-2 overflow-hidden">
+      <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg flex-shrink-0">
       <TooltipProvider :delay-duration="0">
         <Tooltip>
           <TooltipTrigger as-child>
@@ -64,6 +64,7 @@
       <EditorToolbar 
         v-if="editorMode === 'visual'" 
         :get-editor="getEditor"
+        :condensed="isCondensed"
       />
     </div>
     
@@ -117,59 +118,114 @@
         :show-always="false"
       />
       
-      <!-- Share button -->
-      <TooltipProvider :delay-duration="0">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              :disabled="!canShare"
-              @click="emit('share')"
-            >
-              <Share2 class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Share</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      <SaveButton :can-save="canSave" :auto-save-status="props.autoSaveStatus" @save="emit('save')" />
-      <ThemeToggle />
-      <div class="w-px h-4 bg-border/50 mx-1" />
-      <!-- Preview toggle -->
-      <TooltipProvider :delay-duration="0">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              :class="{ 'bg-muted': showPreview }"
-              @click="emit('update:showPreview', !showPreview)"
-            >
-              <PanelRightOpen class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>{{ showPreview ? 'Hide' : 'Show' }} Preview</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <!-- Desktop Actions (!isSmall) -->
+      <template v-if="!isSmall">
+        <!-- Share button -->
+        <TooltipProvider :delay-duration="0">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                :disabled="!canShare"
+                @click="emit('share')"
+              >
+                <Share2 class="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Share</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <SaveButton :can-save="canSave" :auto-save-status="props.autoSaveStatus" @save="emit('save')" />
+        <ThemeToggle />
+        <div class="w-px h-4 bg-border/50 mx-1" />
+        <!-- Preview toggle -->
+        <TooltipProvider :delay-duration="0">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                :class="{ 'bg-muted': showPreview }"
+                @click="emit('update:showPreview', !showPreview)"
+              >
+                <PanelRightOpen class="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>{{ showPreview ? 'Hide' : 'Show' }} Preview</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </template>
+
+      <!-- Mobile Actions (Overflow Menu) -->
+      <DropdownMenu v-else>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <MoreVertical class="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+            <DropdownMenuItem @click="emit('share')" :disabled="!canShare">
+              <Share2 class="w-4 h-4 mr-2" />
+              <span>Share</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="emit('save')" :disabled="!canSave">
+              <Save class="w-4 h-4 mr-2" />
+              <span>Save</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="toggleTheme()">
+              <Sun v-if="isDark" class="w-4 h-4 mr-2" />
+              <Moon v-else class="w-4 h-4 mr-2" />
+              <span>{{ isDark ? 'Light Mode' : 'Dark Mode' }}</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="emit('update:showPreview', !showPreview)">
+              <PanelRightOpen class="w-4 h-4 mr-2" />
+              <span>{{ showPreview ? 'Hide' : 'Show' }} Preview</span>
+            </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { Eye, Code, Keyboard, PanelRightOpen, Share2, Users } from 'lucide-vue-next'
+import { Eye, Code, Keyboard, PanelRightOpen, Share2, Users, MoreVertical, Save, Sun, Moon } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConnectionStatus } from '@/components/ui/connection-status'
 import { ThemeToggle, SidebarToggle, SaveButton } from '@/components/toolbar'
 import EditorToolbar from '@/components/editor/EditorToolbar.vue'
 import { useAwareness } from '@/composables/useAwareness'
+import { useElementSize, useDark, useToggle } from '@vueuse/core'
+import { ref, computed } from 'vue'
+import { useBreakpoints } from '@/composables/useBreakpoints'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const { otherUsers } = useAwareness()
+const { isSmall } = useBreakpoints()
+
+const isDark = useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: '', 
+})
+const toggleTheme = useToggle(isDark)
+
+const toolbarContainer = ref(null)
+const { width: toolbarWidth } = useElementSize(toolbarContainer)
+const isCondensed = computed(() => toolbarWidth.value < 650)
 
 const props = defineProps<{
   canSave: boolean
