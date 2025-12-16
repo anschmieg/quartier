@@ -35,6 +35,61 @@
         @keydown.stop
       />
       
+      <!-- Settings Menu -->
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button variant="ghost" size="icon" class="h-6 w-6 opacity-50 hover:opacity-100 mr-1" @click.stop>
+            <SettingsIcon class="h-3.5 w-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" class="w-56">
+          <DropdownMenuLabel>Type</DropdownMenuLabel>
+          <DropdownMenuRadioGroup v-model="calloutTypeAttr">
+             <DropdownMenuRadioItem value="note">Note</DropdownMenuRadioItem>
+             <DropdownMenuRadioItem value="tip">Tip</DropdownMenuRadioItem>
+             <DropdownMenuRadioItem value="warning">Warning</DropdownMenuRadioItem>
+             <DropdownMenuRadioItem value="caution">Caution</DropdownMenuRadioItem>
+             <DropdownMenuRadioItem value="important">Important</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator />
+
+          <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+          <DropdownMenuRadioGroup v-model="appearanceAttr">
+            <DropdownMenuRadioItem value="default">Default</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="simple">Simple</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="minimal">Minimal</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuLabel>Options</DropdownMenuLabel>
+          <DropdownMenuCheckboxItem 
+            :model-value="isCollapsibleAttr"
+            @select="isCollapsibleAttr = !isCollapsibleAttr"
+          >
+            Collapsible
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem 
+            :model-value="showIconAttr"
+            @select="showIconAttr = !showIconAttr"
+          >
+            Show Icon
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuLabel>Cross-Ref ID</DropdownMenuLabel>
+          <div class="px-2 pb-2 flex items-center gap-1">
+             <span class="text-xs text-muted-foreground font-mono select-none" v-if="crossRefPrefix">{{ crossRefPrefix }}-</span>
+             <Input 
+              v-model="idSuffixAttr" 
+              placeholder="suffix" 
+              class="h-8 font-mono text-xs" 
+              @click.stop 
+              @keydown.stop 
+            />
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      
       <!-- Collapse toggle -->
       <button 
         v-if="isCollapsible"
@@ -68,9 +123,23 @@ import {
   AlertCircle, 
   Lightbulb, 
   ShieldAlert,
-  ChevronDown 
+  ChevronDown,
+  Settings as SettingsIcon,
 } from 'lucide-vue-next'
 import type { CalloutType } from './index'
+
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem
+} from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const { node, contentRef, view, getPos } = useNodeViewContext()
 
@@ -115,22 +184,19 @@ onMounted(() => {
   if (hasImplicitTitle.value) promoteImplicitTitle()
 })
 
-// Cross-reference detection
-const crossRefPrefix = computed(() => {
-  const id = node.value.attrs?.id || ''
-  if (!id) return null
-  
-  const map: Record<CalloutType, string> = {
+// Cross-reference detection (and prefix helper)
+function getPrefixForType(type: string): string {
+  const map: Record<string, string> = {
     note: 'nte',
     tip: 'tip',
     warning: 'wrn',
     important: 'imp',
     caution: 'cau'
   }
-  const prefix = map[calloutType.value]
-  if (id.startsWith(prefix + '-')) return prefix
-  return null
-})
+  return map[type] || 'nte'
+}
+
+const crossRefPrefix = computed(() => getPrefixForType(calloutType.value))
 
 // Collapse state
 const isCollapsible = computed(() => collapse.value === 'true' || collapse.value === 'false')
@@ -171,6 +237,91 @@ function onTitleInput(e: Event) {
     view.dispatch(tr)
   }
 }
+
+// Attribute Updaters
+function updateAttr(key: string, value: any) {
+  const pos = getPos?.()
+  if (typeof pos !== 'number') return
+  const tr = view.state.tr
+  tr.setNodeAttribute(pos, key, value)
+  view.dispatch(tr)
+}
+
+// Quarto Logic:
+// Collapse: 
+// - If absent -> Not collapsible (unless we want to support 'default' behavior which is non-collapsible)
+// - If present ("true" or "false") -> Collapsible.
+// UI Toggle "Collapsible" should mean "Active" (collapsible=false by default) vs "Inactive" (collapsible=null).
+const isCollapsibleAttr = computed({
+  get: () => {
+    // Check if attribute is set to "true" or "false". If null/undefined/empty, it's not collapsible.
+    const val = collapse.value
+    return val === 'true' || val === 'false'
+  },
+  set: (val) => {
+    console.log('Sets collapsible:', val)
+    // If enabling, default to "false" (expanded). If disabling, remove attribute (null).
+    updateAttr('collapse', val ? 'false' : null)
+  }
+})
+
+const showIconAttr = computed({
+  get: () => {
+     // Default is true. Only false if explicitly "false".
+     console.log('Get Icon:', icon.value)
+     return icon.value
+  },
+  set: (val) => {
+    console.log('Sets icon:', val)
+    // If true (show), remove attribute (default). If false (hide), set "false".
+    updateAttr('icon', val ? null : 'false')
+  }
+})
+
+const appearanceAttr = computed({
+  get: () => appearance.value,
+  set: (val) => updateAttr('appearance', val)
+})
+
+const calloutTypeAttr = computed({
+  get: () => calloutType.value,
+  set: (val) => {
+    // When type changes, we also update ID if it follows the pattern
+    // Or we just update type, and ID prefix updates reactively?
+    // Wait, ID is stored in attribute. We must update ID attribute to match new prefix.
+    const currentSuffix = idSuffixAttr.value
+    const newPrefix = getPrefixForType(val)
+    
+    // Batch update?
+    const pos = getPos?.()
+    if (typeof pos !== 'number') return
+    const tr = view.state.tr
+    tr.setNodeAttribute(pos, 'type', val)
+    if (currentSuffix) {
+       tr.setNodeAttribute(pos, 'id', `${newPrefix}-${currentSuffix}`)
+    }
+    view.dispatch(tr)
+  }
+})
+
+const idSuffixAttr = computed({
+  get: () => {
+    const id = node.value.attrs?.id || ''
+    const prefix = crossRefPrefix.value
+    if (id.startsWith(prefix + '-')) {
+      return id.slice(prefix.length + 1)
+    }
+    // If ID doesn't match prefix, treat whole as suffix or empty?
+    // User said "id is automatically prefixed".
+    // Try to be smart.
+    return id
+  },
+  set: (val) => {
+     const prefix = crossRefPrefix.value
+     const newId = val ? `${prefix}-${val}` : ''
+     updateAttr('id', newId)
+  }
+})
 
 function toggleCollapse() {
   if (isCollapsible.value) {

@@ -1,4 +1,4 @@
-import { type Editor } from '@milkdown/kit/core'
+import { type Editor, editorViewCtx } from '@milkdown/kit/core'
 import { toggleStrongCommand, toggleEmphasisCommand } from '@milkdown/preset-commonmark'
 import { wrapInHeadingCommand } from '@milkdown/preset-commonmark'
 import { wrapInBlockquoteCommand } from '@milkdown/preset-commonmark'
@@ -43,8 +43,21 @@ export function useMilkdownCommands(getEditor: () => Editor | undefined) {
         toggleCodeBlock: () => action(createCodeBlockCommand),
 
         // Links & Media
+        // Links & Media
         setLink: (url: string) => action(toggleLinkCommand, { href: url }),
         insertImage: (src: string) => action(insertImageCommand, { src, alt: 'image' }),
+
+        // Custom
+        insertCallout: () => {
+             const editor = getEditor()
+             if (!editor) return
+             editor.action((ctx) => {
+                const view = ctx.get(editorViewCtx)
+                const { from } = view.state.selection
+                const tr = view.state.tr.insertText('\n::: {.callout-note}\n\n:::\n', from)
+                view.dispatch(tr)
+             })
+        },
 
         // History
         undo: () => action(undoCommand),

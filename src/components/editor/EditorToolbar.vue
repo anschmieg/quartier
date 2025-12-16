@@ -1,5 +1,41 @@
 <template>
-  <div class="editor-toolbar flex items-center gap-1 p-2 border-b bg-background">
+  <div class="editor-toolbar flex items-center gap-1 p-2 border-b bg-background overflow-x-auto">
+    <!-- Undo/Redo -->
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            :disabled="!can().undo()"
+            @mousedown.prevent
+            @click="undo"
+          >
+            <Undo class="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            :disabled="!can().redo()"
+            @mousedown.prevent
+            @click="redo"
+          >
+            <Redo class="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Redo (Ctrl+Y)</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+
+    <Separator orientation="vertical" class="h-6 mx-1" />
     <!-- Headings Dropdown -->
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -187,38 +223,14 @@
 
     <div class="flex-1" />
 
-    <!-- Undo/Redo -->
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            :disabled="!can().undo()"
-            @mousedown.prevent
-            @click="undo"
-          >
-            <Undo class="w-4 h-4" />
+          <Button variant="ghost" size="icon" @mousedown.prevent @click="insertCallout">
+            <MessageSquare class="w-4 h-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            :disabled="!can().redo()"
-            @mousedown.prevent
-            @click="redo"
-          >
-            <Redo class="w-4 h-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Redo (Ctrl+Y)</TooltipContent>
+        <TooltipContent>Insert Callout</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   </div>
@@ -228,7 +240,7 @@
 import { type Editor } from '@milkdown/kit/core'
 import { 
   Heading, ChevronDown, List, ListOrdered, Quote, Code, 
-  Link, Image, Undo, Redo, Bold, Italic, Code2 
+  Link, Image, Undo, Redo, Bold, Italic, Code2, MessageSquare
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -250,7 +262,7 @@ const {
   toggleBold, toggleItalic, toggleInlineCode,
   setHeading, toggleBulletList, toggleOrderedList,
   toggleBlockquote, toggleCodeBlock,
-  setLink, insertImage,
+  setLink, insertImage, insertCallout,
   undo, redo,
   isActive, can
 } = useMilkdownCommands(props.getEditor)
