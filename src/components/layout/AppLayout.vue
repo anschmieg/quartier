@@ -53,6 +53,7 @@
               :mode="editorMode"
               :roomId="collabRoomId"
               :userEmail="userEmail"
+              :enableCollab="isShared"
               @update:content="updateContent"
             />
           </div>
@@ -135,6 +136,8 @@ const currentFile = useStorage<string | null>('quartier:currentFile', null)
 const showSidebar = useStorage('quartier:showSidebar', true)
 const showPreview = useStorage('quartier:showPreview', false)
 const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visual')
+const activeSession = useStorage('quartier:activeSession', null)
+const isShared = computed(() => !!activeSession.value)
 
 // Transient State (not persisted)
 const fileContent = ref('')

@@ -36,10 +36,12 @@
         <div v-if="mode === 'visual'" key="visual" class="h-full overflow-auto">
           <MilkdownEditor 
             ref="milkdownRef"
+            :key="roomId"
             v-model="content"
             :editable="true"
             :roomId="roomId"
             :userEmail="userEmail"
+            :enableCollab="enableCollab"
           />
         </div>
         <div v-else key="source" class="h-full overflow-auto">
@@ -77,6 +79,7 @@ const props = defineProps<{
   mode: 'visual' | 'source'
   roomId?: string
   userEmail?: string
+  enableCollab?: boolean
 }>()
 
 const emit = defineEmits(['update:content', 'save'])

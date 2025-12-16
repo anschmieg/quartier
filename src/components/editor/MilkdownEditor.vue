@@ -14,10 +14,10 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, watch, watchEffect, ref, shallowRef, onUnmounted } from 'vue'
+import { defineComponent, h, watch, ref, shallowRef } from 'vue'
 import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
 import { useNodeViewFactory, ProsemirrorAdapterProvider } from '@prosemirror-adapter/vue'
-import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx } from '@milkdown/kit/core'
+import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import { commonmark, codeBlockSchema } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { history } from '@milkdown/plugin-history'
@@ -25,9 +25,11 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { math } from '@milkdown/plugin-math'
 import { diagram } from '@milkdown/plugin-diagram'
 import { nord } from '@milkdown/theme-nord'
-import { replaceAll, $prose, $view } from '@milkdown/utils'
+import { $prose, $view, $remark } from '@milkdown/utils'
 import { keymap } from '@milkdown/prose/keymap'
-import { collab, collabServiceCtx } from '@milkdown/plugin-collab'
+// @ts-ignore
+import remarkDirective from 'remark-directive'
+// COLLAB DISABLED: import { collab, collabServiceCtx } from '@milkdown/plugin-collab'
 import { prism } from '@milkdown/plugin-prism'
 import { emoji } from '@milkdown/plugin-emoji'
 import { indent } from '@milkdown/plugin-indent'
@@ -37,13 +39,11 @@ import { createCompletionPlugin, type CompletionState, type CompletionItem } fro
 import FrontmatterCompletion from './plugins/frontmatter/FrontmatterCompletion.vue'
 import FrontmatterNode from './plugins/frontmatter/FrontmatterNode.vue'
 import CodeCell from './CodeCell.vue'
-import { remarkCalloutDirective, calloutNode } from './plugins/callout'
+import { calloutNode, calloutInputRule } from './plugins/callout'
 import CalloutNode from './plugins/callout/CalloutNode.vue'
 import './plugins/frontmatter/style.css'
-import * as Y from 'yjs'
-import YPartyKitProvider from 'y-partykit/provider'
-import { IndexeddbPersistence } from 'y-indexeddb'
-import { updateAwarenessState, clearAwarenessState } from '@/composables/useAwareness'
+import { useCollab, getCollabPlugins } from '@/composables/useCollab'
+import { convertQuartoToMilkdown, convertMilkdownToQuarto } from '@/utils/quarto-syntax'
 
 
 // Import base styles for structure (optional, but nord helps with complex nodes)
@@ -57,6 +57,7 @@ const props = defineProps<{
   editable?: boolean
   roomId?: string // For collaboration: unique room ID (e.g., 'quartier:owner/repo/path')
   userEmail?: string // For cursor presence
+  enableCollab?: boolean // Conditionally enable collaboration
 }>()
 
 const emit = defineEmits(['update:modelValue'])
@@ -70,14 +71,12 @@ defineExpose({
 // Internal component that uses useEditor (must be inside Provider)
 const MilkdownInternal = defineComponent({
   name: 'MilkdownInternal',
-  props: ['modelValue', 'editable', 'roomId', 'userEmail'],
+  props: ['modelValue', 'editable', 'roomId', 'userEmail', 'enableCollab'],
   emits: ['update:modelValue', 'ready'],
   setup(props, ctx) {
-    // Yjs document and providers for collaboration
-    let ydoc: Y.Doc | null = null
-    // let webrtcProvider: WebrtcProvider | null = null // Replaced by PartyKit
-    let partyProvider: YPartyKitProvider | null = null
-    let idbProvider: IndexeddbPersistence | null = null
+    // COLLAB DISABLED: Yjs document and providers for collaboration
+    // let ydoc: Y.Doc | null = null
+    // let partyProvider: YPartyKitProvider | null = null
     
     // Plugin to handle Escape key -> Blur
     const escapePlugin = $prose((_ctx) => {
@@ -93,13 +92,11 @@ const MilkdownInternal = defineComponent({
     })
 
     // Capture initial value ONCE to prevent useEditor from being reactive
-    const initialValue = props.modelValue
+    // Convert Quarto syntax (::: {.callout}) to Milkdown syntax (:::callout)
+    const initialValue = convertQuartoToMilkdown(props.modelValue)
     
     // Track internal content to avoid infinite loops
     const localValue = ref(initialValue)
-    
-    // Track pending content that arrives before editor is ready
-    const pendingContent = ref<string | null>(null)
 
     // --- Frontmatter Completion ---
     const completionState = shallowRef<CompletionState>({
@@ -151,8 +148,9 @@ const MilkdownInternal = defineComponent({
         as: 'div',
     }))
 
+    // Editor instance
     const { get } = useEditor((root) => {
-      return Editor.make()
+      const editor = Editor.make()
         .config((configCtx) => {
           configCtx.set(rootCtx, root)
           // Use captured initial value, NOT reactive props
@@ -163,15 +161,14 @@ const MilkdownInternal = defineComponent({
             ...prev,
             editable: () => props.editable ?? true,
           }))
-
-
           
           // Setup listener for v-model
           configCtx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
             // Check if update is echo
             if (markdown !== prevMarkdown) {
               localValue.value = markdown
-              ctx.emit('update:modelValue', markdown)
+              // Convert back to Quarto syntax before emitting
+              ctx.emit('update:modelValue', convertMilkdownToQuarto(markdown))
             }
           })
 
@@ -208,8 +205,9 @@ const MilkdownInternal = defineComponent({
         .use(frontmatterValidation)
         .use(createCompletionPlugin(onCompletionUpdate, onCompletionSelect))
         .use(executableCodeView)
-        .use(remarkCalloutDirective)
+        .use($remark('remark-directive', () => remarkDirective))
         .use(calloutNode)
+        .use(calloutInputRule)
         .use(calloutView)
         .use(gfm)
         .use(history)
@@ -221,104 +219,16 @@ const MilkdownInternal = defineComponent({
         .use(indent)
         .use(upload)
         .use(escapePlugin)
-        .use(collab)
+
+        // Add collaboration plugins (conditionally enabled via useCollab)
+        getCollabPlugins().forEach(plugin => editor.use(plugin))
+        
+        return editor
     })
 
-    // Setup collaboration after editor is ready
-    watchEffect(() => {
-      const editor = get()
-      if (!editor || !props.roomId) return
-      
-      // Create Yjs document if not exists
-      if (!ydoc) {
-        ydoc = new Y.Doc()
-        
-        // Setup IndexedDB persistence (local offline storage)
-        idbProvider = new IndexeddbPersistence(props.roomId, ydoc)
-        console.log('[Collab] IndexedDB connected:', props.roomId)
-        
-        // Setup PartyKit provider (WebSocket signaling)
-        // Uses local server in dev (localhost:1999) and deployed server in prod
-        const host = import.meta.env.DEV ? 'localhost:1999' : 'quartier-collab.partykit.dev'
-        
-        partyProvider = new YPartyKitProvider(
-          host,
-          props.roomId,
-          ydoc,
-          {
-            connect: false, // Wait for IndexedDB sync
-          }
-        )
-        
-        // Set user awareness for cursor presence
-        if (props.userEmail) {
-          const hue = props.userEmail.split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0) % 360
-          partyProvider.awareness.setLocalStateField('user', {
-            name: props.userEmail.split('@')[0],
-            email: props.userEmail,
-            color: `hsl(${hue}, 70%, 50%)`,
-          })
-        }
-        console.log('[Collab] PartyKit initialized:', host)
-        
-        // Listen for awareness changes and update global store
-        partyProvider.awareness.on('change', () => {
-             updateAwarenessState(
-               partyProvider!.awareness.getStates(),
-               partyProvider!.awareness.clientID
-             )
-        })
-        
-        // Initial awareness update
-        updateAwarenessState(
-          partyProvider.awareness.getStates(),
-          partyProvider.awareness.clientID
-        )
-        
-        // Wait for IndexedDB to sync before connecting collab service
-        idbProvider.whenSynced.then(() => {
-          console.log('[Collab] IndexedDB synced, connecting collab service...')
-          
-          try {
-            editor.action((ctx) => {
-              const collabService = ctx.get(collabServiceCtx)
-              collabService
-                .bindDoc(ydoc!)
-                .setAwareness(partyProvider!.awareness)
-                .connect()
-              
-              // Connect PartyKit provider to start syncing
-              partyProvider!.connect()
-              console.log('[Collab] PartyKit connected')
-
-              // Apply initial content if Yjs doc is empty
-              // This uses the editor's current content (from the file) as the template
-              collabService.applyTemplate(initialValue)
-            })
-            console.log('[Collab] Editor connected to Yjs')
-          } catch (error) {
-            console.error('[Collab] Failed to connect:', error)
-          }
-        })
-      }
-    })
-
-    // Cleanup on unmount
-    onUnmounted(() => {
-      if (partyProvider) {
-        partyProvider.destroy()
-      }
-      if (idbProvider) {
-        idbProvider.destroy()
-        idbProvider = null
-      }
-      if (ydoc) {
-        ydoc.destroy()
-        ydoc = null
-      }
-      clearAwarenessState()
-      console.log('[Collab] Cleanup complete')
-    })
+    // Initialize collaboration logic (conditionally enabled via useCollab)
+    // This handles Yjs doc, PartyKit connection, and awareness
+    useCollab(props.roomId, props.userEmail, get, initialValue, () => props.enableCollab ?? false)
 
     // Expose the editor instance getter
     ctx.expose({
@@ -327,32 +237,26 @@ const MilkdownInternal = defineComponent({
 
     // Update content when modelValue changes externally
     watch(() => props.modelValue, (newValue) => {
-      if (newValue === localValue.value) {
+      const convertedValue = convertQuartoToMilkdown(newValue)
+      
+      if (convertedValue === localValue.value) {
         return // content is same, ignore
       }
       
-      const editorInstance = get()
-      if (!editorInstance) {
-        // Editor not ready yet, store for later
-        console.log('[MilkdownEditor] Editor not ready, storing pending content')
-        pendingContent.value = newValue
-        return
-      }
-      
-      localValue.value = newValue
-      editorInstance.action(replaceAll(newValue))
-      console.log('[MilkdownEditor] Called replaceAll with new content')
-    })
+      const editor = get()
+      if (!editor) return
 
-    // Apply pending content once editor is ready
-    watchEffect(() => {
-      const editorInstance = get()
-      if (editorInstance && pendingContent.value !== null) {
-        console.log('[MilkdownEditor] Applying pending content')
-        localValue.value = pendingContent.value
-        editorInstance.action(replaceAll(pendingContent.value))
-        pendingContent.value = null // Clear pending
-      }
+      localValue.value = convertedValue
+      
+      editor.action((ctx) => {
+          const view = ctx.get(editorViewCtx)
+          const parser = ctx.get(parserCtx)
+          const doc = parser(convertedValue)
+          if (!doc) return
+          
+          const state = view.state
+          view.dispatch(state.tr.replaceWith(0, state.doc.content.size, doc))
+      })
     })
 
     // Focus helper for container click
@@ -562,4 +466,9 @@ const MilkdownInternal = defineComponent({
 
 /* Math */
 .katex-display { margin: 1.5em 0; overflow-x: auto; }
+
+/* Callout Counters Reset */
+.milkdown {
+  counter-reset: callout-tip callout-nte callout-wrn callout-imp callout-cau;
+}
 </style>

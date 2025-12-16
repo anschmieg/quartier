@@ -27,7 +27,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('@milkdown') || id.includes('prosemirror') || id.includes('yjs') || id.includes('y-websocket') || id.includes('y-indexeddb')) {
+            if (id.includes('@milkdown') || id.includes('prosemirror') || id.includes('yjs') || id.includes('y-websocket') || id.includes('y-partykit') || id.includes('y-indexeddb') || id.includes('remark-directive')) {
               return 'editor-libs'
             }
             if (id.includes('codemirror') || id.includes('vue-codemirror') || id.includes('vscode-icons')) {
