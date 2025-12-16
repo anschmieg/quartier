@@ -64,13 +64,13 @@
           <DropdownMenuLabel>Options</DropdownMenuLabel>
           <DropdownMenuCheckboxItem 
             :model-value="isCollapsibleAttr"
-            @select="isCollapsibleAttr = !isCollapsibleAttr"
+            @select.prevent="isCollapsibleAttr = !isCollapsibleAttr"
           >
             Collapsible
           </DropdownMenuCheckboxItem>
           <DropdownMenuCheckboxItem 
             :model-value="showIconAttr"
-            @select="showIconAttr = !showIconAttr"
+            @select.prevent="showIconAttr = !showIconAttr"
           >
             Show Icon
           </DropdownMenuCheckboxItem>
