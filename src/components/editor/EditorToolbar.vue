@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-toolbar flex items-center gap-1 p-2 border-b bg-background overflow-x-auto">
+  <div class="editor-toolbar flex flex-nowrap items-center gap-1 overflow-x-auto">
     <!-- Undo/Redo -->
     <TooltipProvider>
       <Tooltip>
@@ -220,8 +220,6 @@
         <TooltipContent>Insert Image</TooltipContent>
       </Tooltip>
     </TooltipProvider>
-
-    <div class="flex-1" />
 
     <TooltipProvider>
       <Tooltip>
