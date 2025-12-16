@@ -37,7 +37,7 @@ import { createCompletionPlugin, type CompletionState, type CompletionItem } fro
 import FrontmatterCompletion from './plugins/frontmatter/FrontmatterCompletion.vue'
 import FrontmatterNode from './plugins/frontmatter/FrontmatterNode.vue'
 import CodeCell from './CodeCell.vue'
-import { remarkCallout, remarkCalloutTransform, calloutNode } from './plugins/callout'
+import { remarkCalloutDirective, calloutNode } from './plugins/callout'
 import CalloutNode from './plugins/callout/CalloutNode.vue'
 import './plugins/frontmatter/style.css'
 import * as Y from 'yjs'
@@ -208,11 +208,9 @@ const MilkdownInternal = defineComponent({
         .use(frontmatterValidation)
         .use(createCompletionPlugin(onCompletionUpdate, onCompletionSelect))
         .use(executableCodeView)
-        // TODO: Callout plugins disabled - causing editor crash
-        // .use(remarkCallout)
-        // .use(remarkCalloutTransform)
-        // .use(calloutNode)
-        // .use(calloutView)
+        .use(remarkCalloutDirective)
+        .use(calloutNode)
+        .use(calloutView)
         .use(gfm)
         .use(history)
         .use(listener)
