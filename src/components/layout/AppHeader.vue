@@ -18,11 +18,9 @@
       </TooltipProvider>
     </div>
     
-    <!-- Center: Editor Mode Toggle (aligned with editor area) -->
-    <div 
-      class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg transition-all duration-150"
-      :style="{ marginLeft: sidebarVisible ? 'calc((256px - 1rem) - (4rem + 2.5rem))' : '0' }"
-    >
+    <!-- Center: Editor Mode Toggle + Toolbar (centered via flex) -->
+    <div class="flex-1 flex items-center justify-center gap-2">
+      <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg">
       <TooltipProvider :delay-duration="0">
         <Tooltip>
           <TooltipTrigger as-child>
@@ -62,15 +60,12 @@
       </TooltipProvider>
     </div>
     
-    <!-- Editor Toolbar (only in visual mode) -->
-    <EditorToolbar 
-      v-if="editorMode === 'visual'" 
-      :get-editor="getEditor"
-      class="flex-1"
-    />
-    
-    <!-- Spacer -->
-    <div class="flex-1" />
+      <!-- Editor Toolbar (only in visual mode) -->
+      <EditorToolbar 
+        v-if="editorMode === 'visual'" 
+        :get-editor="getEditor"
+      />
+    </div>
     
     <!-- Right: actions & Preview -->
     <div class="flex items-center gap-1">

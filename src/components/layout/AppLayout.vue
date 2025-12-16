@@ -24,6 +24,7 @@
       <!-- Sidebar -->
       <AppSidebar 
         :visible="showSidebar"
+        :mode="sidebarMode"
         :repo="repo"
         :selected-file="currentFile"
         :is-host="isHost"
@@ -35,6 +36,7 @@
         @create-folder="handleCreateFolder"
         @rename-file="handleRenameFile"
         @delete-file="handleDeleteFile"
+        @close="showSidebar = false"
       />
 
       <!-- Main Content -->
@@ -104,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 
 const { isAuthenticated, isAccessAuthenticated, isHost, user, accessUser } = useAuth()
@@ -138,6 +140,17 @@ const showPreview = useStorage('quartier:showPreview', false)
 const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visual')
 const activeSession = useStorage('quartier:activeSession', null)
 const isShared = computed(() => !!activeSession.value)
+
+// Responsive breakpoints for sidebar mode
+import { useBreakpoints } from '@/composables/useBreakpoints'
+const { sidebarMode } = useBreakpoints()
+
+// Auto-collapse sidebar when switching to temporary/overlay mode
+watch(sidebarMode, (newMode, oldMode) => {
+  if (oldMode === 'persistent' && newMode !== 'persistent') {
+    showSidebar.value = false
+  }
+})
 
 // Transient State (not persisted)
 const fileContent = ref('')
