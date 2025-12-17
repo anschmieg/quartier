@@ -1,0 +1,23 @@
+---
+title: "Test RMarkdown"
+author: "Quartorium"
+output: html_document
+---
+
+# Introduction
+
+This is an RMarkdown file. It should open in **Visual Mode** (Milkdown).
+
+## Code Block Test
+
+```{r}
+summary(cars)
+plot(cars)
+```
+
+## Python Block
+
+```{python}
+import os
+print(os.getcwd())
+```
