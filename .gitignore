@@ -34,3 +34,5 @@ wrangler.dev.toml
 wrangler.toml
 .wrangler/
 .partykit
+playwright-report/
+test-results/
