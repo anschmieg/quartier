@@ -73,10 +73,10 @@
         <div 
           v-if="isExpanded && loading && (!node.children || node.children.length === 0)"
           key="loading-indicator"
-          class="flex items-center gap-2 text-xs text-muted-foreground py-1 animate-pulse"
+          class="py-1"
           :style="{ paddingLeft: `${(level + 1) * 12 + 8}px` }"
         >
-          Loading...
+          <LoadingSpinner size="sm" message="Loading..." />
         </div>
         <div 
           v-else-if="isExpanded && !loading && node.childrenLoaded && (!node.children || node.children.length === 0)"
@@ -94,6 +94,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { ChevronRight, Loader2 } from 'lucide-vue-next'
+import { LoadingSpinner } from '@/components/ui/loading'
 import FileIcon from './FileIcon.vue'
 import type { FileNode } from '@/types/files'
 

@@ -119,12 +119,11 @@
         </Tooltip>
       </TooltipProvider>
       
-      <!-- Connection Status (when collaborating) -->
+      <!-- Connection Status -->
       <ConnectionStatus
-        v-if="sessionMemberCount > 1 || otherUsers.length > 0"
         :status="props.connectionStatus"
         :show-text="false"
-        :show-always="false"
+        :show-always="true"
       />
       
       <!-- Desktop Actions (!isSmall) -->
