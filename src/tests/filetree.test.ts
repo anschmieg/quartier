@@ -93,3 +93,48 @@ describe('FileTree', () => {
     })
 })
 
+// Direct tests for buildFileTree childrenLoaded logic
+import { buildFileTree } from '@/types/files'
+
+describe('buildFileTree childrenLoaded', () => {
+    it('marks folders with children as loaded', () => {
+        const items: FileItem[] = [
+            { path: 'folder/file.txt', type: 'file' },
+        ]
+        
+        const tree = buildFileTree(items)
+        
+        // The 'folder' node should be marked as loaded because it has a child
+        expect(tree[0]?.name).toBe('folder')
+        expect(tree[0]?.childrenLoaded).toBe(true)
+    })
+
+    it('marks empty folders (dir type) as not loaded', () => {
+        const items: FileItem[] = [
+            { path: 'emptyFolder', type: 'dir' },
+        ]
+        
+        const tree = buildFileTree(items)
+        
+        // An empty folder returned by API should be marked as not loaded
+        // (because we haven't fetched its contents yet - it might have files)
+        expect(tree[0]?.name).toBe('emptyFolder')
+        expect(tree[0]?.childrenLoaded).toBe(false)
+    })
+
+    it('marks nested parent folders as loaded', () => {
+        const items: FileItem[] = [
+            { path: 'a/b/c/file.txt', type: 'file' },
+        ]
+        
+        const tree = buildFileTree(items)
+        
+        // All ancestor folders should be marked as loaded
+        expect(tree[0]?.name).toBe('a')
+        expect(tree[0]?.childrenLoaded).toBe(true)
+        expect(tree[0]?.children?.[0]?.name).toBe('b')
+        expect(tree[0]?.children?.[0]?.childrenLoaded).toBe(true)
+        expect(tree[0]?.children?.[0]?.children?.[0]?.name).toBe('c')
+        expect(tree[0]?.children?.[0]?.children?.[0]?.childrenLoaded).toBe(true)
+    })
+})

@@ -79,7 +79,7 @@
           Loading...
         </div>
         <div 
-          v-else-if="isExpanded && !loading && (!node.children || node.children.length === 0)"
+          v-else-if="isExpanded && !loading && node.childrenLoaded && (!node.children || node.children.length === 0)"
           key="empty-indicator"
           class="text-xs text-muted-foreground/70 italic py-1"
           :style="{ paddingLeft: `${(level + 1) * 12 + 8}px` }"
