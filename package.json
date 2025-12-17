@@ -12,8 +12,12 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "release": "bun scripts/release.ts",
     "party:dev": "partykit dev",
     "party:deploy": "partykit deploy"
+  },
+  "bin": {
+    "release": "./scripts/release.ts"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
