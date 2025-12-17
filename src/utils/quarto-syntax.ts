@@ -43,7 +43,7 @@ export function convertQuartoToMilkdown(markdown: string): string {
     res = res.replace(/^( *)::: callout-([a-z]+)(.*)$/gm, (_, indent, type, _rest) => {
        return `${indent}:::callout-${type}`
     })
-
+    
     return res
 }
 
@@ -60,5 +60,6 @@ export function convertMilkdownToQuarto(markdown: string): string {
         // If attributes exist, prepend space
         const attrPart = cleanAttrs ? ` ${cleanAttrs}` : ''
         return `${indent}::: {.callout-${type}${attrPart}}`
+
     })
 }

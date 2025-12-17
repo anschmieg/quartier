@@ -7,6 +7,7 @@
         :editable="editable"
         :roomId="roomId"
         :userEmail="userEmail"
+        :showComments="showComments"
         @update:modelValue="emit('update:modelValue', $event)" 
       />
     </ProsemirrorAdapterProvider>
@@ -14,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, watch, ref, shallowRef } from 'vue'
+import { defineComponent, h, watch, ref, shallowRef, onBeforeUnmount } from 'vue'
 import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
 import { useNodeViewFactory, ProsemirrorAdapterProvider } from '@prosemirror-adapter/vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
@@ -30,12 +31,37 @@ import { keymap } from '@milkdown/prose/keymap'
 // @ts-ignore
 import remarkDirective from 'remark-directive'
 // COLLAB DISABLED: import { collab, collabServiceCtx } from '@milkdown/plugin-collab'
-import { prism } from '@milkdown/plugin-prism'
+import { prism, prismConfig } from '@milkdown/plugin-prism'
+import r from 'refractor/r'
+import python from 'refractor/python'
+import julia from 'refractor/julia'
+import bash from 'refractor/bash'
+import sql from 'refractor/sql'
+import yaml from 'refractor/yaml'
+import toml from 'refractor/toml'
+import javascript from 'refractor/javascript'
+import typescript from 'refractor/typescript'
+import css from 'refractor/css'
+import markdown from 'refractor/markdown'
+import json from 'refractor/json'
+import java from 'refractor/java'
+import c from 'refractor/c'
+import cpp from 'refractor/cpp'
+import go from 'refractor/go'
+import rust from 'refractor/rust'
+import lua from 'refractor/lua'
+import ruby from 'refractor/ruby'
+import latex from 'refractor/latex'
+import mermaid from 'refractor/mermaid'
+import dot from 'refractor/dot'
+import scala from 'refractor/scala'
 import { emoji } from '@milkdown/plugin-emoji'
 import { indent } from '@milkdown/plugin-indent'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { remarkFrontmatterPlugin, frontmatterNode, frontmatterSyntax, frontmatterValidation } from './plugins/frontmatter'
 import { createCompletionPlugin, type CompletionState, type CompletionItem } from './plugins/frontmatter/completion-plugin'
+import { commentPlugin, commentNode, commentInputRule } from './plugins/html-comment'
+import CommentNode from './plugins/html-comment/CommentNode.vue'
 import FrontmatterCompletion from './plugins/frontmatter/FrontmatterCompletion.vue'
 import FrontmatterNode from './plugins/frontmatter/FrontmatterNode.vue'
 import CodeCell from './CodeCell.vue'
@@ -58,6 +84,7 @@ const props = defineProps<{
   roomId?: string // For collaboration: unique room ID (e.g., 'quartier:owner/repo/path')
   userEmail?: string // For cursor presence
   enableCollab?: boolean // Conditionally enable collaboration
+  showComments?: boolean
 }>()
 
 const emit = defineEmits(['update:modelValue'])
@@ -71,7 +98,7 @@ defineExpose({
 // Internal component that uses useEditor (must be inside Provider)
 const MilkdownInternal = defineComponent({
   name: 'MilkdownInternal',
-  props: ['modelValue', 'editable', 'roomId', 'userEmail', 'enableCollab'],
+  props: ['modelValue', 'editable', 'roomId', 'userEmail', 'enableCollab', 'showComments'],
   emits: ['update:modelValue', 'ready'],
   setup(props, ctx) {
     // COLLAB DISABLED: Yjs document and providers for collaboration
@@ -148,6 +175,12 @@ const MilkdownInternal = defineComponent({
         as: 'div',
     }))
 
+    // Create comment view
+    // Create comment view
+    const commentView = $view(commentNode.node, () => nodeViewFactory({
+        component: CommentNode,
+    }))
+
     // Editor instance
     const { get } = useEditor((root) => {
       const editor = Editor.make()
@@ -209,11 +242,68 @@ const MilkdownInternal = defineComponent({
         .use(calloutNode)
         .use(calloutInputRule)
         .use(calloutView)
+        .use(commentPlugin)
+        .use(commentNode)
+        .use(commentInputRule)
+        .use(commentView)
         .use(gfm)
         .use(history)
         .use(listener)
         .use(math)
         .use(diagram)
+        .config((ctx) => {
+          ctx.set(prismConfig.key, {
+            configureRefractor: (refractor) => {
+              refractor.register(r)
+              refractor.register(python)
+              refractor.register(julia)
+              refractor.register(bash)
+              refractor.register(sql)
+              refractor.register(yaml)
+              refractor.register(toml)
+              refractor.register(javascript)
+              refractor.register(typescript)
+              refractor.register(css)
+              refractor.register(markdown)
+              refractor.register(json)
+              refractor.register(java)
+              refractor.register(c)
+              refractor.register(cpp)
+              refractor.register(go)
+              refractor.register(rust)
+              refractor.register(lua)
+              refractor.register(ruby)
+              refractor.register(latex)
+              // mermaid might conflict if not handled carefully, but registering it for Prism is usually safe
+              refractor.register(mermaid) 
+              refractor.register(dot)
+              refractor.register(scala)
+              
+              // Map Quarto style "{r}" to "r"
+              refractor.alias({
+                'r': ['{r}'],
+                'python': ['{python}', '{py}'],
+                'julia': ['{julia}', '{jl}'],
+                'bash': ['{bash}', '{sh}'],
+                'sql': ['{sql}'],
+                'yaml': ['{yaml}'],
+                'toml': ['{toml}'],
+                'javascript': ['{ojs}', '{javascript}', '{js}'], // Map ojs to js
+                'typescript': ['{typescript}', '{ts}', 'ts'],
+                'css': ['{css}'],
+                'markdown': ['{markdown}', '{md}'],
+                'json': ['{json}'],
+                'java': ['{java}'],
+                'c': ['{c}'],
+                'cpp': ['{cpp}', '{c++}'],
+                'go': ['{go}'],
+                'rust': ['{rust}'],
+                'lua': ['{lua}'],
+                'ruby': ['{ruby}', '{rb}']
+              })
+            }
+          })
+        })
         .use(prism)
         .use(emoji)
         .use(indent)
@@ -235,8 +325,16 @@ const MilkdownInternal = defineComponent({
       getEditor: get
     })
 
+    // Track unmount state to prevent watcher firing during destruction
+    const isUnmounted = ref(false)
+    onBeforeUnmount(() => {
+        isUnmounted.value = true
+    })
+
     // Update content when modelValue changes externally
     watch(() => props.modelValue, (newValue) => {
+      if (isUnmounted.value) return
+      
       const convertedValue = convertQuartoToMilkdown(newValue)
       
       if (convertedValue === localValue.value) {
@@ -277,11 +375,11 @@ const MilkdownInternal = defineComponent({
       })
     }
 
-    return () => h('div', { class: 'h-full w-full relative' }, [
-      h(Milkdown, { 
-        class: 'prose prose-slate dark:prose-invert max-w-none h-full outline-none',
-        onClick: focusEditor
-      }),
+    return () => h('div', {
+      class: ['h-full w-full relative milkdown-container', props.showComments === false ? 'hide-comments' : ''],
+      onClick: focusEditor
+    }, [
+      h(Milkdown),
       h(FrontmatterCompletion, {
         state: completionState.value,
         onSelect: onCompletionSelect
@@ -299,6 +397,11 @@ const MilkdownInternal = defineComponent({
 
 .milkdown-editor-container {
   isolation: isolate;
+}
+
+/* Toggle Comments */
+.hide-comments [data-type="comment"] {
+  display: none !important;
 }
 
 /* Base Editor */

@@ -42,11 +42,13 @@
             :roomId="roomId"
             :userEmail="userEmail"
             :enableCollab="enableCollab"
+            :showComments="showComments"
           />
         </div>
         <div v-else key="source" class="h-full overflow-auto">
           <CodeEditor 
             v-model="content"
+            :filename="filename"
           />
         </div>
       </Transition>
@@ -80,6 +82,8 @@ const props = defineProps<{
   roomId?: string
   userEmail?: string
   enableCollab?: boolean
+  filename?: string
+  showComments?: boolean
 }>()
 
 const emit = defineEmits(['update:content', 'save'])

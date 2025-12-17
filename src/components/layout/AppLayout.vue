@@ -16,7 +16,12 @@
       @share="openShareDialog"
       @toggle-sidebar="showSidebar = !showSidebar"
       @update:show-preview="showPreview = $event"
-      @update:editor-mode="editorMode = $event"
+
+
+      @update:editor-mode="(mode) => { editorMode = mode; userPreferredMode = mode }"
+      :disable-visual-mode="isCodeFile"
+      :show-comments="showComments"
+      @toggle-comments="showComments = !showComments"
     />
 
     <!-- Main Layout -->
@@ -53,12 +58,14 @@
               ref="editorWrapperRef"
               :initial-content="fileContent"
               :mode="editorMode"
-              :roomId="collabRoomId"
-              :userEmail="userEmail"
-              :enableCollab="isShared"
-              @update:content="updateContent"
-            />
-          </div>
+              :room-id="activeSession?.roomId"
+              :user-email="(user as any)?.email"
+              :enable-collab="isShared"
+              :filename="currentFile || undefined"
+              :show-comments="showComments"
+              @update:content="updateFileContent"
+              @save="saveFile"
+            />    </div>
           
           <!-- Preview Panel with Fade Animation -->
           <Transition
@@ -138,8 +145,21 @@ const currentFile = useStorage<string | null>('quartier:currentFile', null)
 const showSidebar = useStorage('quartier:showSidebar', true)
 const showPreview = useStorage('quartier:showPreview', false)
 const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visual')
-const activeSession = useStorage('quartier:activeSession', null)
+// Track what the user *wants* to use (to restore after force-source mode)
+const userPreferredMode = useStorage<'visual' | 'source'>('quartier:userPreferredMode', 'visual')
+const showComments = useStorage('quartier:showComments', true)
+
+const activeSession = useStorage<{ roomId: string } | null>('quartier:activeSession', null)
 const isShared = computed(() => !!activeSession.value)
+
+// Helper to check for code files
+const isCodeFile = computed(() => {
+  if (!currentFile.value) return false
+  // List of extensions that support visual mode (Markdown/Quarto)
+  const visualExtensions = ['.md', '.qmd', '.rmd', '.markdown', '.mkd']
+  const ext = '.' + currentFile.value.split('.').pop()?.toLowerCase()
+  return !visualExtensions.includes(ext)
+})
 
 // Responsive breakpoints for sidebar mode
 import { useBreakpoints } from '@/composables/useBreakpoints'
@@ -169,11 +189,7 @@ const userEmail = ref<string | undefined>(undefined)
 const connectionStatus = ref<'connecting' | 'connected' | 'disconnected' | 'error'>('connected') // TODO: Wire up real status from MilkdownEditor
 const autoSaveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 
-// Computed room ID for collaboration
-const collabRoomId = computed(() => {
-  if (!repo.value || !currentFile.value) return undefined
-  return `quartier:${repo.value}/${currentFile.value}`
-})
+
 
 // Full file path for sharing (owner/repo/path)
 const fullFilePath = computed(() => {
@@ -353,6 +369,20 @@ async function selectFile(path: string) {
     
     console.log('Loading file:', path)
     
+    // Force source mode for code files to prevent Milkdown/KaTeX crashes
+    // But remember the user's preference for when they return to markdown
+    const visualExtensions = ['.md', '.qmd', '.rmd', '.markdown', '.mkd']
+    const ext = '.' + path.split('.').pop()?.toLowerCase()
+    
+    if (!visualExtensions.includes(ext)) {
+       console.log('[AppLayout] Code file detected, forcing source mode')
+       editorMode.value = 'source'
+    } else {
+       // It's a markdown file, restore user preference
+       console.log('[AppLayout] Markdown file detected, restoring preference:', userPreferredMode.value)
+       editorMode.value = userPreferredMode.value
+    }
+
     // Try to load from KV first (cross-device sync)
     const kvData = await kvSync.get(owner, name, path)
     const localContent = await cachedFileSystem.getCache(owner, name, path)
@@ -471,7 +501,7 @@ async function handleDeleteFile(path: string) {
   }
 }
 
-async function updateContent(newContent: string) {
+async function updateFileContent(newContent: string) {
   fileContent.value = newContent
   
   // Persist to cache
@@ -542,7 +572,9 @@ function handlePaletteAction(action: string) {
       showPreview.value = !showPreview.value
       break
     case 'toggle-mode':
-      editorMode.value = editorMode.value === 'visual' ? 'source' : 'visual'
+      const newMode = editorMode.value === 'visual' ? 'source' : 'visual'
+      editorMode.value = newMode
+      userPreferredMode.value = newMode
       break
     case 'go-to-repo':
       if (!repo.value) {

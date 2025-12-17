@@ -240,6 +240,24 @@
           <TooltipContent>Insert Callout</TooltipContent>
         </Tooltip>
       </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              :class="{ 'bg-muted': !showComments }"
+              @mousedown.prevent 
+              @click="emit('toggle-comments')"
+            >
+              <MessageSquareOff v-if="!showComments" class="w-4 h-4" />
+              <MessageSquareMore v-else class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{{ showComments ? 'Hide' : 'Show' }} Comments</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </template>
 
     <!-- OVERFLOW MENU (isSmall) -->
@@ -311,6 +329,10 @@
           <MessageSquare class="w-4 h-4 mr-2" />
           <span>Callout</span>
         </DropdownMenuItem>
+        <DropdownMenuItem @click="emit('toggle-comments')">
+          <MessageSquareMore class="w-4 h-4 mr-2" />
+          <span>{{ showComments ? 'Hide' : 'Show' }} Comments</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   </div>
@@ -320,7 +342,8 @@
 import { type Editor } from '@milkdown/kit/core'
 import { 
   Heading, ChevronDown, List, ListOrdered, Quote, Code, 
-  Link, Image, Undo, Redo, Bold, Italic, Code2, MessageSquare, MoreHorizontal
+  Link, Image, Undo, Redo, Bold, Italic, Code2, MessageSquare, MoreHorizontal,
+  MessageSquareMore, MessageSquareOff
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -340,7 +363,10 @@ import { useMilkdownCommands } from './useMilkdownCommands'
 const props = defineProps<{
   getEditor: () => Editor | undefined
   condensed?: boolean
+  showComments?: boolean
 }>()
+
+const emit = defineEmits(['toggle-comments'])
 
 const { 
   toggleBold, toggleItalic, toggleInlineCode,

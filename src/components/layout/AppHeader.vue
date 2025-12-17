@@ -4,10 +4,58 @@
     <div class="flex items-center gap-2">
       <SidebarToggle :visible="sidebarVisible" @toggle="emit('toggle-sidebar')" />
       <div class="w-px h-4 bg-border/50 mx-1" />
+      
+      <!-- Editor Mode Toggle -->
+      <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg flex-shrink-0">
+        <TooltipProvider :delay-duration="0">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <button 
+                @click="emit('update:editorMode', 'visual')"
+                :disabled="disableVisualMode"
+                class="p-1.5 rounded-md transition-all !outline-none !ring-0 !ring-offset-0 focus:!ring-0 focus-visible:!ring-0 focus:border-none border-none shadow-none"
+                :class="[
+                  editorMode === 'visual' 
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground',
+                  disableVisualMode ? 'opacity-50 cursor-not-allowed' : ''
+                ]"
+              >
+                <Eye class="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>{{ disableVisualMode ? 'Visual mode not available for code' : 'Visual Mode' }}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <TooltipProvider :delay-duration="0">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <button 
+                @click="emit('update:editorMode', 'source')"
+                class="p-1.5 rounded-md transition-all !outline-none !ring-0 !ring-offset-0 focus:!ring-0 focus-visible:!ring-0 focus:border-none border-none shadow-none"
+                :class="editorMode === 'source'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'"
+              >
+                <Code class="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Source Mode</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
+      <div class="w-px h-4 bg-border/50 mx-1" />
+
       <TooltipProvider :delay-duration="0">
         <Tooltip>
           <TooltipTrigger as-child>
-            <Button variant="ghost" size="icon" @click="emit('command-palette')">
+            <Button variant="ghost" size="icon" @click="emit('command-palette')" class="!outline-none !ring-0 !ring-offset-0 focus:!ring-0 focus-visible:!ring-0 focus:border-none border-none shadow-none">
               <Keyboard class="w-4 h-4" />
             </Button>
           </TooltipTrigger>
@@ -18,53 +66,14 @@
       </TooltipProvider>
     </div>
     
-    <!-- Center: Editor Mode Toggle + Toolbar (centered via flex) -->
+    <!-- Center: Toolbar (centered via flex) -->
     <div ref="toolbarContainer" class="flex-1 flex items-center justify-center gap-2 overflow-hidden">
-      <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg flex-shrink-0">
-      <TooltipProvider :delay-duration="0">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <button 
-              @click="emit('update:editorMode', 'visual')"
-              class="p-1.5 rounded-md transition-all"
-              :class="editorMode === 'visual' 
-                ? 'bg-background text-foreground shadow-sm' 
-                : 'text-muted-foreground hover:text-foreground'"
-            >
-              <Eye class="w-4 h-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Visual Mode</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider :delay-duration="0">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <button 
-              @click="emit('update:editorMode', 'source')"
-              class="p-1.5 rounded-md transition-all"
-              :class="editorMode === 'source'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'"
-            >
-              <Code class="w-4 h-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Source Mode</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-    
-      <!-- Editor Toolbar (only in visual mode) -->
+      <!-- Editor Toolbar (Visible in all modes, disabled if no editor) -->
       <EditorToolbar 
-        v-if="editorMode === 'visual'" 
         :get-editor="getEditor"
         :condensed="isCondensed"
+        :show-comments="showComments"
+        @toggle-comments="emit('toggle-comments')"
       />
     </div>
     
@@ -237,6 +246,8 @@ const props = defineProps<{
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error'
   autoSaveStatus: 'idle' | 'saving' | 'saved'
   getEditor: () => any
+  disableVisualMode?: boolean
+  showComments?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -246,5 +257,6 @@ const emit = defineEmits<{
   'toggle-sidebar': []
   'update:showPreview': [show: boolean]
   'update:editorMode': [mode: 'visual' | 'source']
+  'toggle-comments': []
 }>()
 </script>

@@ -7,8 +7,11 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  optimizeDeps: {
+    exclude: ['@milkdown/plugin-prism', 'refractor']
   },
   server: {
     proxy: {
@@ -27,7 +30,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('@milkdown') || id.includes('prosemirror') || id.includes('yjs') || id.includes('y-websocket') || id.includes('y-partykit') || id.includes('y-indexeddb') || id.includes('remark-directive')) {
+            if (id.includes('@milkdown') || id.includes('prosemirror') || id.includes('yjs') || id.includes('y-websocket') || id.includes('y-partykit') || id.includes('y-indexeddb') || id.includes('remark-directive') || id.includes('refractor') || id.includes('prismjs')) {
               return 'editor-libs'
             }
             if (id.includes('codemirror') || id.includes('vue-codemirror') || id.includes('vscode-icons')) {
