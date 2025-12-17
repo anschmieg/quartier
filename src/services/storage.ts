@@ -35,7 +35,12 @@ export const cachedFileSystem = {
    */
   async getCache(owner: string, repo: string, path: string): Promise<string | null> {
     const key = this.getCacheKey(owner, repo, path)
-    return await storage.getItem(key) as string | null
+    const val = await storage.getItem(key)
+    if (val === null || val === undefined) return null
+    if (typeof val === 'object') {
+      return JSON.stringify(val, null, 2)
+    }
+    return String(val)
   },
 
   /**
@@ -92,7 +97,12 @@ export const kvSync = {
         if (response.status === 404) return null
         throw new Error(`KV sync GET failed: ${response.status}`)
       }
-      return await response.json()
+      const data = await response.json()
+      // Ensure content is a string (handle .ipynb parsed as JSON)
+      if (data && typeof data.content === 'object') {
+        data.content = JSON.stringify(data.content, null, 2)
+      }
+      return data
     } catch (error) {
       console.error('[kvSync] GET error:', error)
       return null

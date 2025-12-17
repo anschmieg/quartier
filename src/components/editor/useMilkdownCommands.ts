@@ -58,6 +58,17 @@ export function useMilkdownCommands(getEditor: () => Editor | undefined) {
                 view.dispatch(tr)
              })
         },
+        
+        insertComment: () => {
+             const editor = getEditor()
+             if (!editor) return
+             editor.action((ctx) => {
+                const view = ctx.get(editorViewCtx)
+                const { from } = view.state.selection
+                const tr = view.state.tr.insertText('<!-- TODO: -->', from)
+                view.dispatch(tr)
+             })
+        },
 
         // History
         undo: () => action(undoCommand),

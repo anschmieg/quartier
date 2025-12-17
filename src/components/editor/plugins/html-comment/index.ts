@@ -32,8 +32,15 @@ export const commentNode = $nodeSchema('comment', () => ({
     }, `<!-- ${node.attrs.content} -->`]
   },
   parseMarkdown: {
-      match: (node) => node.type === 'comment',
+      match: (node) => {
+          if (node.type === 'comment') {
+              console.log('[commentNode] Matched comment node:', node.content)
+              return true
+          }
+          return false
+      },
       runner: (state, node, type) => {
+          console.log('[commentNode] Running parser for:', node.content)
           state.addNode(type, { content: node.content })
       }
   },
@@ -47,7 +54,7 @@ export const commentNode = $nodeSchema('comment', () => ({
 }))
 
 // Remark plugin integration
-export const commentPlugin = $remark('remark-comment', () => remarkHtmlComment())
+export const commentPlugin = $remark('remark-comment', () => remarkHtmlComment as any)
 
 // Input Rule: Type "<!-- " to insert a comment
 export const commentInputRule = $inputRule((ctx) => {

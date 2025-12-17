@@ -24,40 +24,46 @@
 
     <!-- Editors -->
     <div class="flex-1 overflow-hidden relative">
-      <Transition
-        enter-active-class="transition-opacity duration-150"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition-opacity duration-100"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-        mode="out-in"
-      >
-        <div v-if="mode === 'visual'" key="visual" class="h-full overflow-auto">
-          <MilkdownEditor 
-            ref="milkdownRef"
-            :key="roomId"
-            v-model="content"
-            :editable="true"
-            :roomId="roomId"
-            :userEmail="userEmail"
-            :enableCollab="enableCollab"
-            :showComments="showComments"
-          />
-        </div>
-        <div v-else key="source" class="h-full overflow-auto">
-          <CodeEditor 
-            v-model="content"
-            :filename="filename"
-          />
-        </div>
-      </Transition>
+      <MilkdownProvider>
+        <ProsemirrorAdapterProvider>
+          <Transition
+            enter-active-class="transition-opacity duration-150"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity duration-100"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+            mode="out-in"
+          >
+            <div v-if="mode === 'visual' && !reloading" key="visual" class="h-full overflow-auto">
+              <MilkdownEditor 
+                ref="milkdownRef"
+                :key="roomId"
+                v-model="content"
+                :editable="true"
+                :roomId="roomId"
+                :userEmail="userEmail"
+                :enableCollab="enableCollab"
+                :showComments="showComments"
+              />
+            </div>
+            <div v-else key="source" class="h-full overflow-auto">
+              <CodeEditor 
+                v-model="content"
+                :filename="filename"
+              />
+            </div>
+          </Transition>
+        </ProsemirrorAdapterProvider>
+      </MilkdownProvider>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
+import { MilkdownProvider } from '@milkdown/vue'
+import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/vue'
 import CodeEditor from './CodeEditor.vue'
 import MilkdownEditor from './MilkdownEditor.vue'
 
@@ -91,15 +97,34 @@ const saving = ref(false)
 const saved = ref(false)
 
 // Sync content when props change (e.g. file load)
-watch(() => props.initialContent, (newVal) => {
-  content.value = newVal
-  saved.value = false
+const reloading = ref(false)
+
+watch(() => [props.initialContent, props.filename], async ([newContent, newFilename], [_oldContent, oldFilename]) => {
+  // If filename changed, force a brief unmount to reset the editor completely
+  // This prevents Milkdown/ProseMirror from trying to "update" the existing instance with a new doc schema or plugins
+  if (newFilename !== oldFilename) {
+    reloading.value = true
+    content.value = newContent as string
+    saved.value = false
+    
+    // Wait for DOM update to unmount
+    await nextTick()
+    
+    // Remount
+    reloading.value = false
+  } else {
+    // Just content update
+    content.value = newContent as string
+    saved.value = false
+  }
 })
 
 // Debounced content update and save indicator
 let debounceTimeout: ReturnType<typeof setTimeout> | null = null
 
 watch(content, (newVal) => {
+  if (reloading.value) return // Don't trigger save during reload
+  
   // Clear any pending debounce
   if (debounceTimeout) clearTimeout(debounceTimeout)
   

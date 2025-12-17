@@ -244,6 +244,17 @@
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" @mousedown.prevent @click="insertComment">
+              <MessageSquarePlus class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Insert Comment</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -343,7 +354,7 @@ import { type Editor } from '@milkdown/kit/core'
 import { 
   Heading, ChevronDown, List, ListOrdered, Quote, Code, 
   Link, Image, Undo, Redo, Bold, Italic, Code2, MessageSquare, MoreHorizontal,
-  MessageSquareMore, MessageSquareOff
+  MessageSquareMore, MessageSquareOff, MessageSquarePlus
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -372,7 +383,7 @@ const {
   toggleBold, toggleItalic, toggleInlineCode,
   setHeading, toggleBulletList, toggleOrderedList,
   toggleBlockquote, toggleCodeBlock,
-  setLink, insertImage, insertCallout,
+  setLink, insertImage, insertCallout, insertComment,
   undo, redo,
   isActive, can
 } = useMilkdownCommands(props.getEditor)

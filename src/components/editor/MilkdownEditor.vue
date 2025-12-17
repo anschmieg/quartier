@@ -1,23 +1,21 @@
 <template>
-  <MilkdownProvider>
-    <ProsemirrorAdapterProvider>
-      <MilkdownInternal 
-        ref="internalRef"
-        :modelValue="modelValue" 
-        :editable="editable"
-        :roomId="roomId"
-        :userEmail="userEmail"
-        :showComments="showComments"
-        @update:modelValue="emit('update:modelValue', $event)" 
-      />
-    </ProsemirrorAdapterProvider>
-  </MilkdownProvider>
+  <div
+    class="h-full w-full relative milkdown-container"
+    :class="showComments === false ? 'hide-comments' : ''"
+    @click="focusEditor"
+  >
+    <Milkdown />
+    <FrontmatterCompletion
+      :state="completionState"
+      @select="onCompletionSelect"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, watch, ref, shallowRef, onBeforeUnmount } from 'vue'
-import { MilkdownProvider, Milkdown, useEditor } from '@milkdown/vue'
-import { useNodeViewFactory, ProsemirrorAdapterProvider } from '@prosemirror-adapter/vue'
+import { watch, ref, shallowRef, onBeforeUnmount } from 'vue'
+import { Milkdown, useEditor } from '@milkdown/vue'
+import { useNodeViewFactory } from '@prosemirror-adapter/vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import { commonmark, codeBlockSchema } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
@@ -67,6 +65,8 @@ import FrontmatterNode from './plugins/frontmatter/FrontmatterNode.vue'
 import CodeCell from './CodeCell.vue'
 import { calloutNode, calloutInputRule } from './plugins/callout'
 import CalloutNode from './plugins/callout/CalloutNode.vue'
+import { fencedDivNode } from './plugins/fenced-div'
+import { remarkFencedDivPlugin } from './plugins/fenced-div/remark-plugin'
 import './plugins/frontmatter/style.css'
 import { useCollab, getCollabPlugins } from '@/composables/useCollab'
 import { convertQuartoToMilkdown, convertMilkdownToQuarto } from '@/utils/quarto-syntax'
@@ -89,304 +89,298 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue'])
 
-const internalRef = ref<any>(null)
-
-defineExpose({
-  getEditor: () => internalRef.value?.getEditor?.()
+// Plugin to handle Escape key -> Blur
+const escapePlugin = $prose((_ctx) => {
+  return keymap({
+    Escape: (_state, _dispatch, view) => {
+      if (view && view.dom) {
+        view.dom.blur()
+        return true
+      }
+      return false
+    }
+  })
 })
 
-// Internal component that uses useEditor (must be inside Provider)
-const MilkdownInternal = defineComponent({
-  name: 'MilkdownInternal',
-  props: ['modelValue', 'editable', 'roomId', 'userEmail', 'enableCollab', 'showComments'],
-  emits: ['update:modelValue', 'ready'],
-  setup(props, ctx) {
-    // COLLAB DISABLED: Yjs document and providers for collaboration
-    // let ydoc: Y.Doc | null = null
-    // let partyProvider: YPartyKitProvider | null = null
-    
-    // Plugin to handle Escape key -> Blur
-    const escapePlugin = $prose((_ctx) => {
-      return keymap({
-        Escape: (_state, _dispatch, view) => {
-          if (view && view.dom) {
-            view.dom.blur()
-            return true
-          }
-          return false
-        }
-      })
-    })
+// Capture initial value ONCE to prevent useEditor from being reactive
+// Convert Quarto syntax (::: {.callout}) to Milkdown syntax (:::callout)
+const initialValue = convertQuartoToMilkdown(props.modelValue)
 
-    // Capture initial value ONCE to prevent useEditor from being reactive
-    // Convert Quarto syntax (::: {.callout}) to Milkdown syntax (:::callout)
-    const initialValue = convertQuartoToMilkdown(props.modelValue)
-    
-    // Track internal content to avoid infinite loops
-    const localValue = ref(initialValue)
+// Track internal content to avoid infinite loops
+const localValue = ref(initialValue)
 
-    // --- Frontmatter Completion ---
-    const completionState = shallowRef<CompletionState>({
-        active: false,
-        items: [],
-        index: 0,
-        coords: null,
-        query: '',
-        range: null
-    })
+// --- Frontmatter Completion ---
+const completionState = shallowRef<CompletionState>({
+    active: false,
+    items: [],
+    index: 0,
+    coords: null,
+    query: '',
+    range: null
+})
 
-    const onCompletionUpdate = (newState: CompletionState) => {
-        completionState.value = newState
-    }
-    
-    const onCompletionSelect = (item: CompletionItem) => {
-        const editorInstance = get()
-        if (!editorInstance) return
+const onCompletionUpdate = (newState: CompletionState) => {
+    completionState.value = newState
+}
 
-        editorInstance.action(ctx => {
-            const view = ctx.get(editorViewCtx)
-            const range = completionState.value.range
-            if (range) {
-                const tr = view.state.tr.insertText(item.insertText || item.label, range.from, range.to)
-                view.dispatch(tr)
-                view.focus()
-            }
-        })
-        completionState.value = { ...completionState.value, active: false }
-    }
+const onCompletionSelect = (item: CompletionItem) => {
+    const editorInstance = get()
+    if (!editorInstance) return
 
-    const nodeViewFactory = useNodeViewFactory()
-
-    // Create the View Plugin here, so it's available for .use()
-    const frontmatterView = $view(frontmatterNode.node, () => nodeViewFactory({
-        component: FrontmatterNode 
-    }))
-
-    // Create executable code view for code blocks
-    // The CodeCell component checks the language and renders appropriately
-    const executableCodeView = $view(codeBlockSchema.node, () => nodeViewFactory({
-        component: CodeCell,
-        as: 'div',
-    }))
-
-    // Create callout view for ::: {.callout-*} blocks
-    const calloutView = $view(calloutNode.node, () => nodeViewFactory({
-        component: CalloutNode,
-        as: 'div',
-    }))
-
-    // Create comment view
-    // Create comment view
-    const commentView = $view(commentNode.node, () => nodeViewFactory({
-        component: CommentNode,
-    }))
-
-    // Editor instance
-    const { get } = useEditor((root) => {
-      const editor = Editor.make()
-        .config((configCtx) => {
-          configCtx.set(rootCtx, root)
-          // Use captured initial value, NOT reactive props
-          configCtx.set(defaultValueCtx, initialValue)
-          
-          // Configure editor view options
-          configCtx.update(editorViewOptionsCtx, (prev) => ({
-            ...prev,
-            editable: () => props.editable ?? true,
-          }))
-          
-          // Setup listener for v-model
-          configCtx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
-            // Check if update is echo
-            if (markdown !== prevMarkdown) {
-              localValue.value = markdown
-              // Convert back to Quarto syntax before emitting
-              ctx.emit('update:modelValue', convertMilkdownToQuarto(markdown))
-            }
-          })
-
-          // Configure upload plugin
-          configCtx.update(uploadConfig.key, (prev) => ({
-             ...prev,
-             uploader: async (files, _schema) => {
-               const images: any[] = []
-               
-               for (let i = 0; i < files.length; i++) {
-                 const file = files.item(i)
-                 if (!file) continue
-                 
-                 // Placeholder: return a fake URL for now as we don't have a backend storage yet
-                 // In a real app, this would upload to R2/S3 and return the URL
-                 console.log('[Upload] Mock upload for:', file.name)
-                 
-                 images.push({
-                   url: 'https://placehold.co/600x400?text=' + encodeURIComponent(file.name),
-                   alt: file.name,
-                 })
-               }
-               
-               return images
-             }
-          }))
-        })
-        .config(nord)
-        .use(commonmark)
-        .use(remarkFrontmatterPlugin)
-        .use(frontmatterNode)
-        .use(frontmatterView)
-        .use(frontmatterSyntax)
-        .use(frontmatterValidation)
-        .use(createCompletionPlugin(onCompletionUpdate, onCompletionSelect))
-        .use(executableCodeView)
-        .use($remark('remark-directive', () => remarkDirective))
-        .use(calloutNode)
-        .use(calloutInputRule)
-        .use(calloutView)
-        .use(commentPlugin)
-        .use(commentNode)
-        .use(commentInputRule)
-        .use(commentView)
-        .use(gfm)
-        .use(history)
-        .use(listener)
-        .use(math)
-        .use(diagram)
-        .config((ctx) => {
-          ctx.set(prismConfig.key, {
-            configureRefractor: (refractor) => {
-              refractor.register(r)
-              refractor.register(python)
-              refractor.register(julia)
-              refractor.register(bash)
-              refractor.register(sql)
-              refractor.register(yaml)
-              refractor.register(toml)
-              refractor.register(javascript)
-              refractor.register(typescript)
-              refractor.register(css)
-              refractor.register(markdown)
-              refractor.register(json)
-              refractor.register(java)
-              refractor.register(c)
-              refractor.register(cpp)
-              refractor.register(go)
-              refractor.register(rust)
-              refractor.register(lua)
-              refractor.register(ruby)
-              refractor.register(latex)
-              // mermaid might conflict if not handled carefully, but registering it for Prism is usually safe
-              refractor.register(mermaid) 
-              refractor.register(dot)
-              refractor.register(scala)
-              
-              // Map Quarto style "{r}" to "r"
-              refractor.alias({
-                'r': ['{r}'],
-                'python': ['{python}', '{py}'],
-                'julia': ['{julia}', '{jl}'],
-                'bash': ['{bash}', '{sh}'],
-                'sql': ['{sql}'],
-                'yaml': ['{yaml}'],
-                'toml': ['{toml}'],
-                'javascript': ['{ojs}', '{javascript}', '{js}'], // Map ojs to js
-                'typescript': ['{typescript}', '{ts}', 'ts'],
-                'css': ['{css}'],
-                'markdown': ['{markdown}', '{md}'],
-                'json': ['{json}'],
-                'java': ['{java}'],
-                'c': ['{c}'],
-                'cpp': ['{cpp}', '{c++}'],
-                'go': ['{go}'],
-                'rust': ['{rust}'],
-                'lua': ['{lua}'],
-                'ruby': ['{ruby}', '{rb}']
-              })
-            }
-          })
-        })
-        .use(prism)
-        .use(emoji)
-        .use(indent)
-        .use(upload)
-        .use(escapePlugin)
-
-        // Add collaboration plugins (conditionally enabled via useCollab)
-        getCollabPlugins().forEach(plugin => editor.use(plugin))
-        
-        return editor
-    })
-
-    // Initialize collaboration logic (conditionally enabled via useCollab)
-    // This handles Yjs doc, PartyKit connection, and awareness
-    useCollab(props.roomId, props.userEmail, get, initialValue, () => props.enableCollab ?? false)
-
-    // Expose the editor instance getter
-    ctx.expose({
-      getEditor: get
-    })
-
-    // Track unmount state to prevent watcher firing during destruction
-    const isUnmounted = ref(false)
-    onBeforeUnmount(() => {
-        isUnmounted.value = true
-    })
-
-    // Update content when modelValue changes externally
-    watch(() => props.modelValue, (newValue) => {
-      if (isUnmounted.value) return
-      
-      const convertedValue = convertQuartoToMilkdown(newValue)
-      
-      if (convertedValue === localValue.value) {
-        return // content is same, ignore
-      }
-      
-      const editor = get()
-      if (!editor) return
-
-      localValue.value = convertedValue
-      
-      editor.action((ctx) => {
-          const view = ctx.get(editorViewCtx)
-          const parser = ctx.get(parserCtx)
-          const doc = parser(convertedValue)
-          if (!doc) return
-          
-          const state = view.state
-          view.dispatch(state.tr.replaceWith(0, state.doc.content.size, doc))
-      })
-    })
-
-    // Focus helper for container click
-    const focusEditor = (e?: Event) => {
-      // Prevent event from bubbling to scrolling parents or triggering navigation
-      if (e) {
-        e.stopPropagation()
-        // e.preventDefault() // Don't prevent default, we want the click to register, just focus.
-      }
-      
-      const editorInstance = get()
-      if (!editorInstance) return
-      editorInstance.action((ctx) => {
+    editorInstance.action(ctx => {
         const view = ctx.get(editorViewCtx)
-        if (view && !view.hasFocus()) {
-           view.focus()
+        const range = completionState.value.range
+        if (range) {
+            const tr = view.state.tr.insertText(item.insertText || item.label, range.from, range.to)
+            view.dispatch(tr)
+            view.focus()
+        }
+    })
+    completionState.value = { ...completionState.value, active: false }
+}
+
+const nodeViewFactory = useNodeViewFactory()
+
+// Create the View Plugin here, so it's available for .use()
+const frontmatterView = $view(frontmatterNode.node, () => nodeViewFactory({
+    component: FrontmatterNode 
+}))
+
+// Create executable code view for code blocks
+// The CodeCell component checks the language and renders appropriately
+const executableCodeView = $view(codeBlockSchema.node, () => nodeViewFactory({
+    component: CodeCell,
+    as: 'div',
+}))
+
+// Create callout view for ::: {.callout-*} blocks
+const calloutView = $view(calloutNode.node, () => nodeViewFactory({
+    component: CalloutNode,
+    as: 'div',
+}))
+
+// Create comment view
+const commentView = $view(commentNode.node, () => nodeViewFactory({
+    component: CommentNode,
+    stopEvent: () => true, // Allow all events to pass through to the Vue component
+}))
+
+// Editor instance
+const { get, loading } = useEditor((root) => {
+  const editor = Editor.make()
+    .config((configCtx) => {
+      configCtx.set(rootCtx, root)
+      // Use captured initial value, NOT reactive props
+      configCtx.set(defaultValueCtx, initialValue)
+      
+      // Configure editor view options
+      configCtx.update(editorViewOptionsCtx, (prev) => ({
+        ...prev,
+        editable: () => props.editable ?? true,
+      }))
+      
+      // Setup listener for v-model
+      configCtx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
+        // Check if update is echo
+        if (markdown !== prevMarkdown) {
+          localValue.value = markdown
+          // Convert back to Quarto syntax before emitting
+          emit('update:modelValue', convertMilkdownToQuarto(markdown))
         }
       })
-    }
 
-    return () => h('div', {
-      class: ['h-full w-full relative milkdown-container', props.showComments === false ? 'hide-comments' : ''],
-      onClick: focusEditor
-    }, [
-      h(Milkdown),
-      h(FrontmatterCompletion, {
-        state: completionState.value,
-        onSelect: onCompletionSelect
+      // Configure upload plugin
+      configCtx.update(uploadConfig.key, (prev) => ({
+         ...prev,
+         uploader: async (files, _schema) => {
+           const images: any[] = []
+           
+           for (let i = 0; i < files.length; i++) {
+             const file = files.item(i)
+             if (!file) continue
+             
+             // Placeholder: return a fake URL for now as we don't have a backend storage yet
+             // In a real app, this would upload to R2/S3 and return the URL
+             console.log('[Upload] Mock upload for:', file.name)
+             
+             images.push({
+               url: 'https://placehold.co/600x400?text=' + encodeURIComponent(file.name),
+               alt: file.name,
+             })
+           }
+           
+           return images
+         }
+      }))
+    })
+    .config(nord)
+    .use(commonmark)
+    .use(remarkFrontmatterPlugin)
+    .use(frontmatterNode)
+    .use(frontmatterView)
+    .use(frontmatterSyntax)
+    .use(frontmatterValidation)
+    .use(createCompletionPlugin(onCompletionUpdate, onCompletionSelect))
+    .use(executableCodeView)
+    .use($remark('remark-fenced-div', () => remarkFencedDivPlugin as any))
+    .use($remark('remark-directive', () => remarkDirective))
+    .use(fencedDivNode)
+    .use(calloutNode)
+    .use(calloutInputRule)
+    .use(calloutView)
+    .use(commentPlugin)
+    .use(commentNode)
+    .use(commentInputRule)
+    .use(commentView)
+    .use(gfm)
+    .use(history)
+    .use(listener)
+    .use(math)
+    .use(diagram)
+    .config((ctx) => {
+      ctx.set(prismConfig.key, {
+        configureRefractor: (refractor) => {
+          refractor.register(r)
+          refractor.register(python)
+          refractor.register(julia)
+          refractor.register(bash)
+          refractor.register(sql)
+          refractor.register(yaml)
+          refractor.register(toml)
+          refractor.register(javascript)
+          refractor.register(typescript)
+          refractor.register(css)
+          refractor.register(markdown)
+          refractor.register(json)
+          refractor.register(java)
+          refractor.register(c)
+          refractor.register(cpp)
+          refractor.register(go)
+          refractor.register(rust)
+          refractor.register(lua)
+          refractor.register(ruby)
+          refractor.register(latex)
+          // mermaid might conflict if not handled carefully, but registering it for Prism is usually safe
+          refractor.register(mermaid) 
+          refractor.register(dot)
+          refractor.register(scala)
+          
+          // Map Quarto style "{r}" to "r"
+          refractor.alias({
+            'r': ['{r}'],
+            'python': ['{python}', '{py}'],
+            'julia': ['{julia}', '{jl}'],
+            'bash': ['{bash}', '{sh}'],
+            'sql': ['{sql}'],
+            'yaml': ['{yaml}'],
+            'toml': ['{toml}'],
+            'javascript': ['{ojs}', '{javascript}', '{js}'], // Map ojs to js
+            'typescript': ['{typescript}', '{ts}', 'ts'],
+            'css': ['{css}'],
+            'markdown': ['{markdown}', '{md}'],
+            'json': ['{json}'],
+            'java': ['{java}'],
+            'c': ['{c}'],
+            'cpp': ['{cpp}', '{c++}'],
+            'go': ['{go}'],
+            'rust': ['{rust}'],
+            'lua': ['{lua}'],
+            'ruby': ['{ruby}', '{rb}']
+          })
+        }
       })
-    ])
+    })
+    .use(prism)
+    .use(emoji)
+    .use(indent)
+    .use(upload)
+    .use(escapePlugin)
+
+    // Add collaboration plugins (conditionally enabled via useCollab)
+    getCollabPlugins().forEach(plugin => editor.use(plugin))
+    
+    return editor
+})
+
+// Initialize collaboration logic (conditionally enabled via useCollab)
+// This handles Yjs doc, PartyKit connection, and awareness
+useCollab(props.roomId, props.userEmail, get, initialValue, () => props.enableCollab ?? false)
+
+// Expose the editor instance getter
+defineExpose({
+  getEditor: get
+})
+
+// Track unmount state to prevent watcher firing during destruction
+const isUnmounted = ref(false)
+onBeforeUnmount(() => {
+    isUnmounted.value = true
+})
+
+// Sync content once editor is ready
+watch(loading, (isLoading) => {
+  if (!isLoading) {
+    const convertedValue = convertQuartoToMilkdown(props.modelValue)
+    if (convertedValue !== localValue.value) {
+       const editorInstance = get()
+       if (editorInstance) {
+          localValue.value = convertedValue
+          editorInstance.action((ctx) => {
+              const view = ctx.get(editorViewCtx)
+              const parser = ctx.get(parserCtx)
+              const doc = parser(convertedValue)
+              if (!doc) return
+              const state = view.state
+              view.dispatch(state.tr.replaceWith(0, state.doc.content.size, doc))
+          })
+       }
+    }
   }
 })
+
+// Update content when modelValue changes externally
+watch(() => props.modelValue, (newValue) => {
+  if (isUnmounted.value) return
+  
+  const convertedValue = convertQuartoToMilkdown(newValue)
+  
+  if (convertedValue === localValue.value) {
+    return // content is same, ignore
+  }
+  
+  const editor = get()
+  if (!editor || loading.value) return // If loading, the watch(loading) will handle it
+
+  localValue.value = convertedValue
+  
+  editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const parser = ctx.get(parserCtx)
+      const doc = parser(convertedValue)
+      if (!doc) return
+      
+      const state = view.state
+      view.dispatch(state.tr.replaceWith(0, state.doc.content.size, doc))
+  })
+})
+
+// Focus helper for container click
+const focusEditor = (e?: Event) => {
+  // Prevent event from bubbling to scrolling parents or triggering navigation
+  if (e) {
+    e.stopPropagation()
+    // e.preventDefault() // Don't prevent default, we want the click to register, just focus.
+  }
+  
+  const editorInstance = get()
+  if (!editorInstance) return
+  editorInstance.action((ctx) => {
+    const view = ctx.get(editorViewCtx)
+    if (view && !view.hasFocus()) {
+       view.focus()
+    }
+  })
+}
 </script>
 
 <style>
