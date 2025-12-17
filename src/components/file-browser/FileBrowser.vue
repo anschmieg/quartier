@@ -169,9 +169,10 @@ const searchedFiles = computed(() => {
   })
 })
 
-// Watch for repo changes
-watch(() => props.repo, async (newRepo) => {
+// Watch for repo or host changes
+watch([() => props.repo, () => props.isHost], async ([newRepo, _newIsHost]) => {
   if (newRepo) {
+    // If isHost changed from false to true, we might need to reload specific bits, but generally reloading repo is safe
     await loadRepoContents(newRepo, '')
   } else {
     files.value = []
@@ -196,8 +197,37 @@ async function loadRepoContents(repoFullName: string, path: string) {
   // If Host, use GitHub API
   if (props.isHost) {
       try {
-        const contents = await githubService.loadRepo(owner, name, path)
-        files.value = contents.map((item: { path: string, type: string }) => ({
+        // 1. Load current path
+        let allItems = await githubService.loadRepo(owner, name, path)
+        
+        // 2. Load expanded folders (recursive hydration)
+        // We only do this if we are loading the root (initial load) or a specific refresh
+        if (path === '') {
+            const expanded = currentExpandedFolders.value
+            if (expanded.length > 0) {
+                // Fetch all expanded folders in parallel
+                // Note: GitHub API might rate limit us if too many, but for now this is the correct logic
+                const expandedPromises = expanded.map(folderPath => 
+                    githubService.loadRepo(owner, name, folderPath)
+                        .then((items: any[]) => items) // Return items
+                        .catch((e: any) => {
+                            console.warn(`Failed to hydrate folder ${folderPath}:`, e)
+                            return []
+                        })
+                )
+                
+                const expandedResults = await Promise.all(expandedPromises)
+                expandedResults.forEach(items => {
+                    allItems = [...allItems, ...items]
+                })
+            }
+        }
+
+        // Deduplicate items based on path
+        const uniqueItems = new Map<string, any>()
+        allItems.forEach((item: any) => uniqueItems.set(item.path, item))
+        
+        files.value = Array.from(uniqueItems.values()).map((item: any) => ({
           path: item.path,
           type: item.type as 'file' | 'dir'
         }))
@@ -212,7 +242,8 @@ async function loadRepoContents(repoFullName: string, path: string) {
   }
   
   // If Guest, use KV list
-  // KV returns flattened list of ALL files. We need to filter for the current path/folder.
+  // KV returns flattened list of ALL files.
+  // We simply load EVERYTHING and let the FileTree component handle hierarchy logic via buildFileTree.
   try {
       const allFiles = await kvSync.list(owner, name)
       if (!allFiles) {
@@ -221,7 +252,7 @@ async function loadRepoContents(repoFullName: string, path: string) {
           return
       }
 
-      // Filter by allowed paths (if guest/restricted)
+      // Filter by allowed paths (if guest/restricted perms)
       const visibleFiles = allFiles.filter(f => {
           if (!props.allowedPaths || props.allowedPaths.length === 0) return true
           const fullPath = `${owner}/${name}/${f.path}`
@@ -234,41 +265,20 @@ async function loadRepoContents(repoFullName: string, path: string) {
           })
       })
       
-      // Filter logic:
-      // If path is empty, show files with no slashes, OR folders (first part of path)
-      // If path is 'foo', show files starting with 'foo/'
+      // Guest Mode Simplification:
+      // We do NOT filter by 'currentPath' or folder depth here.
+      // We pass ALL visible files to the tree, and the tree renders the structure.
+      // This solves the 'empty folder' issue because all nested files are present.
       
-      const filtered = new Map<string, FileItem>()
+      files.value = visibleFiles.map(f => ({
+          path: f.path,
+          type: 'file' as const // KV only lists files, folders are implicit
+      })).sort((a, b) => a.path.localeCompare(b.path))
       
-      visibleFiles.forEach(f => {
-          if (!f.path.startsWith(path ? path + '/' : '')) return
-          
-          const relative = path ? f.path.slice(path.length + 1) : f.path
-          const parts = relative.split('/')
-          
-          if (parts.length === 1) {
-              // It's a file in the current folder
-              const fileName = parts[0]
-              if (fileName) {
-                  filtered.set(fileName, { path: f.path, type: 'file' })
-              }
-          } else {
-              // It's a folder
-              const subFolderName = parts[0]
-              if (subFolderName) {
-                  const folderName = subFolderName
-                  const folderPath = path ? `${path}/${folderName}` : folderName
-                  filtered.set(folderName, { path: folderPath, type: 'dir' })
-              }
-          }
-      })
-      
-      files.value = Array.from(filtered.values()).sort((a, b) => {
-          if (a.type === b.type) return a.path.localeCompare(b.path)
-          return a.type === 'dir' ? -1 : 1
-      })
-      
+      // We still update currentPath to support breadcrumbs if needed, 
+      // but strictly speaking for a pure tree view, 'currentPath' is less relevant than 'selectedPath'.
       currentPath.value = path
+
   } catch (e: any) {
       console.error('Failed to load guest contents:', e)
       error.value = e.message || 'Failed to load files'
