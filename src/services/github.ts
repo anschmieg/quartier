@@ -9,6 +9,8 @@
  * Production GitHub service using our Backend Proxy
  * All requests go to /api/github/* to keep tokens secure
  */
+import { getCsrfToken } from '@/utils/csrf'
+
 class ProxyGitHubService {
 
   async listRepos() {
@@ -115,10 +117,14 @@ class ProxyGitHubService {
     message: string
   ): Promise<{ success: boolean; commitSha?: string; fileSha?: string; error?: string }> {
     try {
+      const csrfToken = getCsrfToken() || ''
       const response = await fetch('/api/github/commit', {
         method: 'PUT',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({ owner, repo, path, content, message })
       })
 
@@ -192,10 +198,14 @@ class ProxyGitHubService {
         return { success: false, error: 'File not found or unable to get SHA' }
       }
 
+      const csrfToken = getCsrfToken() || ''
       const response = await fetch('/api/github/file', {
         method: 'DELETE',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({ owner, repo, path, message, sha })
       })
 

@@ -43,15 +43,55 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       return response
     }
     
-    // 4. Proceed with request
+    // 4. CSRF Protection
+    const method = context.request.method
+    const UNSAFE_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH']
+    
+    // Get existing CSRF cookie
+    const cookieHeader = context.request.headers.get('Cookie') || ''
+    const cookieMatch = cookieHeader.match(/(^| )csrf-token=([^;]+)/)
+    let csrfToken = cookieMatch ? cookieMatch[2] : null
+    let setCsrfCookie = false
+
+    // Generate token if missing
+    if (!csrfToken) {
+      csrfToken = crypto.randomUUID()
+      setCsrfCookie = true
+    }
+
+    // Verify token on unsafe methods
+    if (UNSAFE_METHODS.includes(method)) {
+      const headerToken = context.request.headers.get('X-CSRF-Token')
+      
+      if (!headerToken || headerToken !== csrfToken) {
+        return createErrorResponse(
+          'CSRF verification failed',
+          403,
+          'CSRF_MISMATCH'
+        )
+      }
+    }
+
+    // 5. Proceed with request
     const response = await context.next()
     
-    // 5. Add headers to successful/other responses
-    // We clone the response to modify headers if it's immutable (sometimes necessary in Workers)
+    // 6. Add headers and Set-Cookie to response
+    // We clone the response to modify headers if it's immutable
     const newResponse = new Response(response.body, response)
+    
+    // Rate Limit Headers
     newResponse.headers.set('X-RateLimit-Limit', LIMIT.toString())
     newResponse.headers.set('X-RateLimit-Remaining', remaining.toString())
     newResponse.headers.set('X-RateLimit-Reset', (Math.floor(Date.now() / 1000) + WINDOW_SECONDS).toString())
+    
+    // Set CSRF Cookie if needed (HttpOnly=false so JS can read it for header injection)
+    // SameSite=Lax is good default. Secure=true in production.
+    if (setCsrfCookie) {
+      newResponse.headers.append(
+        'Set-Cookie', 
+        `csrf-token=${csrfToken}; Path=/; SameSite=Lax; Secure`
+      )
+    }
     
     return newResponse
     
