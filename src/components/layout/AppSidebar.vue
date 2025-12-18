@@ -10,7 +10,7 @@
 
   <aside 
     ref="sidebarRef"
-    class="flex flex-col bg-sidebar/50 flex-shrink-0 overflow-hidden transition-all duration-150 ease-out"
+    class="flex flex-col bg-sidebar/50 shrink-0 overflow-hidden transition-all duration-150 ease-out"
     :class="sidebarClasses"
   >
     <div class="w-64 flex flex-col h-full">
@@ -27,7 +27,7 @@
             <BookMarked class="w-3.5 h-3.5 mr-2 opacity-70" />
             <span class="truncate">{{ repo || (isHost ? 'Select Repository...' : 'Shared Session') }}</span>
           </div>
-          <ChevronDown v-if="isHost" class="w-3 h-3 opacity-50 ml-2 flex-shrink-0" />
+          <ChevronDown v-if="isHost" class="w-3 h-3 opacity-50 ml-2 shrink-0" />
         </Button>
       </div>
       

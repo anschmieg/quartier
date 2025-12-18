@@ -6,7 +6,7 @@
           <GitBranch class="w-3.5 h-3.5 mr-2 opacity-70" />
           <span class="truncate">{{ selectedBranch || 'main' }}</span>
         </div>
-        <ChevronDown class="w-3 h-3 opacity-50 ml-2 flex-shrink-0" />
+        <ChevronDown class="w-3 h-3 opacity-50 ml-2 shrink-0" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="start" class="w-56">

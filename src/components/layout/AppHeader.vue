@@ -6,17 +6,17 @@
       <div class="w-px h-4 bg-border/50 mx-1" />
       
       <!-- Editor Mode Toggle -->
-      <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg flex-shrink-0">
+      <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg shrink-0">
         <TooltipProvider :delay-duration="0">
           <Tooltip>
             <TooltipTrigger as-child>
               <button 
                 @click="emit('update:editorMode', 'visual')"
                 :disabled="disableVisualMode"
-                class="p-1.5 rounded-md transition-all !outline-none !ring-0 !ring-offset-0 focus:!ring-0 focus-visible:!ring-0 focus:border-none border-none shadow-none"
+                class="p-1.5 rounded-md transition-all outline-hidden! ring-0! ring-offset-0! focus:ring-0! focus-visible:ring-0! focus:border-none border-none shadow-none"
                 :class="[
                   editorMode === 'visual' 
-                    ? 'bg-background text-foreground shadow-sm' 
+                    ? 'bg-background text-foreground shadow-xs' 
                     : 'text-muted-foreground hover:text-foreground',
                   disableVisualMode ? 'opacity-50 cursor-not-allowed' : ''
                 ]"
@@ -35,9 +35,9 @@
             <TooltipTrigger as-child>
               <button 
                 @click="emit('update:editorMode', 'source')"
-                class="p-1.5 rounded-md transition-all !outline-none !ring-0 !ring-offset-0 focus:!ring-0 focus-visible:!ring-0 focus:border-none border-none shadow-none"
+                class="p-1.5 rounded-md transition-all outline-hidden! ring-0! ring-offset-0! focus:ring-0! focus-visible:ring-0! focus:border-none border-none shadow-none"
                 :class="editorMode === 'source'
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'"
               >
                 <Code class="w-4 h-4" />
@@ -55,7 +55,7 @@
       <TooltipProvider :delay-duration="0">
         <Tooltip>
           <TooltipTrigger as-child>
-            <Button variant="ghost" size="icon" @click="emit('command-palette')" class="!outline-none !ring-0 !ring-offset-0 focus:!ring-0 focus-visible:!ring-0 focus:border-none border-none shadow-none">
+            <Button variant="ghost" size="icon" @click="emit('command-palette')" class="outline-hidden! ring-0! ring-offset-0! focus:ring-0! focus-visible:ring-0! focus:border-none border-none shadow-none">
               <Keyboard class="w-4 h-4" />
             </Button>
           </TooltipTrigger>
@@ -85,7 +85,7 @@
           <Tooltip>
             <TooltipTrigger as-child>
               <div 
-                class="w-6 h-6 rounded-full border-2 border-background flex items-center justify-center text-xs font-medium text-white shadow-sm"
+                class="w-6 h-6 rounded-full border-2 border-background flex items-center justify-center text-xs font-medium text-white shadow-xs"
                 :style="{ backgroundColor: user.color }"
               >
                 {{ user.name.charAt(0).toUpperCase() }}
@@ -98,7 +98,7 @@
         </TooltipProvider>
         <div 
           v-if="otherUsers.length > 3" 
-          class="w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium shadow-sm"
+          class="w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium shadow-xs"
         >
           +{{ otherUsers.length - 3 }}
         </div>
