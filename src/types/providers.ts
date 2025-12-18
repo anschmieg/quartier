@@ -16,7 +16,7 @@ export interface StorageProvider {
   capabilities: ProviderCapabilities
 
   // Project Management
-  listProjects?(): Promise<any[]>
+  listProjects?(path?: string): Promise<any[]>
   
   // File Operations
   listFiles(project: string, path?: string): Promise<FileItem[]>
@@ -27,7 +27,7 @@ export interface StorageProvider {
   createFolder?(project: string, path: string): Promise<void>
 
   // Authentication
-  login?(): Promise<void>
+  login?(options?: any): Promise<void>
   logout?(): Promise<void>
   isAuthenticated?(): Promise<boolean>
 }

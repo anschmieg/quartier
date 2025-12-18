@@ -43,10 +43,11 @@
           <Check v-if="activeProviderId === 'gdrive'" class="w-3 h-3 ml-auto" />
         </DropdownMenuItem>
         
-        <!-- Nextcloud (Disabled) -->
-        <DropdownMenuItem class="text-xs opacity-50 hidden" disabled>
+        <!-- Nextcloud -->
+        <DropdownMenuItem class="text-xs" @click="handleSourceSelect('nextcloud')">
           <Cloud class="w-3.5 h-3.5 mr-2" />
-          <span>Nextcloud</span>
+          <span>Nextcloud (WebDAV)</span>
+          <Check v-if="activeProviderId === 'nextcloud'" class="w-3 h-3 ml-auto" />
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

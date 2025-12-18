@@ -575,8 +575,8 @@ function handleOpenSourceSelector(providerId: string) {
     return
   }
 
-  // Handle Cloud Providers (Google Drive)
-  if (providerId === 'gdrive') {
+  // Handle Cloud Providers (Google Drive, Nextcloud)
+  if (providerId === 'gdrive' || providerId === 'nextcloud') {
     const provider = storageManager.allProviders.find(p => p.id === providerId)
     if (provider) {
         targetCloudProvider.value = provider

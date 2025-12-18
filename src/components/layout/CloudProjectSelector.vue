@@ -19,9 +19,35 @@
             <p class="text-sm text-muted-foreground">
                 Connect to {{ providerName }} to access your files.
             </p>
-            <Button @click="handleLogin">
+
+            <!-- Custom Login Form for Nextcloud -->
+            <div v-if="provider?.id === 'nextcloud'" class="w-full space-y-3 text-left">
+                <div class="space-y-1">
+                    <label class="text-xs font-medium">Server URL</label>
+                    <input v-model="nextcloudConfig.url" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs" placeholder="https://cloud.example.com/remote.php/dav/files/user/" />
+                    <p class="text-[10px] text-muted-foreground">The full WebDAV URL to your files.</p>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-medium">Username</label>
+                    <input v-model="nextcloudConfig.username" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs" />
+                </div>
+                 <div class="space-y-1">
+                    <label class="text-xs font-medium">Password / App Token</label>
+                    <input v-model="nextcloudConfig.password" type="password" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs" />
+                    <p class="text-[10px] text-muted-foreground text-amber-600/80">
+                        Recommendation: Use a dedicated App Password/Token from your Nextcloud security settings.
+                    </p>
+                </div>
+                 <Button @click="handleLogin" class="w-full mt-2" :disabled="!nextcloudConfig.url || !nextcloudConfig.username || !nextcloudConfig.password">
+                    Connect
+                </Button>
+            </div>
+
+            <!-- Generic Login Button (e.g. Google Drive) -->
+            <Button v-else @click="handleLogin">
                 Connect {{ providerName }}
             </Button>
+            
             <p v-if="error" class="text-xs text-destructive mt-2">{{ error }}</p>
         </div>
 
@@ -136,13 +162,23 @@ async function checkAuth() {
     }
 }
 
+const nextcloudConfig = ref({
+    url: '',
+    username: '',
+    password: ''
+})
+
 async function handleLogin() {
     if (!props.provider) return
     loading.value = true
     error.value = null
     
     try {
-        await props.provider.login?.()
+        if (props.provider.id === 'nextcloud') {
+            await props.provider.login?.(nextcloudConfig.value)
+        } else {
+            await props.provider.login?.()
+        }
         isAuthenticated.value = true
         await loadProjects()
     } catch (e) {

@@ -3,6 +3,7 @@ import type { StorageProvider } from '../types/providers'
 import { GitHubProvider } from './providers/GitHubProvider'
 import { LocalProvider } from './providers/LocalProvider'
 import { GoogleDriveProvider } from './providers/GoogleDriveProvider'
+import { NextcloudProvider } from './providers/NextcloudProvider'
 
 class StorageManager {
   private providers = new Map<string, StorageProvider>()
@@ -15,6 +16,7 @@ class StorageManager {
     this.registerProvider(new GitHubProvider())
     this.registerProvider(new LocalProvider())
     this.registerProvider(new GoogleDriveProvider())
+    this.registerProvider(new NextcloudProvider())
     
     // Stubs
   }
