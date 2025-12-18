@@ -23,7 +23,7 @@ const style = computed(() => {
        :style="style">
     <div v-for="(item, i) in state.items" 
          :key="item.label"
-         class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors"
+         class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors"
          :class="{ 'bg-accent text-accent-foreground': i === state.index }">
       
       <div class="flex flex-col">

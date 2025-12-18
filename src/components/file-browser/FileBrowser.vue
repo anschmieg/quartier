@@ -198,7 +198,7 @@ async function loadRepoContents(repoFullName: string, path: string) {
   if (props.isHost) {
       try {
         // 1. Load current path
-        let allItems = await githubService.loadRepo(owner, name, path)
+        let allItems = await githubService.loadRepo(owner, name, path) as any[]
         
         // 2. Load expanded folders (recursive hydration)
         // We only do this if we are loading the root (initial load) or a specific refresh
@@ -208,7 +208,7 @@ async function loadRepoContents(repoFullName: string, path: string) {
                 // Fetch all expanded folders in parallel
                 // Note: GitHub API might rate limit us if too many, but for now this is the correct logic
                 const expandedPromises = expanded.map(folderPath => 
-                    githubService.loadRepo(owner, name, folderPath)
+                    (githubService.loadRepo(owner, name, folderPath) as any)
                         .then((items: any[]) => items) // Return items
                         .catch((e: any) => {
                             console.warn(`Failed to hydrate folder ${folderPath}:`, e)
@@ -372,7 +372,7 @@ async function handleExpandFolder(folderPath: string) {
 
   // Host logic (GitHub)
   try {
-    const contents = await githubService.loadRepo(owner, name, folderPath)
+    const contents = await githubService.loadRepo(owner, name, folderPath) as any[]
     const newItems = contents.map((item: { path: string, type: string }) => ({
       path: item.path,
       type: item.type as 'file' | 'dir'

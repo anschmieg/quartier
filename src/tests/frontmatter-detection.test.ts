@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
     hasFrontmatter,
     extractFrontmatter,
-    validateFrontmatterBoundaries,
-    type FrontmatterDiagnostic
+    validateFrontmatterBoundaries
 } from '@/utils/quarto-syntax'
 
 describe('Frontmatter boundary detection', () => {

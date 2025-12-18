@@ -80,7 +80,7 @@ class ProxyGitHubService {
         throw new Error(`Failed to read file: ${response.status} ${response.statusText}`)
       }
 
-      const data = await response.json()
+      const data = await response.json() as any
 
       // GitHub API returns directory as array, file as object with 'content' field
       if (Array.isArray(data)) {

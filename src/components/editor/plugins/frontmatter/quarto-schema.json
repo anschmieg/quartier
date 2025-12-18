@@ -2738,7 +2738,7 @@
           "border-width",
           "border-color",
           "border-radius",
-          "outline",
+          "outline-solid",
           "outline-offset"
         ]
       },

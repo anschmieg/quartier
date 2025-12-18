@@ -48,7 +48,7 @@ describe('API Security Middleware', () => {
       
       expect(mockNext).not.toHaveBeenCalled()
       expect(response.status).toBe(429)
-      const body = await response.json()
+      const body = await response.json() as any
       expect(body.code).toBe('RATE_LIMIT_EXCEEDED')
     })
   })
@@ -96,7 +96,7 @@ describe('API Security Middleware', () => {
       const response = await onRequest(mockContext as any)
 
       expect(response.status).toBe(403)
-      const body = await response.json()
+      const body = await response.json() as any
       expect(body.code).toBe('CSRF_MISMATCH')
     })
 

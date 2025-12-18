@@ -165,7 +165,7 @@ async function createSession() {
     })
     
     if (!sessionRes.ok) throw new Error('Failed to create session')
-    const { session } = await sessionRes.json()
+    const { session } = await sessionRes.json() as any
     sessionId.value = session.id
     
     // Create share link
@@ -177,7 +177,7 @@ async function createSession() {
     })
     
     if (!shareRes.ok) throw new Error('Failed to create share link')
-    const data = await shareRes.json()
+    const data = await shareRes.json() as any
     shareUrl.value = data.shareUrl
 
     // Perform initial sync of shared content to KV

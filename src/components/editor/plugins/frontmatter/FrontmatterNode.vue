@@ -1,5 +1,5 @@
 <template>
-  <div class="frontmatter-container my-4 rounded-md border border-border bg-card text-card-foreground shadow-sm">
+  <div class="frontmatter-container my-4 rounded-md border border-border bg-card text-card-foreground shadow-xs">
     <div 
       contenteditable="false" 
       class="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border select-none"
@@ -19,7 +19,7 @@
     <div v-show="isExpanded" class="relative group">
       <div 
         :ref="contentRef"
-        class="language-yaml font-mono text-sm p-3 bg-card min-h-[4rem] outline-none"
+        class="language-yaml font-mono text-sm p-3 bg-card min-h-16 outline-hidden"
       ></div>
     </div>
     

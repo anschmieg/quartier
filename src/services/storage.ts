@@ -97,12 +97,12 @@ export const kvSync = {
         if (response.status === 404) return null
         throw new Error(`KV sync GET failed: ${response.status}`)
       }
-      const data = await response.json()
+      const data = await response.json() as any
       // Ensure content is a string (handle .ipynb parsed as JSON)
       if (data && typeof data.content === 'object') {
         data.content = JSON.stringify(data.content, null, 2)
       }
-      return data
+      return data as { content: string; user: string; timestamp: number; yjsState?: string } | null
     } catch (error) {
       console.error('[kvSync] GET error:', error)
       return null

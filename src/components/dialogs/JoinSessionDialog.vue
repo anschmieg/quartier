@@ -34,7 +34,7 @@
           <div class="max-h-32 overflow-y-auto">
             <ul class="space-y-2">
                 <li v-for="path in session.paths" :key="path" class="text-sm font-mono flex items-center gap-3">
-                <FileText class="h-7 w-7 text-muted-foreground flex-shrink-0" />
+                <FileText class="h-7 w-7 text-muted-foreground shrink-0" />
                 <span>{{ formatPath(path) }}</span>
                 </li>
             </ul>
@@ -47,7 +47,7 @@
            
            <!-- Live Edits -->
            <div class="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
-              <Edit3 class="w-8 h-8 text-primary flex-shrink-0" />
+              <Edit3 class="w-8 h-8 text-primary shrink-0" />
               <div class="space-y-1">
                 <h4 class="text-sm font-medium">Live Editing</h4>
                 <p class="text-xs text-muted-foreground leading-snug">
@@ -58,7 +58,7 @@
 
             <!-- File System -->
             <div class="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
-              <HardDrive class="w-8 h-8 text-muted-foreground flex-shrink-0" />
+              <HardDrive class="w-8 h-8 text-muted-foreground shrink-0" />
               <div class="space-y-1">
                 <h4 class="text-sm font-medium">No File System Access</h4>
                 <p class="text-xs text-muted-foreground leading-snug">
@@ -69,7 +69,7 @@
             
             <!-- Visibility -->
             <div class="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
-              <Eye class="w-8 h-8 text-muted-foreground flex-shrink-0" />
+              <Eye class="w-8 h-8 text-muted-foreground shrink-0" />
               <div class="space-y-1">
                 <h4 class="text-sm font-medium">Limited Visibility</h4>
                 <p class="text-xs text-muted-foreground leading-snug">
@@ -201,12 +201,12 @@ async function joinSession() {
         window.location.href = `/app?return_to=${returnUrl}`
         return
       }
-      const data = await res.json()
+      const data = await res.json() as any
       error.value = data.error || 'Failed to join'
       return
     }
     
-    const data = await res.json()
+    const data = await res.json() as any
     localStorage.setItem('quartier:activeSession', JSON.stringify(data.session))
     
     // Set repo/file logic

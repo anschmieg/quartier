@@ -7,7 +7,7 @@ import {
 describe('Content Sync: Quarto ↔ Milkdown conversion roundtrip', () => {
     
     // Helper to test roundtrip conversion
-    const testRoundtrip = (input: string, description?: string) => {
+    const testRoundtrip = (input: string) => {
         const toMilkdown = convertQuartoToMilkdown(input)
         const backToQuarto = convertMilkdownToQuarto(toMilkdown)
         return { original: input, milkdown: toMilkdown, quarto: backToQuarto }

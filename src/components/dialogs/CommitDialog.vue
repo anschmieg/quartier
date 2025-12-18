@@ -44,7 +44,7 @@
             v-model="message"
             type="text"
             :placeholder="defaultMessage"
-            class="w-full px-3 py-2 text-sm rounded-md border border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            class="w-full px-3 py-2 text-sm rounded-md border border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
             @keydown.enter="handleConfirm"
             ref="inputRef"
           />

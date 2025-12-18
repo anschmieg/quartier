@@ -22,7 +22,6 @@ import { gfm } from '@milkdown/preset-gfm'
 import { history } from '@milkdown/plugin-history'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { math } from '@milkdown/plugin-math'
-import { diagram } from '@milkdown/plugin-diagram'
 import { nord } from '@milkdown/theme-nord'
 import { $prose, $view, $remark } from '@milkdown/utils'
 import { keymap } from '@milkdown/prose/keymap'
@@ -236,7 +235,6 @@ const { get, loading } = useEditor((root) => {
     .use(history)
     .use(listener)
     .use(math)
-    .use(diagram)
     .config((ctx) => {
       ctx.set(prismConfig.key, {
         configureRefractor: (refractor) => {

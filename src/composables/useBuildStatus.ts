@@ -54,7 +54,7 @@ export function useBuildStatus(repo: string) {
                 throw new Error(`HTTP ${response.status}`)
             }
 
-            const data = await response.json()
+            const data = await response.json() as any
 
             if (data.status !== 'unknown') {
                 status.value = data as BuildStatus

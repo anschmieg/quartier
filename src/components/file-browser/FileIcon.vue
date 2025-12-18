@@ -3,13 +3,13 @@
     v-if="iconUrl" 
     :src="iconUrl" 
     :alt="name" 
-    class="w-4 h-4 flex-shrink-0"
+    class="w-4 h-4 shrink-0"
     :class="{ 'opacity-50 grayscale': monochrome }"
   />
   <component 
     v-else 
     :is="fallbackIcon" 
-    class="w-4 h-4 flex-shrink-0 text-muted-foreground" 
+    class="w-4 h-4 shrink-0 text-muted-foreground" 
   />
 </template>
 

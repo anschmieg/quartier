@@ -43,7 +43,7 @@
     <!-- Code Content (ProseMirror editable) -->
     <div 
       :ref="contentRef"
-      class="p-3 font-mono text-sm bg-card min-h-[3rem] focus:outline-none"
+      class="p-3 font-mono text-sm bg-card min-h-12 focus:outline-hidden"
     />
 
     <!-- Output Section (Accordion) -->

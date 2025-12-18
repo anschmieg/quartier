@@ -201,7 +201,7 @@ async function fetchSessions() {
     
     const res = await fetch(endpoint, { credentials: 'include' })
     if (res.ok) {
-      const data = await res.json()
+      const data = await res.json() as any
       sessions.value = data.sessions || []
     }
   } catch (error) {
@@ -221,7 +221,7 @@ async function viewShareLinks(session: SharedSession) {
   try {
     const res = await fetch(`/api/sessions/${session.id}/share`, { credentials: 'include' })
     if (res.ok) {
-      const data = await res.json()
+      const data = await res.json() as any
       shareLinks.value = data.tokens || []
       expandedSession.value = session.id
     }
