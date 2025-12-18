@@ -3,11 +3,11 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-3 px-2">
       <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Files</span>
-      <FileFilters v-if="repo" v-model:showAll="showAllFiles" />
+      <FileFilters v-if="project" v-model:showAll="showAllFiles" />
     </div>
     
     <!-- Search input -->
-    <div v-if="repo && !error" class="px-2 mb-2">
+    <div v-if="project && !error" class="px-2 mb-2">
       <Input 
         v-model="searchQuery"
         placeholder="Search files..."
@@ -17,7 +17,7 @@
     
     <!-- Breadcrumb navigation -->
     <PathBreadcrumbs 
-      v-if="repo && !error"
+      v-if="project && !error"
       :current-path="currentPath" 
       @navigate="navigateToPath"
       class="px-2"
@@ -40,10 +40,10 @@
     
     <!-- Empty state -->
     <EmptyState
-      v-else-if="!repo"
+      v-else-if="!project"
       :icon="FolderOpen"
-      title="No repository selected"
-      description="Select a repository from the header to get started"
+      title="No project selected"
+      description="Select a source from the sidebar to get started"
       class="px-2 py-4"
     />
     
@@ -54,7 +54,7 @@
       :description="searchQuery ? 'No files match your search' : 'This folder is empty'"
       class="px-2 py-4"
     >
-        <template #actions v-if="!searchQuery && repo">
+        <template #actions v-if="!searchQuery && project">
              <Button size="sm" variant="outline" @click="emit('create-file', currentPath)">
                 Create File
              </Button>
@@ -92,8 +92,7 @@ import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { githubService } from '@/services/github'
-import { kvSync } from '@/services/storage'
+import { storageManager } from '@/services/storageManager'
 
 interface FileItem {
   path: string
@@ -101,14 +100,12 @@ interface FileItem {
 }
 
 const props = withDefaults(defineProps<{
-  repo?: string
+  project?: string | null
   selectedPath?: string | null
   isDirty?: boolean
-  isHost?: boolean
   allowedPaths?: string[]
 }>(), {
   isDirty: false,
-  isHost: false,
   allowedPaths: () => []
 })
 
@@ -128,12 +125,12 @@ const searchQuery = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-// Persisted expanded folders (per repo)
+// Persisted expanded folders (per project)
 const expandedFolders = useStorage<Record<string, string[]>>('quartier:expandedFolders', {})
 
-// Get expanded folders for current repo
+// Get expanded folders for current project
 const currentExpandedFolders = computed(() => {
-  return props.repo ? (expandedFolders.value[props.repo] || []) : []
+  return props.project ? (expandedFolders.value[props.project] || []) : []
 })
 
 // Quarto-relevant file extensions (whitelist)
@@ -172,11 +169,12 @@ const searchedFiles = computed(() => {
   })
 })
 
-// Watch for repo or host changes
-watch([() => props.repo, () => props.isHost], async ([newRepo, _newIsHost]) => {
-  if (newRepo) {
-    // If isHost changed from false to true, we might need to reload specific bits, but generally reloading repo is safe
-    await loadRepoContents(newRepo, '')
+const currentProvider = computed(() => storageManager.activeProvider)
+
+// Watch for project or provider changes
+watch(() => props.project, async (newProject) => {
+  if (newProject) {
+    await loadContents(newProject, '')
   } else {
     files.value = []
     currentPath.value = ''
@@ -185,108 +183,50 @@ watch([() => props.repo, () => props.isHost], async ([newRepo, _newIsHost]) => {
 }, { immediate: true })
 
 async function retryLoad() {
-    if (props.repo) {
-        await loadRepoContents(props.repo, currentPath.value)
+    if (props.project) {
+        await loadContents(props.project, currentPath.value)
     }
 }
 
-async function loadRepoContents(repoFullName: string, path: string) {
-  const [owner, name] = repoFullName.split('/')
-  if (!owner || !name) return
-  
+async function loadContents(project: string, path: string) {
   loading.value = true
   error.value = null
   
-  // If Host, use GitHub API
-  if (props.isHost) {
-      try {
-        // 1. Load current path
-        let allItems = await githubService.loadRepo(owner, name, path) as any[]
-        
-        // 2. Load expanded folders (recursive hydration)
-        // We only do this if we are loading the root (initial load) or a specific refresh
-        if (path === '') {
-            const expanded = currentExpandedFolders.value
-            if (expanded.length > 0) {
-                // Fetch all expanded folders in parallel
-                // Note: GitHub API might rate limit us if too many, but for now this is the correct logic
-                const expandedPromises = expanded.map(folderPath => 
-                    (githubService.loadRepo(owner, name, folderPath) as any)
-                        .then((items: any[]) => items) // Return items
-                        .catch((e: any) => {
-                            console.warn(`Failed to hydrate folder ${folderPath}:`, e)
-                            return []
-                        })
-                )
-                
-                const expandedResults = await Promise.all(expandedPromises)
-                expandedResults.forEach(items => {
-                    allItems = [...allItems, ...items]
-                })
-            }
-        }
-
-        // Deduplicate items based on path
-        const uniqueItems = new Map<string, any>()
-        allItems.forEach((item: any) => uniqueItems.set(item.path, item))
-        
-        files.value = Array.from(uniqueItems.values()).map((item: any) => ({
-          path: item.path,
-          type: item.type as 'file' | 'dir'
-        }))
-        currentPath.value = path
-      } catch (e: any) {
-        console.error('Failed to load repo contents from GitHub:', e)
-        error.value = e.message || 'Failed to load repository contents'
-      } finally {
-        loading.value = false
-      }
-      return
-  }
-  
-  // If Guest, use KV list
-  // KV returns flattened list of ALL files.
-  // We simply load EVERYTHING and let the FileTree component handle hierarchy logic via buildFileTree.
   try {
-      const allFiles = await kvSync.list(owner, name)
-      if (!allFiles) {
-          files.value = []
-          loading.value = false
-          return
-      }
+    const provider = currentProvider.value
+    // 1. Load current path
+    let allItems = await provider.listFiles(project, path)
+    
+    // 2. Load expanded folders (recursive hydration) - Only needed for providers that don't return full trees
+    if (path === '' && provider.id === 'github') { // GitHub is shallow, need hydration
+        const expanded = currentExpandedFolders.value
+        if (expanded.length > 0) {
+            const expandedPromises = expanded.map(folderPath => 
+                provider.listFiles(project, folderPath)
+                    .catch((e: any) => {
+                        console.warn(`Failed to hydrate folder ${folderPath}:`, e)
+                        return []
+                    })
+            )
+            
+            const expandedResults = await Promise.all(expandedPromises)
+            expandedResults.forEach(items => {
+                allItems = [...allItems, ...items]
+            })
+        }
+    }
 
-      // Filter by allowed paths (if guest/restricted perms)
-      const visibleFiles = allFiles.filter(f => {
-          if (!props.allowedPaths || props.allowedPaths.length === 0) return true
-          const fullPath = `${owner}/${name}/${f.path}`
-          return props.allowedPaths.some(allowed => {
-              if (allowed.endsWith('/*')) {
-                  const allowedDir = allowed.slice(0, -2)
-                  return fullPath.startsWith(allowedDir + '/')
-              }
-              return fullPath === allowed || fullPath.startsWith(allowed + '/')
-          })
-      })
-      
-      // Guest Mode Simplification:
-      // We do NOT filter by 'currentPath' or folder depth here.
-      // We pass ALL visible files to the tree, and the tree renders the structure.
-      // This solves the 'empty folder' issue because all nested files are present.
-      
-      files.value = visibleFiles.map(f => ({
-          path: f.path,
-          type: 'file' as const // KV only lists files, folders are implicit
-      })).sort((a, b) => a.path.localeCompare(b.path))
-      
-      // We still update currentPath to support breadcrumbs if needed, 
-      // but strictly speaking for a pure tree view, 'currentPath' is less relevant than 'selectedPath'.
-      currentPath.value = path
-
+    // Deduplicate items based on path
+    const uniqueItems = new Map<string, FileItem>()
+    allItems.forEach((item: FileItem) => uniqueItems.set(item.path, item))
+    
+    files.value = Array.from(uniqueItems.values())
+    currentPath.value = path
   } catch (e: any) {
-      console.error('Failed to load guest contents:', e)
-      error.value = e.message || 'Failed to load files'
+    console.error(`[FileBrowser] Failed to load contents from ${currentProvider.value.name}:`, e)
+    error.value = e.message || `Failed to load ${currentProvider.value.name} contents`
   } finally {
-      loading.value = false
+    loading.value = false
   }
 }
 
@@ -295,124 +235,59 @@ function handleSelect(path: string) {
 }
 
 async function handleEnterFolder(folderPath: string) {
-  if (!props.repo) return
-  await loadRepoContents(props.repo, folderPath)
+  if (!props.project) return
+  await loadContents(props.project, folderPath)
 }
 
 async function handleExpandFolder(folderPath: string) {
-  if (!props.repo) return
+  if (!props.project) return
   
   // Track expansion
   addExpandedFolder(folderPath)
   
-  // Check if already loaded
+  const provider = currentProvider.value
+  
+  // Check if children already loaded (only for shallow providers like GitHub)
   const existingChildren = files.value.some(f => 
     f.path.startsWith(folderPath + '/') && f.path !== folderPath
   )
   if (existingChildren) return
   
-  const [owner, name] = props.repo.split('/')
-  if (!owner || !name) return
-  
-  // Don't show full page loading spinner for expansion
-  // But maybe show a toast or small indicator if it fails?
-  // For now we just log errors as before
-  
-  // If Guest, use KV list
-  if (!props.isHost) {
-      try {
-          const allFiles = await kvSync.list(owner, name)
-          if (!allFiles) return
-          
-          // Filter by allowed paths
-          const visibleFiles = allFiles.filter(f => {
-              if (!props.allowedPaths || props.allowedPaths.length === 0) return true
-              const fullPath = `${owner}/${name}/${f.path}`
-              return props.allowedPaths.some(allowed => {
-                  if (allowed.endsWith('/*')) {
-                      const allowedDir = allowed.slice(0, -2)
-                      return fullPath.startsWith(allowedDir + '/')
-                  }
-                  return fullPath === allowed || fullPath.startsWith(allowed + '/')
-              })
-          })
-
-          const newItems: FileItem[] = []
-          const processedFolders = new Set<string>()
-
-          visibleFiles.forEach(f => {
-              // We want direct children of folderPath
-              if (!f.path.startsWith(folderPath + '/')) return
-              
-              const relative = f.path.slice(folderPath.length + 1)
-              const parts = relative.split('/')
-              
-              if (parts.length === 1) {
-                  // File
-                  newItems.push({ path: f.path, type: 'file' })
-              } else {
-                  // Subfolder
-                  const subFolderName = parts[0]
-                  if (subFolderName) {
-                      if (!processedFolders.has(subFolderName)) {
-                          const subFolderPath = `${folderPath}/${subFolderName}`
-                          // Ensure not a duplicate of existing
-                          if (!files.value.some(ex => ex.path === subFolderPath)) {
-                               newItems.push({ path: subFolderPath, type: 'dir' })
-                          }
-                          processedFolders.add(subFolderName)
-                      }
-                  }
-              }
-          })
-          
-          files.value = [...files.value, ...newItems]
-      } catch (error) {
-          console.error('Failed to expand folder (guest):', error)
-      }
-      return
-  }
-
-  // Host logic (GitHub)
   try {
-    const contents = await githubService.loadRepo(owner, name, folderPath) as any[]
-    const newItems = contents.map((item: { path: string, type: string }) => ({
-      path: item.path,
-      type: item.type as 'file' | 'dir'
-    }))
-    files.value = [...files.value, ...newItems]
+    const contents = await provider.listFiles(props.project, folderPath)
+    files.value = [...files.value, ...contents]
   } catch (error) {
     console.error('Failed to expand folder:', error)
   }
 }
 
 function handleCollapseFolder(folderPath: string) {
-  if (!props.repo) return
+  if (!props.project) return
   removeExpandedFolder(folderPath)
 }
 
 function addExpandedFolder(folderPath: string) {
-  if (!props.repo) return
-  const current = expandedFolders.value[props.repo] || []
+  if (!props.project) return
+  const current = expandedFolders.value[props.project] || []
   if (!current.includes(folderPath)) {
     expandedFolders.value = {
       ...expandedFolders.value,
-      [props.repo]: [...current, folderPath]
+      [props.project]: [...current, folderPath]
     }
   }
 }
 
 function removeExpandedFolder(folderPath: string) {
-  if (!props.repo) return
-  const current = expandedFolders.value[props.repo] || []
+  if (!props.project) return
+  const current = expandedFolders.value[props.project] || []
   expandedFolders.value = {
     ...expandedFolders.value,
-    [props.repo]: current.filter(p => p !== folderPath)
+    [props.project]: current.filter(p => p !== folderPath)
   }
 }
 
 async function navigateToPath(path: string) {
-  if (!props.repo) return
-  await loadRepoContents(props.repo, path)
+  if (!props.project) return
+  await loadContents(props.project, path)
 }
 </script>

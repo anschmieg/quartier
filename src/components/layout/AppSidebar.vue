@@ -14,24 +14,10 @@
     :class="sidebarClasses"
   >
     <div class="w-64 flex flex-col h-full">
-      <!-- Repo Selector -->
-      <div class="p-3 border-b border-border/50">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          class="w-full justify-between px-2 h-8 text-xs font-normal border-dashed" 
-          :class="{ 'opacity-100 cursor-default hover:bg-background': !isHost }"
-          @click="isHost && emit('open-repo-selector')"
-        >
-          <div class="flex items-center truncate">
-            <BookMarked class="w-3.5 h-3.5 mr-2 opacity-70" />
-            <span class="truncate">{{ repo || (isHost ? 'Select Repository...' : 'Shared Session') }}</span>
-          </div>
-          <ChevronDown v-if="isHost" class="w-3 h-3 opacity-50 ml-2 shrink-0" />
-        </Button>
-      </div>
+      <!-- Source Switcher -->
+      <SourceSwitcher @select="emit('open-source-selector', $event)" />
       
-      <!-- Branch Selector (Host only) -->
+      <!-- Branch Selector (Host only) - Only for GitHub -->
       <div v-if="repo && isHost" class="px-3 pb-2">
         <BranchSelector 
           :owner="repoOwner" 
@@ -41,11 +27,10 @@
       </div>
       
       <!-- File Browser -->
-      <div class="flex-1 overflow-auto p-3">
+      <div class="flex-1 overflow-auto p-3 pt-0">
         <FileBrowser 
-          :repo="repo" 
+          :project="project" 
           :selected-path="selectedFile"
-          :is-host="isHost"
           :is-dirty="isDirty"
           :allowed-paths="allowedPaths"
           @select="handleFileSelect"
@@ -66,17 +51,17 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { BookMarked, ChevronDown } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
 import { FileBrowser } from '@/components/file-browser'
 import UserMenu from './UserMenu.vue'
 import BranchSelector from './BranchSelector.vue'
+import SourceSwitcher from './SourceSwitcher.vue'
 import type { SidebarMode } from '@/composables/useBreakpoints'
 
 const props = withDefaults(defineProps<{
   visible: boolean
   mode?: SidebarMode
-  repo?: string
+  project?: string | null
+  repo?: string // Still needed for branch selector logic if provider is github
   selectedFile?: string | null
   isDirty?: boolean
   isHost?: boolean
@@ -93,7 +78,7 @@ const repoOwner = computed(() => props.repo?.split('/')[0] || '')
 const repoName = computed(() => props.repo?.split('/')[1] || '')
 
 const emit = defineEmits<{
-  'open-repo-selector': []
+  'open-source-selector': [providerId: string]
   'select-file': [path: string]
   'open-shared': [mode: 'shared-with-me' | 'shared-by-me']
   'create-file': [parentPath: string]

@@ -83,13 +83,24 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         return new Response('Missing repo parameter', { status: 400 })
     }
 
+    if (!context.env.UPSTASH_REDIS_REST_URL || !context.env.UPSTASH_REDIS_REST_TOKEN) {
+        console.error('Missing Upstash configuration')
+        return new Response('Missing Upstash configuration. Please set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.', { status: 500 })
+    }
+
     try {
         const key = `quartier:build:${repo}`
-        const response = await fetch(`${context.env.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(key)}`, {
+        const upstreamUrl = `${context.env.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(key)}`
+        
+        const response = await fetch(upstreamUrl, {
             headers: {
                 Authorization: `Bearer ${context.env.UPSTASH_REDIS_REST_TOKEN}`,
             },
         })
+
+        if (!response.ok) {
+            throw new Error(`Upstash returned ${response.status}: ${response.statusText}`)
+        }
 
         const data = await response.json() as { result: string | null }
 
@@ -99,11 +110,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             })
         }
 
+        // Return empty status structure if not found (not an error)
         return new Response(JSON.stringify({ status: 'unknown' }), {
             headers: { 'Content-Type': 'application/json' },
         })
     } catch (error) {
-        return new Response(JSON.stringify({ error: 'Failed to fetch status' }), {
+        console.error('Webhook GET error:', error)
+        return new Response(JSON.stringify({ error: 'Failed to fetch status', details: error instanceof Error ? error.message : String(error) }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         })

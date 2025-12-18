@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
+    include: ['unstorage', 'idb-keyval', 'unstorage/drivers/indexedb'],
     exclude: ['@milkdown/plugin-prism', 'refractor']
   },
   server: {

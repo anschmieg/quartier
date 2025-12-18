@@ -1,7 +1,7 @@
 <template>
   <div class="preview-panel border-l flex flex-col h-full">
     <!-- Header -->
-    <div class="flex items-center justify-between p-3 border-b bg-muted/30">
+    <div v-if="!hideHeader" class="flex items-center justify-between p-3 border-b bg-muted/30">
       <div class="flex items-center gap-2">
         <Eye class="w-4 h-4" />
         <span class="font-medium text-sm">Preview</span>
@@ -38,7 +38,7 @@
           @click="triggerRender"
         >
           <Play class="w-3 h-3 mr-1" />
-          Render
+          Preview
         </Button>
 
         <!-- Open in new tab -->
@@ -91,6 +91,7 @@ import { useBuildStatus } from '@/composables/useBuildStatus'
 
 const props = defineProps<{
   repo?: string
+  hideHeader?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -141,6 +142,16 @@ function openPreview() {
     window.open(previewUrl.value, '_blank')
   }
 }
+
+defineExpose({
+  triggerRender,
+  openPreview,
+  isBuilding,
+  isSuccess,
+  isFailure,
+  stepLabel,
+  previewUrl
+})
 </script>
 
 <style scoped>

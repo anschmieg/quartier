@@ -1,30 +1,31 @@
 <template>
   <div class="flex items-center gap-2">
-    <!-- Auto-save indicator -->
-    <Transition
-      enter-active-class="transition-opacity duration-200"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition-opacity duration-300"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <span v-if="autoSaveStatus !== 'idle'" class="text-xs text-muted-foreground flex items-center gap-1">
-        <Loader2 v-if="autoSaveStatus === 'saving'" class="w-3 h-3 animate-spin" />
-        <Check v-else-if="autoSaveStatus === 'saved'" class="w-3 h-3" />
-        <span>{{ autoSaveStatus === 'saving' ? 'Auto-saving...' : 'Auto-saved' }}</span>
-      </span>
-    </Transition>
-    
-    <TooltipProvider>
+
+    <!-- Provider Save Status -->
+    <TooltipProvider :delay-duration="0">
       <Tooltip>
         <TooltipTrigger as-child>
-          <Button variant="ghost" size="icon" :disabled="!canSave" @click="emit('save')">
-            <Save class="w-4 h-4" />
-          </Button>
+          <div class="relative">
+            <Button 
+                :variant="isDirtyToProvider ? 'default' : 'ghost'" 
+                size="sm" 
+                class="h-9 w-9 gap-2 transition-all p-0"
+                :class="{ 'shadow-lg shadow-primary/20 bg-primary text-primary-foreground': isDirtyToProvider }"
+                :disabled="!canSave" 
+                @click="emit('save')"
+            >
+                <component :is="saveIcon" class="w-4 h-4" />
+                <span v-if="isDirtyToProvider && !isCondensed" class="mr-1 ml-1">{{ saveLabel }}</span>
+            </Button>
+            <!-- Provider Dirty Dot -->
+            <div v-if="isDirtyToProvider" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background animate-pulse" />
+            
+            <!-- Local Draft Dot (Very subtle) -->
+            <div v-if="autoSaveStatus === 'saving'" class="absolute -bottom-1 -right-1 w-2 h-2 bg-blue-400 rounded-full border-2 border-background" />
+          </div>
         </TooltipTrigger>
-        <TooltipContent side="bottom">
-          <p>Save <kbd class="ml-1 px-1 py-0.5 bg-muted rounded text-xs">⌘S</kbd></p>
+        <TooltipContent side="left">
+          <p>{{ isDirtyToProvider ? 'Unsaved changes to ' + providerName : 'Changes saved to ' + providerName }} <kbd class="ml-1 px-1 py-0.5 bg-muted rounded text-xs text-muted-foreground">⌘S</kbd></p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -32,16 +33,36 @@
 </template>
 
 <script setup lang="ts">
-import { Save, Loader2, Check } from 'lucide-vue-next'
+import { Save, Github } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { computed } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   canSave: boolean
-  autoSaveStatus?: 'idle' | 'saving' | 'saved'
+  isDirtyToProvider: boolean
+  autoSaveStatus: 'idle' | 'saving' | 'saved'
+  providerId: string
+  providerName: string
+  isCondensed?: boolean
 }>()
 
 const emit = defineEmits<{
   save: []
 }>()
+
+const saveLabel = computed(() => {
+    if (props.providerId === 'github') return 'Commit'
+    return 'Save'
+})
+
+const saveIcon = computed(() => {
+    if (props.providerId === 'github') return Github
+    return Save
+})
 </script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>

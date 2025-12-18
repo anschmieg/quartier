@@ -119,55 +119,27 @@
         </Tooltip>
       </TooltipProvider>
       
-      <!-- Connection Status -->
-      <ConnectionStatus
-        :status="props.connectionStatus"
-        :show-text="false"
-        :show-always="true"
-      />
-      
-      <!-- Desktop Actions (!isSmall) -->
-      <template v-if="!isSmall">
-        <!-- Share button -->
+
+      <!-- Right Sidebar Toggle (Desktop) -->
+      <div v-if="!isSmall" class="flex items-center">
         <TooltipProvider :delay-duration="0">
           <Tooltip>
             <TooltipTrigger as-child>
               <Button 
-                variant="ghost" 
-                size="icon" 
-                :disabled="!canShare"
-                @click="emit('share')"
+                  variant="ghost" 
+                  size="icon"
+                  @click="emit('update:showRightSidebar', !showRightSidebar)"
               >
-                <Share2 class="w-4 h-4" />
+                  <PanelRight v-if="!showRightSidebar" class="w-4 h-4" />
+                  <PanelLeft v-else class="w-4 h-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <p>Share</p>
+              <p>{{ showRightSidebar ? 'Hide' : 'Show' }} Right Sidebar</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <SaveButton :can-save="canSave" :auto-save-status="props.autoSaveStatus" @save="emit('save')" />
-        <ThemeToggle />
-        <div class="w-px h-4 bg-border/50 mx-1" />
-        <!-- Preview toggle -->
-        <TooltipProvider :delay-duration="0">
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                :class="{ 'bg-muted': showPreview }"
-                @click="emit('update:showPreview', !showPreview)"
-              >
-                <PanelRightOpen class="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>{{ showPreview ? 'Hide' : 'Show' }} Preview</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </template>
+      </div>
 
       <!-- Mobile Actions (Overflow Menu) -->
       <DropdownMenu v-else>
@@ -181,19 +153,16 @@
               <Share2 class="w-4 h-4 mr-2" />
               <span>Share</span>
             </DropdownMenuItem>
-            <DropdownMenuItem @click="emit('save')" :disabled="!canSave">
-              <Save class="w-4 h-4 mr-2" />
-              <span>Save</span>
-            </DropdownMenuItem>
             <DropdownMenuItem @click="toggleTheme()">
               <Sun v-if="isDark" class="w-4 h-4 mr-2" />
               <Moon v-else class="w-4 h-4 mr-2" />
               <span>{{ isDark ? 'Light Mode' : 'Dark Mode' }}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem @click="emit('update:showPreview', !showPreview)">
-              <PanelRightOpen class="w-4 h-4 mr-2" />
-              <span>{{ showPreview ? 'Hide' : 'Show' }} Preview</span>
+            <DropdownMenuItem @click="emit('update:showRightSidebar', !showRightSidebar)">
+              <PanelRight v-if="!showRightSidebar" class="w-4 h-4 mr-2" />
+              <PanelLeft v-else class="w-4 h-4 mr-2" />
+              <span>{{ showRightSidebar ? 'Hide' : 'Show' }} Right Sidebar</span>
             </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -202,11 +171,10 @@
 </template>
 
 <script setup lang="ts">
-import { Eye, Code, Keyboard, PanelRightOpen, Share2, Users, MoreVertical, Save, Sun, Moon } from 'lucide-vue-next'
+import { Eye, Code, Keyboard, Users, MoreVertical, Sun, Moon, PanelRight, PanelLeft, Share2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { ConnectionStatus } from '@/components/ui/connection-status'
-import { ThemeToggle, SidebarToggle, SaveButton } from '@/components/toolbar'
+import { SidebarToggle } from '@/components/toolbar'
 import EditorToolbar from '@/components/editor/EditorToolbar.vue'
 import { useAwareness } from '@/composables/useAwareness'
 import { useElementSize, useDark, useToggle } from '@vueuse/core'
@@ -239,11 +207,9 @@ const props = defineProps<{
   canSave: boolean
   canShare: boolean
   sidebarVisible: boolean
-  showPreview: boolean
+  showRightSidebar: boolean
   editorMode: 'visual' | 'source'
   sessionMemberCount: number
-  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error'
-  autoSaveStatus: 'idle' | 'saving' | 'saved'
   getEditor: () => any
   disableVisualMode?: boolean
   showComments?: boolean
@@ -251,10 +217,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'command-palette': []
-  'save': []
   'share': []
   'toggle-sidebar': []
-  'update:showPreview': [show: boolean]
+  'update:showRightSidebar': [show: boolean]
   'update:editorMode': [mode: 'visual' | 'source']
   'toggle-comments': []
 }>()

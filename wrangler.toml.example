@@ -29,16 +29,9 @@ id = "your-production-kv-namespace-id-here"
 # Required secrets:
 # - GITHUB_CLIENT_ID
 # - GITHUB_CLIENT_SECRET
-
-# Optional: Durable Objects (for future WebSocket/signaling server)
-# [[durable_objects.bindings]]
-# name = "COLLAB_ROOM"
-# class_name = "CollabRoom"
-# script_name = "quartier"
-
-# Optional: Analytics (if you want to track usage)
-# [analytics_engine_datasets]
-# binding = "ANALYTICS"
+# - UPSTASH_REDIS_REST_URL
+# - UPSTASH_REDIS_REST_TOKEN
+# - QUARTIER_WEBHOOK_SECRET
 
 # Build configuration
 [build]

@@ -4,18 +4,15 @@
     <AppHeader 
       :can-save="!!currentFile"
       :sidebar-visible="showSidebar"
-      :show-preview="showPreview"
+      :show-right-sidebar="showRightSidebar"
       :editor-mode="editorMode"
       :get-editor="getEditorInstance"
-      :can-share="!!currentFile && !!repo"
+      :can-share="!!currentFile && currentProvider.capabilities.canShare"
       :session-member-count="sessionMemberCount"
-      :connection-status="connectionStatus"
-      :auto-save-status="autoSaveStatus"
       @command-palette="openCommandPalette"
-      @save="saveFile"
       @share="openShareDialog"
       @toggle-sidebar="showSidebar = !showSidebar"
-      @update:show-preview="showPreview = $event"
+      @update:show-right-sidebar="showRightSidebar = $event"
 
 
       @update:editor-mode="(mode) => { editorMode = mode; userPreferredMode = mode }"
@@ -30,12 +27,13 @@
       <AppSidebar 
         :visible="showSidebar"
         :mode="sidebarMode"
-        :repo="repo"
+        :project="project"
+        :repo="isGitHub ? (project || undefined) : undefined"
         :selected-file="currentFile"
         :is-dirty="isDirty"
         :is-host="isHost"
         :allowed-paths="allowedPaths"
-        @open-repo-selector="isHost ? showRepoSelector = true : null"
+        @open-source-selector="handleOpenSourceSelector"
         @select-file="selectFile"
         @open-shared="openSharedSessions"
         @create-file="handleCreateFile"
@@ -52,7 +50,7 @@
         <!-- Editor/Preview Split -->
         <div class="flex-1 flex overflow-hidden relative">
           <div 
-            :class="showPreview ? 'w-1/2' : 'w-full'" 
+            :class="showRightSidebar ? 'w-1/2' : 'w-full'" 
             class="h-full overflow-hidden transition-all duration-150"
           >
             <EditorWrapper 
@@ -86,24 +84,25 @@
             </div>
           </Transition>
           
-          <!-- Preview Panel with Fade Animation -->
-          <Transition
-            enter-active-class="transition-opacity duration-200"
-            enter-from-class="opacity-0"
-            enter-to-class="opacity-100"
-            leave-active-class="transition-opacity duration-150"
-            leave-from-class="opacity-100"
-            leave-to-class="opacity-0"
-            mode="out-in"
-          >
-            <PreviewPanel 
-              v-if="showPreview" 
-              :content="fileContent"
-              class="absolute right-0 top-0 bottom-0 w-1/2 border-l border-border/50"
-            />
-          </Transition>
         </div>
       </main>
+
+      <!-- Right Sidebar -->
+      <AppRightSidebar 
+        :visible="showRightSidebar"
+        :can-save="!!currentFile"
+        :can-share="!!currentFile && currentProvider.capabilities.canShare"
+        :auto-save-status="autoSaveStatus"
+        :is-dirty-to-provider="isDirtyToProvider"
+        :provider-id="activeProviderId"
+        :provider-name="currentProvider.name"
+        :connection-status="connectionStatus"
+        :file-content="fileContent"
+        :repo="isGitHub ? (project ?? undefined) : undefined"
+        @save="saveFile"
+        @share="openShareDialog"
+        @close="showRightSidebar = false"
+      />
     </div>
 
     <!-- Modals -->
@@ -114,6 +113,11 @@
       @action="handlePaletteAction"
     />
     <RepoSelector v-model:open="showRepoSelector" @select="handleRepoSelect" />
+    <LocalProjectSelector 
+        v-model:open="showLocalSelector" 
+        :current-project="project"
+        @select="handleLocalProjectSelect" 
+    />
     <CommitDialog 
       ref="commitDialogRef" 
       :file-path="currentFile || ''" 
@@ -141,7 +145,6 @@ import { useStorage } from '@vueuse/core'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import EditorWrapper from '@/components/editor/EditorWrapper.vue'
-import PreviewPanel from '@/components/preview/PreviewPanel.vue'
 import CommandPalette from '@/components/command/CommandPalette.vue'
 import RepoSelector from '@/components/github/RepoSelector.vue'
 import CommitDialog from '@/components/dialogs/CommitDialog.vue'
@@ -150,21 +153,25 @@ import SharedSessionsDialog from '@/components/dialogs/SharedSessionsDialog.vue'
 import Toast from '@/components/ui/Toast.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { LoadingSpinner } from '@/components/ui/loading'
-import { githubService } from '@/services/github'
-import { cachedFileSystem, kvSync } from '@/services/storage'
-// import { getConnectionStatus, onConnectionStatusChange, type ConnectionStatus } from '@/services/collab'
+import { storageManager } from '@/services/storageManager'
+import { storage } from '@/services/storage'
 
 import JoinSessionDialog from '@/components/dialogs/JoinSessionDialog.vue'
+import LocalProjectSelector from '@/components/layout/LocalProjectSelector.vue'
+import AppRightSidebar from '@/components/layout/AppRightSidebar.vue'
 
 // Router
-// const router = useRouter()
 const route = useRoute()
 
-// Persisted State (localStorage)
-const repo = useStorage<string | undefined>('quartier:repo', undefined)
+// State
+const project = computed(() => storageManager.activeProject)
+const currentProvider = computed(() => storageManager.activeProvider)
+const activeProviderId = computed(() => currentProvider.value.id)
+const isGitHub = computed(() => activeProviderId.value === 'github')
+
 const currentFile = useStorage<string | null>('quartier:currentFile', null)
 const showSidebar = useStorage('quartier:showSidebar', true)
-const showPreview = useStorage('quartier:showPreview', false)
+const showRightSidebar = useStorage('quartier:showRightSidebar', false)
 const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visual')
 // Track what the user *wants* to use (to restore after force-source mode)
 const userPreferredMode = useStorage<'visual' | 'source'>('quartier:userPreferredMode', 'visual')
@@ -200,28 +207,43 @@ const fileLoading = ref(false)
 const commandPaletteRef = ref()
 const commitDialogRef = ref()
 const toastRef = ref()
+const editorWrapperRef = ref()
+const shareDialogRef = ref()
+const sharedSessionsDialogRef = ref()
 const showRepoSelector = ref(false)
-const recentFiles = ref<string[]>([])
-const editorWrapperRef = ref<InstanceType<typeof EditorWrapper> | null>(null)
-const shareDialogRef = ref<InstanceType<typeof ShareDialog> | null>(null)
-const sharedSessionsDialogRef = ref<InstanceType<typeof SharedSessionsDialog> | null>(null)
+const showLocalSelector = ref(false)
 const userEmail = ref<string | undefined>(undefined)
+const recentFiles = useStorage<string[]>('quartier:recentFiles', [])
+function addToRecent(path: string) {
+  recentFiles.value = [path, ...recentFiles.value.filter(p => p !== path)].slice(0, 10)
+}
 // const connectionStatus = ref<ConnectionStatus>('disconnected')
 const connectionStatus = ref<'connecting' | 'connected' | 'disconnected' | 'error'>('connected') // TODO: Wire up real status from MilkdownEditor
 const autoSaveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 
-// Dirty state tracking
-const isDirty = computed(() => {
+// Dirty state tracking (Local vs UI)
+let lastLocalSaveContent = ''
+// Provider state tracking (Provider vs local cache)
+const lastProviderContent = ref('')
+
+const isDirtyToLocal = computed(() => {
   if (!currentFile.value) return false
-  return fileContent.value !== lastSyncedContent
+  return fileContent.value !== lastLocalSaveContent
 })
+
+const isDirtyToProvider = computed(() => {
+  if (!currentFile.value) return false
+  return fileContent.value !== lastProviderContent.value
+})
+
+const isDirty = isDirtyToLocal // keep legacy prop for UI
 
 
 
 // Full file path for sharing (owner/repo/path)
 const fullFilePath = computed(() => {
-  if (!repo.value || !currentFile.value) return ''
-  return `${repo.value}/${currentFile.value}`
+  if (!project.value || !currentFile.value) return ''
+  return `${project.value}/${currentFile.value}`
 })
 
 const sessionMemberCount = computed(() => {
@@ -247,7 +269,6 @@ const allowedPaths = computed(() => {
 })
 
 // Auto-sync state
-let lastSyncedContent = ''
 let autoSyncInterval: ReturnType<typeof setInterval> | null = null
 
 // Getter for the editor instance (passed down to toolbar)
@@ -298,7 +319,7 @@ whenever(() => Meta_K?.value || Ctrl_K?.value, () => openCommandPalette())
 
 // Restore file content on mount
 onMounted(async () => {
-  console.log('[AppLayout] onMounted - repo:', repo.value, 'currentFile:', currentFile.value)
+  console.log('[AppLayout] onMounted - project:', project.value, 'currentFile:', currentFile.value)
   
   // Auth state allows checking if we are host or guest
   // userEmail is largely redundant if we use useAuth, but we keep it for now
@@ -310,7 +331,7 @@ onMounted(async () => {
     console.log('[AppLayout] GitHub User:', user.value.login)
   }
   
-  if (repo.value && currentFile.value) {
+  if (project.value && currentFile.value) {
     console.log('[AppLayout] Restoring file on mount:', currentFile.value)
     
     // Only try to load file if we have auth (Host or Access)
@@ -321,31 +342,28 @@ onMounted(async () => {
     console.log('[AppLayout] No file to restore')
   }
   
-  // Start auto-sync every 60 seconds
+  // Auto-save to Local Cache (Drafts)
   autoSyncInterval = setInterval(async () => {
-    if (!repo.value || !currentFile.value) return
-    if (fileContent.value === lastSyncedContent) return // No changes
-    if (fileLoading.value) return // Don't sync while loading
-    
-    const [owner, name] = repo.value.split('/')
-    if (!owner || !name) return
+    if (!project.value || !currentFile.value) return
+    if (!isDirtyToLocal.value) return
+    if (fileLoading.value) return
     
     autoSaveStatus.value = 'saving'
-    console.log('[AutoSync] Saving to KV...')
-    const saved = await kvSync.put(owner, name, currentFile.value, fileContent.value)
-    if (saved) {
-      lastSyncedContent = fileContent.value
+    try {
+      // We use a dedicated local-drafts namespace in unstorage
+      const draftKey = `draft:${activeProviderId.value}:${project.value}:${currentFile.value}`
+      await storage.setItem(draftKey, fileContent.value)
+      lastLocalSaveContent = fileContent.value
       autoSaveStatus.value = 'saved'
-      console.log('[AutoSync] Saved successfully')
       
-      // Reset to idle after 2 seconds
       setTimeout(() => {
-        autoSaveStatus.value = 'idle'
+        if (autoSaveStatus.value === 'saved') autoSaveStatus.value = 'idle'
       }, 2000)
-    } else {
+    } catch (e) {
+      console.error('[AutoDraft] Failed to save draft:', e)
       autoSaveStatus.value = 'idle'
     }
-  }, 60000) // Every 60 seconds
+  }, 5000) // Much more frequent for drafts (5s)
 
   // Warn about unsaved changes before unload
   window.addEventListener('beforeunload', handleBeforeUnload)
@@ -371,10 +389,12 @@ onBeforeRouteLeave(() => {
 })
 
 function handleBeforeUnload(e: BeforeUnloadEvent) {
-  if (isDirty.value || autoSaveStatus.value === 'saving') {
+  if (isDirtyToProvider.value) {
+    const msg = `You have unsaved changes to ${currentProvider.value.name}. Changes ARE kept in your browser sandbox, but not synced to the actual source.`
     e.preventDefault()
-    e.returnValue = ''
-    return ''
+    // @ts-ignore
+    e.returnValue = msg
+    return msg
   }
 }
 
@@ -391,75 +411,33 @@ function openSharedSessions(mode: 'shared-with-me' | 'shared-by-me') {
 }
 
 async function selectFile(path: string) {
-  if (!repo.value) return
-  
-  const [owner, name] = repo.value.split('/')
-  if (!owner || !name) return
+  if (!project.value) return
   
   try {
     fileLoading.value = true
     currentFile.value = path
-    // No longer setting fileContent to "Loading..." text hack
     
-    console.log('Loading file:', path)
+    // 1. Initial load from provider
+    const providerContent = await currentProvider.value.readFile(project.value, path)
     
-    // Force source mode for code files to prevent Milkdown/KaTeX crashes
-    // But remember the user's preference for when they return to markdown
-    const visualExtensions = ['.md', '.qmd', '.rmd', '.markdown', '.mkd']
-    const ext = '.' + path.split('.').pop()?.toLowerCase()
+    // 2. Check for local draft
+    const draftKey = `draft:${activeProviderId.value}:${project.value}:${path}`
+    const localDraft = await storage.getItem(draftKey) as string | null
     
-    if (!visualExtensions.includes(ext)) {
-       console.log('[AppLayout] Code file detected, forcing source mode')
-       editorMode.value = 'source'
+    if (localDraft && localDraft !== providerContent) {
+        if (confirm('A more recent local version exists. Load the draft?')) {
+            fileContent.value = localDraft
+        } else {
+            fileContent.value = providerContent
+        }
     } else {
-       // It's a markdown file, restore user preference
-       console.log('[AppLayout] Markdown file detected, restoring preference:', userPreferredMode.value)
-       editorMode.value = userPreferredMode.value
-    }
-
-    // Try to load from KV first (cross-device sync)
-    const kvData = await kvSync.get(owner, name, path)
-    const localContent = await cachedFileSystem.getCache(owner, name, path)
-    
-    // Determine which source to use
-    if (kvData && localContent) {
-      // Both exist - use KV since it's the server source of truth
-      console.log('[AppLayout] Loaded from KV (cross-device):', path)
-      fileContent.value = kvData.content
-      lastSyncedContent = kvData.content
-      // Update local cache with KV content
-      await cachedFileSystem.setCache(owner, name, path, kvData.content)
-      fileLoading.value = false
-      return
+        fileContent.value = providerContent
     }
     
-    if (kvData) {
-      console.log('[AppLayout] Loaded from KV:', path)
-      fileContent.value = kvData.content
-      lastSyncedContent = kvData.content
-      await cachedFileSystem.setCache(owner, name, path, kvData.content)
-      fileLoading.value = false
-      return
-    }
-    
-    if (localContent !== null) {
-      console.log('[AppLayout] Loaded from local cache:', path)
-      fileContent.value = localContent
-      lastSyncedContent = localContent
-      fileLoading.value = false
-      return
-    }
-    
-    // Not in KV or local cache, load from GitHub
-    const content = await githubService.readFile(owner, name, path)
-    
-    // Cache the content locally
-    await cachedFileSystem.setCache(owner, name, path, content)
-    
-    fileContent.value = content
-    lastSyncedContent = content
-    originalFileContent.value = content // Track original for diff
-    console.log('File loaded from GitHub, length:', content.length)
+    lastLocalSaveContent = fileContent.value
+    lastProviderContent.value = providerContent
+    originalFileContent.value = providerContent
+    addToRecent(path)
   } catch (error) {
     console.error('Failed to load file:', error)
     fileContent.value = `# Error loading file\n\nFailed to load ${path}:\n${error instanceof Error ? error.message : 'Unknown error'}`
@@ -468,36 +446,36 @@ async function selectFile(path: string) {
   }
 }
 
-// File operation handlers
 async function handleCreateFile(parentPath: string) {
-  if (!repo.value) return
-  const [owner, name] = repo.value.split('/')
-  if (!owner || !name) return
+  if (!project.value) return
   
   const fileName = window.prompt('Enter new file name:', 'new-file.qmd')
   if (!fileName) return
   
   const fullPath = parentPath ? `${parentPath}/${fileName}` : fileName
-  const result = await githubService.createFile(owner, name, fullPath, '---\ntitle: "New Document"\n---\n\n')
-  
-  if (result.success) {
-    // Reload and select the new file
+  try {
+    await currentProvider.value.writeFile(project.value, fullPath, '---\ntitle: "New Document"\n---\n\n')
     selectFile(fullPath)
-    window.location.reload() // Refresh file tree
-  } else {
-    alert(`Failed to create file: ${result.error}`)
+    window.location.reload()
+  } catch (error) {
+    alert(`Failed to create file: ${error}`)
   }
 }
 
 async function handleCreateFolder(_parentPath: string) {
-  // GitHub doesn't have "folders" - they're created when a file is added
-  alert('To create a folder, create a new file with a path like "folder/file.qmd"')
+  if (currentProvider.value.createFolder && project.value) {
+    const folderName = window.prompt('Enter folder name:')
+    if (folderName) {
+      await currentProvider.value.createFolder(project.value, folderName)
+      window.location.reload()
+    }
+  } else {
+    alert('This storage source does not support explicit folder creation. Create a file with a path like "folder/file.md" instead.')
+  }
 }
 
 async function handleRenameFile(path: string) {
-  if (!repo.value) return
-  const [owner, name] = repo.value.split('/')
-  if (!owner || !name) return
+  if (!project.value || !currentProvider.value.renameFile) return
   
   const currentName = path.split('/').pop() || path
   const newName = window.prompt('Enter new name:', currentName)
@@ -506,92 +484,82 @@ async function handleRenameFile(path: string) {
   const parentPath = path.split('/').slice(0, -1).join('/')
   const newPath = parentPath ? `${parentPath}/${newName}` : newName
   
-  const result = await githubService.renameFile(owner, name, path, newPath)
-  
-  if (result.success) {
+  try {
+    await currentProvider.value.renameFile(project.value, path, newPath)
     selectFile(newPath)
     window.location.reload()
-  } else {
-    alert(`Failed to rename: ${result.error}`)
+  } catch (error) {
+    alert(`Failed to rename: ${error}`)
   }
 }
 
 async function handleDeleteFile(path: string) {
-  if (!repo.value) return
-  const [owner, name] = repo.value.split('/')
-  if (!owner || !name) return
+  if (!project.value) return
   
   const confirmed = window.confirm(`Delete "${path}"? This cannot be undone.`)
   if (!confirmed) return
   
-  const result = await githubService.deleteFile(owner, name, path)
-  
-  if (result.success) {
+  try {
+    await currentProvider.value.deleteFile(project.value, path)
     currentFile.value = null
     fileContent.value = ''
     window.location.reload()
-  } else {
-    alert(`Failed to delete: ${result.error}`)
+  } catch (error) {
+    alert(`Failed to delete: ${error}`)
   }
 }
 
 async function updateFileContent(newContent: string) {
   fileContent.value = newContent
+}
+
+async function saveFile() {
+  if (!currentFile.value || !project.value) return
   
-  // Persist to cache
-  if (repo.value && currentFile.value) {
-    const [owner, name] = repo.value.split('/')
-    if (owner && name) {
-      // Save to local cache immediately
-      await cachedFileSystem.setCache(owner, name, currentFile.value, newContent)
-      
-      // Also sync to KV (debounced separately in the background)
-      kvSync.put(owner, name, currentFile.value, newContent).catch(err => {
-        console.warn('[AppLayout] KV sync failed (will retry):', err)
-      })
+  if (currentProvider.value.capabilities.canCommit) {
+    commitDialogRef.value?.open()
+  } else {
+    // Direct save for local/disk providers
+    try {
+      await currentProvider.value.writeFile(project.value, currentFile.value, fileContent.value)
+      lastProviderContent.value = fileContent.value
+      toastRef.value?.success(`File saved to ${currentProvider.value.name}`)
+    } catch (error) {
+       toastRef.value?.error(`Failed to save: ${error}`)
     }
   }
 }
 
-async function saveFile() {
-  if (!currentFile.value || !repo.value) return
-  
-  // Open the commit dialog
-  commitDialogRef.value?.open()
-}
-
 async function handleCommit(message: string) {
-  if (!currentFile.value || !repo.value) return
+  if (!currentFile.value || !project.value) return
   
-  const [owner, name] = repo.value.split('/')
-  if (!owner || !name) return
-  
-  console.log('[AppLayout] Committing:', currentFile.value)
-  
-  const result = await githubService.commitChanges(
-    owner,
-    name,
-    currentFile.value,
-    fileContent.value,
-    message
-  )
-  
-  if (result.success) {
-    console.log('[AppLayout] Commit successful:', result.commitSha)
-    lastSyncedContent = fileContent.value
-    // Clear local cache since it's now committed
-    await cachedFileSystem.clearCache(owner, name, currentFile.value)
-    toastRef.value?.success(`Committed: ${result.commitSha?.slice(0, 7)}`)
-  } else {
-    console.error('[AppLayout] Commit failed:', result.error)
-    toastRef.value?.error(`Commit failed: ${result.error}`)
+  try {
+    // Use githubService directly or provider
+    await currentProvider.value.writeFile(project.value, currentFile.value, fileContent.value, message)
+    lastProviderContent.value = fileContent.value
+    toastRef.value?.success('Committed successfully')
+  } catch (error) {
+    toastRef.value?.error(`Commit failed: ${error}`)
   }
 }
 
-function handleRepoSelect(selectedRepo: { owner: string, name: string, full_name: string }) {
-  repo.value = selectedRepo.full_name
+function handleRepoSelect(selectedRepo: { full_name: string }) {
+  storageManager.setSource('github', selectedRepo.full_name)
   currentFile.value = null
   fileContent.value = ''
+}
+
+function handleOpenSourceSelector(providerId: string) {
+  if (providerId === 'github') {
+    showRepoSelector.value = true
+  } else if (providerId === 'local') {
+    showLocalSelector.value = true
+  }
+}
+
+function handleLocalProjectSelect(id: string) {
+    storageManager.setSource('local', id)
+    window.location.reload()
 }
 
 function handlePaletteAction(action: string) {
@@ -602,25 +570,16 @@ function handlePaletteAction(action: string) {
     case 'toggle-sidebar':
       showSidebar.value = !showSidebar.value
       break
-    case 'toggle-preview':
-      showPreview.value = !showPreview.value
+    case 'toggle-right-sidebar':
+      showRightSidebar.value = !showRightSidebar.value
       break
     case 'toggle-mode':
       const newMode = editorMode.value === 'visual' ? 'source' : 'visual'
       editorMode.value = newMode
       userPreferredMode.value = newMode
       break
-    case 'go-to-repo':
-      if (!repo.value) {
-        // Only prompt to select repo if we are Host (Github user)
-        // Guests rely on session/share link to set the repo
-        if (isHost.value) {
-          showRepoSelector.value = true
-        } else {
-          console.log('[AppLayout] Guest user, waiting for session-based repo...')
-        }
-      }
-      break
+    case 'manage-source':
+      if (isHost.value) handleOpenSourceSelector(activeProviderId.value); break
     case 'new-file':
       handleCreateFile('')
       break
