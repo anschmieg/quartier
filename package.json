@@ -1,7 +1,7 @@
 {
   "name": "quartier",
   "private": true,
-  "version": "0.14.2",
+  "version": "0.15.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"bun:dev:frontend\" \"bun:dev:api\" \"bun:party:dev\"",
@@ -37,7 +37,6 @@
     "@milkdown/kit": "^7.17.3",
     "@milkdown/plugin-clipboard": "^7.17.3",
     "@milkdown/plugin-collab": "^7.17.3",
-    "@milkdown/plugin-diagram": "^7.7.0",
     "@milkdown/plugin-emoji": "^7.17.3",
     "@milkdown/plugin-history": "^7.17.3",
     "@milkdown/plugin-indent": "^7.17.3",
@@ -69,12 +68,13 @@
     "yaml": "^2.8.2"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251217.0",
     "@playwright/test": "^1.57.0",
-    "@types/node": "^24.10.1",
-    "@vitejs/plugin-vue": "^6.0.1",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^24.10.4",
+    "@vitejs/plugin-vue": "^6.0.3",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.8.1",
-    "autoprefixer": "10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "codemirror": "^6.0.2",
@@ -86,17 +86,17 @@
     "radix-vue": "^1.9.17",
     "remark": "^15.0.1",
     "remark-directive": "^4.0.0",
-    "shadcn-vue": "^2.4.2",
+    "shadcn-vue": "^2.4.3",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss": "3.4.17",
+    "tailwindcss": "^4.1.18",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.3",
     "unist-util-visit": "^5.0.0",
     "unstorage": "^1.17.3",
-    "vite": "^7.2.4",
-    "vitest": "^4.0.15",
+    "vite": "^7.3.0",
+    "vitest": "^4.0.16",
     "vue-codemirror": "^6.1.1",
     "vue-tsc": "^3.1.4",
-    "yjs": "^13.6.27"
+    "yjs": "^13.6.28"
   }
 }

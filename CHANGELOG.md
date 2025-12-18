@@ -5,11 +5,36 @@ All notable changes to Quartier will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-## [0.10.1] - 2025-12-15
+## [0.15.0] - 2024-12-16
 
 ### Added
+
+- **API Security**: Global CSRF protection using Double Submit Cookie pattern
+- **API Security**: Regression test suite for rate limiting and CSRF protection
+- **Build**: Added `@cloudflare/workers-types` to project for better API security testing
+- **Versioning**: Version bumped to 0.15.0 to reflect major security and dependency updates
+
+### Changed
+
+- **Dependencies**: Migrated to **Tailwind CSS 4.x** (CSS-first configuration)
+- **Dependencies**: Updated core packages: `vite`, `vitest`, `lucide-vue-next`, `shadcn-vue`, `yjs`
+- **Editor**: Switched to `@milkdown/kit` v7 and removed deprecated `@milkdown/plugin-diagram`
+- **Security**: Enhanced middleware to attach `Set-Cookie` headers to error responses (403/429)
+
+### Fixed
+
+- **Types**: Resolved widespread `unknown` type errors in services and components caused by stricter dependency versions
+- **Security**: Fixed CSRF token synchronization on rejected requests
+
+## [0.14.2] - 2025-12-16
+
+### Added
+
+- Global API rate limiting middleware (60 req/min)
+- Standardized `X-RateLimit-*` headers for all API responses
+
+### Added
+
 - **UI Integration**: `LoadingSpinner`, `EmptyState`, and `ErrorMessage` components integrated into FileBrowser
 - **UX**: Auto-save indicators in toolbar (Saving... / Saved)
 - **UX**: Unsaved changes warning (browser beforeunload event)
@@ -28,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lint and format npm scripts
 
 ### Changed
+
 - Improved collaboration service with automatic reconnection
 - Enhanced WebRTC provider with status callbacks
 - Better cleanup logic for disconnected collaboration sessions
@@ -35,10 +61,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Signaling server configuration now supports multiple servers
 
 ### Fixed
+
 - Proper cleanup of awareness state on disconnect
 - Memory leaks in collaboration providers
 
 ### Security
+
 - Added input sanitization for file paths
 - Implemented validation helpers for all data types
 - Documented security best practices and procedures
@@ -47,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.9.37] - 2024-12-15
 
 ### Added
+
 - Initial public release
 - WYSIWYG markdown editor with Milkdown
 - Source code editor with CodeMirror
@@ -68,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - KV-based session storage
 
 ### Technical Stack
+
 - Frontend: Vue 3 + TypeScript + Vite
 - Editor: Milkdown (WYSIWYG) + CodeMirror (Source)
 - Backend: Cloudflare Pages Functions
@@ -85,6 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 This is the initial public release of Quartier, a collaborative web-based editor for Quarto documents.
 
 **Key Features**:
+
 - Dual authentication system supporting both repository owners and collaborators
 - Real-time collaborative editing with live cursors
 - Offline support with local persistence
@@ -92,6 +123,7 @@ This is the initial public release of Quartier, a collaborative web-based editor
 - Session-based sharing with granular access control
 
 **Known Limitations**:
+
 - No multi-file commits
 - No branch creation through UI
 - No version history viewer
@@ -100,6 +132,7 @@ This is the initial public release of Quartier, a collaborative web-based editor
 - Deprecated Milkdown plugins (@milkdown/plugin-math, @milkdown/plugin-diagram)
 
 **Coming Soon**:
+
 - Improved mobile responsiveness
 - Keyboard shortcuts documentation in-app
 - File search and navigation improvements
@@ -118,6 +151,7 @@ This is the initial public release of Quartier, a collaborative web-based editor
 When version 1.0 is released, the following breaking changes may occur:
 
 **Potential Breaking Changes**:
+
 - API endpoint format changes
 - Session storage schema updates
 - Authentication flow modifications
