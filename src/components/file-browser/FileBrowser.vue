@@ -96,6 +96,7 @@ import { storageManager } from '@/services/storageManager'
 
 interface FileItem {
   path: string
+  name?: string
   type: 'file' | 'dir'
 }
 
@@ -151,7 +152,10 @@ const filteredFiles = computed(() => {
         const parts = f.path.split('/')
         if (parts.some(part => part.startsWith('.'))) return false
         if (f.type === 'dir') return true
-        const ext = '.' + f.path.split('.').pop()?.toLowerCase()
+        
+        // Use name if available, otherwise path
+        const filename = f.name || f.path.split('/').pop() || ''
+        const ext = '.' + filename.split('.').pop()?.toLowerCase()
         return QUARTO_EXTENSIONS.has(ext)
       })
   return items

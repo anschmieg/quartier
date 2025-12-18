@@ -33,16 +33,18 @@
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
-        <DropdownMenuLabel class="text-[10px] uppercase opacity-50">Cloud Stubs</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel class="text-[10px] uppercase opacity-50">Cloud Sources</DropdownMenuLabel>
         
         <!-- Google Drive -->
-        <DropdownMenuItem class="text-xs opacity-50" disabled>
-          <Cloud class="w-3.5 h-3.5 mr-2" />
+        <DropdownMenuItem class="text-xs" @click="handleSourceSelect('gdrive')">
+          <Cloud class="w-3.5 h-3.5 mr-2 text-blue-500" />
           <span>Google Drive</span>
+          <Check v-if="activeProviderId === 'gdrive'" class="w-3 h-3 ml-auto" />
         </DropdownMenuItem>
         
-        <!-- Nextcloud -->
-        <DropdownMenuItem class="text-xs opacity-50" disabled>
+        <!-- Nextcloud (Disabled) -->
+        <DropdownMenuItem class="text-xs opacity-50 hidden" disabled>
           <Cloud class="w-3.5 h-3.5 mr-2" />
           <span>Nextcloud</span>
         </DropdownMenuItem>
@@ -81,6 +83,14 @@ const sourceLabel = computed(() => {
     // Simplify labels for display: 'browser:repo' -> 'repo', 'disk:folder' -> 'folder'
     return activeProject.value.split(':').pop() || activeProject.value
   }
+  if (activeProviderId.value === 'gdrive') {
+    // For GDrive, project ID is folder ID, but storageManager might store the ID.
+    // Ideally we want the Name. For now, showing 'Google Drive' or look up name from cache?
+    // Let's just show 'Google Drive' + ID or just 'Google Drive' if active.
+    // The storageManager activeProject is just the ID.
+    // TODO: Store project Name in storageManager alongside ID or fetch it.
+    return 'Google Drive'
+  }
   return 'Select Source...'
 })
 
@@ -88,6 +98,7 @@ const sourceIcon = computed(() => {
   switch (activeProviderId.value) {
     case 'github': return Github
     case 'local': return Monitor
+    case 'gdrive': return Cloud
     default: return Cloud
   }
 })

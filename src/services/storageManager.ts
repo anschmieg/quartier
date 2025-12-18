@@ -2,7 +2,7 @@ import { useStorage } from '@vueuse/core'
 import type { StorageProvider } from '../types/providers'
 import { GitHubProvider } from './providers/GitHubProvider'
 import { LocalProvider } from './providers/LocalProvider'
-import { CloudProvider } from './providers/CloudProvider'
+import { GoogleDriveProvider } from './providers/GoogleDriveProvider'
 
 class StorageManager {
   private providers = new Map<string, StorageProvider>()
@@ -14,10 +14,9 @@ class StorageManager {
   constructor() {
     this.registerProvider(new GitHubProvider())
     this.registerProvider(new LocalProvider())
+    this.registerProvider(new GoogleDriveProvider())
     
     // Stubs
-    this.registerProvider(new CloudProvider('gdrive', 'Google Drive', 'cloud'))
-    this.registerProvider(new CloudProvider('nextcloud', 'Nextcloud', 'cloud'))
   }
 
   registerProvider(provider: StorageProvider) {

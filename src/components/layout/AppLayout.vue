@@ -118,6 +118,11 @@
         :current-project="project"
         @select="handleLocalProjectSelect" 
     />
+    <CloudProjectSelector
+        v-model:open="showCloudSelector"
+        :provider="targetCloudProvider"
+        @select="handleCloudProjectSelect"
+    />
     <CommitDialog 
       ref="commitDialogRef" 
       :file-path="currentFile || ''" 
@@ -158,16 +163,25 @@ import { storage } from '@/services/storage'
 
 import JoinSessionDialog from '@/components/dialogs/JoinSessionDialog.vue'
 import LocalProjectSelector from '@/components/layout/LocalProjectSelector.vue'
+import CloudProjectSelector from '@/components/layout/CloudProjectSelector.vue'
 import AppRightSidebar from '@/components/layout/AppRightSidebar.vue'
 
 // Router
 const route = useRoute()
 
 // State
-const project = computed(() => storageManager.activeProject)
+const project = ref<string | null>(storageManager.activeProject)
+const activeProviderId = ref<string>(storageManager.activeProvider.id)
 const currentProvider = computed(() => storageManager.activeProvider)
-const activeProviderId = computed(() => currentProvider.value.id)
 const isGitHub = computed(() => activeProviderId.value === 'github')
+
+// Watch changes in storageManager
+watch(() => storageManager.activeProject, (val) => {
+    project.value = val
+})
+watch(() => storageManager.activeProvider, (val) => {
+    activeProviderId.value = val.id
+})
 
 const currentFile = useStorage<string | null>('quartier:currentFile', null)
 const showSidebar = useStorage('quartier:showSidebar', true)
@@ -210,8 +224,12 @@ const toastRef = ref()
 const editorWrapperRef = ref()
 const shareDialogRef = ref()
 const sharedSessionsDialogRef = ref()
+// Modals
 const showRepoSelector = ref(false)
 const showLocalSelector = ref(false)
+const showCloudSelector = ref(false)
+const targetCloudProvider = ref<any>(null)
+
 const userEmail = ref<string | undefined>(undefined)
 const recentFiles = useStorage<string[]>('quartier:recentFiles', [])
 function addToRecent(path: string) {
@@ -554,12 +572,44 @@ function handleOpenSourceSelector(providerId: string) {
     showRepoSelector.value = true
   } else if (providerId === 'local') {
     showLocalSelector.value = true
+    return
+  }
+
+  // Handle Cloud Providers (Google Drive)
+  if (providerId === 'gdrive') {
+    const provider = storageManager.allProviders.find(p => p.id === providerId)
+    if (provider) {
+        targetCloudProvider.value = provider
+        showCloudSelector.value = true
+    }
+    return
   }
 }
 
-function handleLocalProjectSelect(id: string) {
-    storageManager.setSource('local', id)
-    window.location.reload()
+async function handleLocalProjectSelect(projectId: string) {
+    if (projectId) {
+        storageManager.setSource('local', projectId)
+        // Force refresh
+        project.value = projectId
+        activeProviderId.value = 'local'
+        currentFile.value = null
+        fileContent.value = ''
+        await currentProvider.value.listFiles(projectId)
+    }
+    showLocalSelector.value = false
+}
+
+async function handleCloudProjectSelect(projectId: string) {
+    if (projectId && targetCloudProvider.value) {
+        storageManager.setSource(targetCloudProvider.value.id, projectId)
+        // Force refresh
+        project.value = projectId
+        activeProviderId.value = targetCloudProvider.value.id
+        currentFile.value = null
+        fileContent.value = ''
+        targetCloudProvider.value = null
+    }
+    showCloudSelector.value = false
 }
 
 function handlePaletteAction(action: string) {

@@ -32,6 +32,7 @@ id = "your-production-kv-namespace-id-here"
 # - UPSTASH_REDIS_REST_URL
 # - UPSTASH_REDIS_REST_TOKEN
 # - QUARTIER_WEBHOOK_SECRET
+# - VITE_GOOGLE_CLIENT_ID (For Google Drive support)
 
 # Build configuration
 [build]

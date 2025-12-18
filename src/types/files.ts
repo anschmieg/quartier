@@ -14,6 +14,7 @@ export interface FileNode {
 
 export interface FileItem {
     path: string
+    name?: string
     type: 'file' | 'dir'
 }
 
@@ -69,7 +70,8 @@ export function buildFileTree(items: FileItem[]): FileNode[] {
 
                 node = {
                     id: currentPath,
-                    name: part,
+                    // Use explicit name if available and this is the leaf node
+                    name: (isLastPart && item.name) ? item.name : part,
                     type: nodeType,
                     path: currentPath,
                     children: nodeType === 'folder' ? [] : undefined,

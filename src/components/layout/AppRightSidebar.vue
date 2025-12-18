@@ -91,18 +91,13 @@
             class="h-full border-0"
         />
         
-        <!-- Empty State if no content -->
-        <div v-if="!fileContent" class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center text-muted-foreground opacity-50">
-            <PanelRightOpen class="w-8 h-8 mb-3" />
-            <p class="text-sm">Select a file to preview</p>
-        </div>
       </div>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { Share2, PanelRightOpen, Play, ExternalLink, Loader2 } from 'lucide-vue-next'
+import { Share2, Play, ExternalLink, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConnectionStatus } from '@/components/ui/connection-status'
