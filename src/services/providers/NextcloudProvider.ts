@@ -48,9 +48,14 @@ export class NextcloudProvider implements StorageProvider {
         // Lazy load webdav library
         const { createClient } = await import('webdav')
         
-        this.client = createClient(this.credentials.url, {
+        // Use local proxy to bypass CORS
+        // The proxy lives at /api/webdav and forwards to X-Target-Base-Url
+        this.client = createClient('/api/webdav', {
             username: this.credentials.username,
-            password: this.credentials.password
+            password: this.credentials.password,
+            headers: {
+                'X-Target-Base-Url': this.credentials.url
+            }
         })
 
         return this.client
@@ -65,23 +70,36 @@ export class NextcloudProvider implements StorageProvider {
             throw new Error('Missing credentials')
         }
 
+        let url = options.url.replace(/\/$/, '')
+        
+        // Auto-append WebDAV path if missing
+        if (!url.includes('/remote.php/dav')) {
+            // Standard Nextcloud WebDAV path
+            url = `${url}/remote.php/dav/files/${options.username}`
+        }
+
         // Verify connection before saving
         const { createClient } = await import('webdav')
-        const testClient = createClient(options.url, {
+        
+        // Use proxy for verification too
+        const testClient = createClient('/api/webdav', {
             username: options.username,
-            password: options.password
+            password: options.password,
+            headers: {
+                'X-Target-Base-Url': url
+            }
         })
 
         try {
             await testClient.getDirectoryContents('/')
         } catch (e) {
             console.error('Connection failed:', e)
-            throw new Error('Failed to connect to Nextcloud. Check URL and credentials.')
+            throw new Error('Failed to connect. Check URL, credentials, and CORS settings.')
         }
 
         // Save
         this.credentials = {
-            url: options.url,
+            url: url,
             username: options.username,
             password: options.password
         }
@@ -97,10 +115,35 @@ export class NextcloudProvider implements StorageProvider {
 
     // --- File Operations ---
 
+    // Helper to strip the WebDAV base path from the full path returned by the library
+    private normalizePath(fullPath: string): string {
+        if (!this.credentials?.username) return fullPath
+        
+        try {
+            const safeFullPath = decodeURIComponent(fullPath)
+            
+            // Standard Nextcloud structure: .../remote.php/dav/files/USERNAME/path/to/file
+            // We split by /files/USERNAME to get the relative path
+            const splitToken = `/files/${this.credentials.username}`
+            const idx = safeFullPath.lastIndexOf(splitToken)
+            
+            if (idx !== -1) {
+                // Return everything after /files/USERNAME
+                // + splitToken.length gives us the path starting with /
+                const result = safeFullPath.slice(idx + splitToken.length)
+                return result || '/'
+            }
+        } catch (e) {
+            console.warn('Failed to normalize path', e)
+        }
+        return fullPath
+    }
+
     async listProjects(folderPath?: string): Promise<any[]> {
         // "Projects" in WebDAV are just folders.
-        // We list contents of the given folder path, filtering for directories.
         const client = await this.getClient()
+        // If folderPath is provided, it is already relative to root (e.g. /Photos) 
+        // because we normalized it in the previous step.
         const path = folderPath || '/'
         
         try {
@@ -110,7 +153,7 @@ export class NextcloudProvider implements StorageProvider {
             return contents
                 .filter((item) => item.type === 'directory')
                 .map((item) => ({
-                    id: item.filename, // In webdav lib, filename is the full path
+                    id: this.normalizePath(item.filename), // Return relative path as ID
                     name: item.basename,
                     updated_at: item.lastmod
                 }))
@@ -121,41 +164,34 @@ export class NextcloudProvider implements StorageProvider {
     }
 
     async listFiles(project: string, _path: string = ''): Promise<FileItem[]> {
-        // project is the Root Path (e.g. /Photos) or the current folder context
-        // _path is the current subfolder relative to project, logic similar to GDrive
-        
         const client = await this.getClient()
         
-        // Construct target path to list
-        // If _path is provided, it's the full path we want to list (since listProjects returns full path as ID)
-        // If not, use project as root
-        const targetPath = _path || project
+        // project is the root path (e.g. /Photos)
+        // _path is relative to project
+        
+        // However, since we normalized project ID to be relative to root (e.g. /Photos), 
+        // we can just join them.
+        // If project is '/' and path is 'img.jpg', target is '/img.jpg'
+        
+        // Ensure paths start with /
+        const root = project.startsWith('/') ? project : '/' + project
+        const sub = _path ? (_path.startsWith('/') ? _path : '/' + _path) : ''
+        
+        const targetPath = (root === '/' ? '' : root) + sub || '/'
         
         try {
             const contents = await client.getDirectoryContents(targetPath) as FileStat[]
             
             return contents.map((item) => {
-                // Determine type
                 const type = item.type === 'directory' ? 'dir' : 'file'
-                
-                // For FileTree compatibility:
-                // name: explicit basename
-                // path: webdav returns full path in 'filename'.
-                // Since our FileTree is recursive, we can just use the full path as the ID/path.
-                // UNLESS FileTree expects relative paths? 
-                // GDrive provider constructs 'parent/id'.
-                // Here 'filename' is '/Photos/Summer/img.jpg'. This IS hierarchical.
-                // So we can use it directly.
-                
                 return {
-                    path: item.filename,
+                    path: this.normalizePath(item.filename), // Normalize for consistency
                     name: item.basename,
                     type
                 }
             })
         } catch (e) {
              console.error('List files failed', e)
-             // If file not found or other error, return empty
              return []
         }
     }

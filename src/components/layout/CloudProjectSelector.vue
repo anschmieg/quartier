@@ -24,8 +24,8 @@
             <div v-if="provider?.id === 'nextcloud'" class="w-full space-y-3 text-left">
                 <div class="space-y-1">
                     <label class="text-xs font-medium">Server URL</label>
-                    <input v-model="nextcloudConfig.url" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs" placeholder="https://cloud.example.com/remote.php/dav/files/user/" />
-                    <p class="text-[10px] text-muted-foreground">The full WebDAV URL to your files.</p>
+                    <input v-model="nextcloudConfig.url" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs" placeholder="https://cloud.example.com" />
+                    <p class="text-[10px] text-muted-foreground">The base URL of your Nextcloud instance. We'll handle the WebDAV path.</p>
                 </div>
                 <div class="space-y-1">
                     <label class="text-xs font-medium">Username</label>
@@ -34,8 +34,9 @@
                  <div class="space-y-1">
                     <label class="text-xs font-medium">Password / App Token</label>
                     <input v-model="nextcloudConfig.password" type="password" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs" />
-                    <p class="text-[10px] text-muted-foreground text-amber-600/80">
-                        Recommendation: Use a dedicated App Password/Token from your Nextcloud security settings.
+                    <p class="text-[10px] text-muted-foreground text-amber-600/80 leading-tight">
+                        Recommendation: Use a dedicated App Password/Token.<br>
+                        (Found in Nextcloud: <strong>Settings &rarr; Security &rarr; Devices & sessions</strong>)
                     </p>
                 </div>
                  <Button @click="handleLogin" class="w-full mt-2" :disabled="!nextcloudConfig.url || !nextcloudConfig.username || !nextcloudConfig.password">
@@ -72,7 +73,12 @@
                 </Button>
             </div>
 
-            <div v-if="projects.length === 0" class="text-center py-8 text-muted-foreground">
+            <!-- Loading State -->
+            <div v-if="loading" class="flex items-center justify-center py-12 min-h-[200px]">
+                <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+
+            <div v-else-if="projects.length === 0" class="text-center py-8 text-muted-foreground">
                 No subfolders found.
             </div>
             
