@@ -197,14 +197,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         })
     }
 
-    // Rate limiting: 60 requests per minute per user (use token as identifier)
-    const tokenHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(accessToken))
-    const tokenId = Array.from(new Uint8Array(tokenHash)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('')
-    const rateLimit = await checkRateLimit(context.env.QUARTIER_KV, `content:${tokenId}`, 60, 60)
-    if (!rateLimit.allowed) {
-        return createErrorResponse('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
-    }
-
+    // Rate limiting is now handled by _middleware.ts
+    
     try {
         const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
         const response = await fetch(apiUrl, {
