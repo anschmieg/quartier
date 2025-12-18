@@ -32,6 +32,7 @@
         :mode="sidebarMode"
         :repo="repo"
         :selected-file="currentFile"
+        :is-dirty="isDirty"
         :is-host="isHost"
         :allowed-paths="allowedPaths"
         @open-repo-selector="isHost ? showRepoSelector = true : null"
@@ -65,7 +66,25 @@
               :show-comments="showComments"
               @update:content="updateFileContent"
               @save="saveFile"
-            />    </div>
+            />
+          </div>
+
+          <!-- Loading Overlay -->
+          <Transition
+            enter-active-class="transition-opacity duration-200"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity duration-200"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div 
+              v-if="fileLoading" 
+              class="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-[1px]"
+            >
+              <LoadingSpinner size="lg" message="Loading file..." />
+            </div>
+          </Transition>
           
           <!-- Preview Panel with Fade Animation -->
           <Transition
@@ -114,6 +133,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 const { isAuthenticated, isAccessAuthenticated, isHost, user, accessUser } = useAuth()
@@ -129,14 +149,15 @@ import ShareDialog from '@/components/dialogs/ShareDialog.vue'
 import SharedSessionsDialog from '@/components/dialogs/SharedSessionsDialog.vue'
 import Toast from '@/components/ui/Toast.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
+import { LoadingSpinner } from '@/components/ui/loading'
 import { githubService } from '@/services/github'
 import { cachedFileSystem, kvSync } from '@/services/storage'
 // import { getConnectionStatus, onConnectionStatusChange, type ConnectionStatus } from '@/services/collab'
 
-import { useRoute } from 'vue-router'
 import JoinSessionDialog from '@/components/dialogs/JoinSessionDialog.vue'
 
 // Router
+// const router = useRouter()
 const route = useRoute()
 
 // Persisted State (localStorage)
@@ -188,6 +209,12 @@ const userEmail = ref<string | undefined>(undefined)
 // const connectionStatus = ref<ConnectionStatus>('disconnected')
 const connectionStatus = ref<'connecting' | 'connected' | 'disconnected' | 'error'>('connected') // TODO: Wire up real status from MilkdownEditor
 const autoSaveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
+
+// Dirty state tracking
+const isDirty = computed(() => {
+  if (!currentFile.value) return false
+  return fileContent.value !== lastSyncedContent
+})
 
 
 
@@ -298,7 +325,7 @@ onMounted(async () => {
   autoSyncInterval = setInterval(async () => {
     if (!repo.value || !currentFile.value) return
     if (fileContent.value === lastSyncedContent) return // No changes
-    if (fileContent.value === 'Loading...') return
+    if (fileLoading.value) return // Don't sync while loading
     
     const [owner, name] = repo.value.split('/')
     if (!owner || !name) return
@@ -336,8 +363,15 @@ onUnmounted(() => {
   // }
 })
 
+// Internal router guard to prevent data loss
+onBeforeRouteLeave(() => {
+  if (isDirty.value) {
+    return window.confirm('You have unsaved changes. Are you sure you want to leave?')
+  }
+})
+
 function handleBeforeUnload(e: BeforeUnloadEvent) {
-  if (fileContent.value !== lastSyncedContent || autoSaveStatus.value === 'saving') {
+  if (isDirty.value || autoSaveStatus.value === 'saving') {
     e.preventDefault()
     e.returnValue = ''
     return ''
@@ -365,7 +399,7 @@ async function selectFile(path: string) {
   try {
     fileLoading.value = true
     currentFile.value = path
-    fileContent.value = 'Loading...'
+    // No longer setting fileContent to "Loading..." text hack
     
     console.log('Loading file:', path)
     

@@ -5,6 +5,7 @@
       :key="node.id"
       :node="node"
       :selected-path="selectedPath"
+      :is-dirty="isDirty"
       :expanded-folders="expandedFolders"
       :level="0"
       @select="emit('select', $event)"
@@ -58,6 +59,7 @@ import { buildFileTree, type FileNode, type FileItem } from '@/types/files'
 const props = defineProps<{
   files: FileItem[]
   selectedPath?: string | null
+  isDirty?: boolean
   expandedFolders?: string[]
 }>()
 

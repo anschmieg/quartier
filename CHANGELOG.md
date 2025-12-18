@@ -5,7 +5,20 @@ All notable changes to Quartier will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.15.0] - 2024-12-16
+## [Unreleased]
+
+### Added
+
+- **UX**: Subtle "dirty state" indicator (dot) in sidebar for active files with unsaved changes
+- **UX**: Unsaved changes warnings using browser `beforeunload` and Vue Router `onBeforeRouteLeave` guards
+- **UX**: Professional `LoadingSpinner` overlay during file operations, replacing text placeholders
+
+### Fixed
+
+- **App**: Corrected TypeScript errors related to duplicate imports and unused variables in `AppLayout.vue`
+- **Build**: Successfully verified production build with all new UI enhancements
+
+## [0.15.0] - 2025-12-17
 
 ### Added
 

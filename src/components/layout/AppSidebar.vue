@@ -46,6 +46,7 @@
           :repo="repo" 
           :selected-path="selectedFile"
           :is-host="isHost"
+          :is-dirty="isDirty"
           :allowed-paths="allowedPaths"
           @select="handleFileSelect"
           @create-file="emit('create-file', $event)"
@@ -77,10 +78,12 @@ const props = withDefaults(defineProps<{
   mode?: SidebarMode
   repo?: string
   selectedFile?: string | null
+  isDirty?: boolean
   isHost?: boolean
   allowedPaths?: string[]
 }>(), {
   mode: 'persistent',
+  isDirty: false,
   isHost: false,
   allowedPaths: () => []
 })

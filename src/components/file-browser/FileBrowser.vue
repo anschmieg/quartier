@@ -66,6 +66,7 @@
       v-else
       :files="searchedFiles" 
       :selected-path="selectedPath"
+      :is-dirty="isDirty"
       :expanded-folders="currentExpandedFolders"
       @select="handleSelect"
       @enter-folder="handleEnterFolder"
@@ -102,9 +103,11 @@ interface FileItem {
 const props = withDefaults(defineProps<{
   repo?: string
   selectedPath?: string | null
+  isDirty?: boolean
   isHost?: boolean
   allowedPaths?: string[]
 }>(), {
+  isDirty: false,
   isHost: false,
   allowedPaths: () => []
 })

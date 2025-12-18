@@ -37,6 +37,13 @@
 
       <!-- Name -->
       <span class="truncate flex-1">{{ node.name }}</span>
+      
+      <!-- Dirty Indicator (Dot) -->
+      <div 
+        v-if="node.type === 'file' && selectedPath === node.path && isDirty" 
+        class="w-2 h-2 rounded-full bg-primary shadow-xs shrink-0 mr-1" 
+        title="Unsaved changes"
+      />
     </div>
 
     <!-- Children container -->
@@ -58,6 +65,7 @@
             :key="child.id"
             :node="child"
             :selected-path="selectedPath"
+            :is-dirty="isDirty"
             :expanded-folders="expandedFolders"
             :level="level + 1"
             :data-index="index"
@@ -101,6 +109,7 @@ import type { FileNode } from '@/types/files'
 const props = defineProps<{
   node: FileNode
   selectedPath?: string | null
+  isDirty?: boolean
   expandedFolders?: string[]
   level: number
 }>()
