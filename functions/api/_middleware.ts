@@ -64,11 +64,21 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       const headerToken = context.request.headers.get('X-CSRF-Token')
       
       if (!headerToken || headerToken !== csrfToken) {
-        return createErrorResponse(
+        const errorResponse = createErrorResponse(
           'CSRF verification failed',
           403,
           'CSRF_MISMATCH'
         )
+        
+        // Ensure we set the cookie even on error so client can retry
+        if (setCsrfCookie) {
+          errorResponse.headers.append(
+            'Set-Cookie', 
+            `csrf-token=${csrfToken}; Path=/; SameSite=Lax; Secure`
+          )
+        }
+        
+        return errorResponse
       }
     }
 
