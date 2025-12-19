@@ -1,12 +1,29 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LandingPage from '@/components/landing/LandingPage.vue'
+import Dashboard from '@/components/dashboard/Dashboard.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { historyService } from '@/services/history'
 
 const routes = [
     {
         path: '/',
         name: 'landing',
         component: LandingPage,
+        meta: { public: true },
+        beforeEnter: (to: any, _from: any, next: any) => {
+            // If we have history, go to dashboard instead of landing
+            // But allow explicit access via query param ?landing=true if needed
+            if (historyService.getProjects().length > 0 && !to.query.landing) {
+                next('/dashboard')
+            } else {
+                next()
+            }
+        }
+    },
+    {
+        path: '/dashboard',
+        name: 'dashboard',
+        component: Dashboard,
         meta: { public: true }
     },
     {

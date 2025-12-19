@@ -1,7 +1,7 @@
 {
   "name": "quartier",
   "private": true,
-  "version": "0.17.1",
+  "version": "0.17.2",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"bun:dev:frontend\" \"bun:dev:api\" \"bun:party:dev\"",

@@ -28,7 +28,7 @@
       <ErrorMessage 
         title="Failed to load files"
         :message="error"
-        action-label="Retry"
+        :action-label="isAuthError ? 'Log In & Retry' : 'Retry'"
         @action="retryLoad"
       />
     </div>
@@ -186,7 +186,23 @@ watch(() => props.project, async (newProject) => {
   }
 }, { immediate: true })
 
+const isAuthError = computed(() => {
+    if (!error.value) return false
+    const msg = error.value.toLowerCase()
+    return msg.includes('authenticated') || msg.includes('expired') || msg.includes('permission')
+})
+
 async function retryLoad() {
+    if (isAuthError.value && currentProvider.value.login) {
+        try {
+            await currentProvider.value.login()
+        } catch (e) {
+            console.error('Login failed', e)
+            error.value = `Login failed: ${e}`
+            return
+        }
+    }
+
     if (props.project) {
         await loadContents(props.project, currentPath.value)
     }

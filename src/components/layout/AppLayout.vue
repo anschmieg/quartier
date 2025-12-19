@@ -50,8 +50,7 @@
         <!-- Editor/Preview Split -->
         <div class="flex-1 flex overflow-hidden relative">
           <div 
-            :class="showRightSidebar ? 'w-1/2' : 'w-full'" 
-            class="h-full overflow-hidden transition-all duration-150"
+            class="w-full h-full overflow-hidden transition-all duration-150"
           >
             <EditorWrapper 
               ref="editorWrapperRef"
@@ -81,6 +80,33 @@
               class="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-[1px]"
             >
               <LoadingSpinner size="lg" message="Loading file..." />
+            </div>
+          </Transition>
+
+          <!-- Auth Error Overlay -->
+          <Transition
+            enter-active-class="transition-opacity duration-200"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity duration-200"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div 
+              v-if="authError" 
+              class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-center space-y-4"
+            >
+              <div class="bg-card border shadow-sm rounded-lg p-6 max-w-sm w-full space-y-4">
+                 <div class="space-y-2">
+                    <h3 class="text-lg font-semibold">Authentication Required</h3>
+                    <p class="text-sm text-muted-foreground">
+                        Your session with {{ currentProvider.name }} has expired or is invalid.
+                    </p>
+                 </div>
+                 <Button @click="handleReauth" class="w-full">
+                    Log In to {{ currentProvider.name }}
+                 </Button>
+              </div>
             </div>
           </Transition>
           
@@ -165,6 +191,7 @@ import JoinSessionDialog from '@/components/dialogs/JoinSessionDialog.vue'
 import LocalProjectSelector from '@/components/layout/LocalProjectSelector.vue'
 import CloudProjectSelector from '@/components/layout/CloudProjectSelector.vue'
 import AppRightSidebar from '@/components/layout/AppRightSidebar.vue'
+import { Button } from '@/components/ui/button'
 
 // Router
 const route = useRoute()
@@ -218,6 +245,7 @@ watch(sidebarMode, (newMode, oldMode) => {
 const fileContent = ref('')
 const originalFileContent = ref('')
 const fileLoading = ref(false)
+const authError = ref(false)
 const commandPaletteRef = ref()
 const commitDialogRef = ref()
 const toastRef = ref()
@@ -456,12 +484,36 @@ async function selectFile(path: string) {
     lastProviderContent.value = providerContent
     originalFileContent.value = providerContent
     addToRecent(path)
-  } catch (error) {
-    console.error('Failed to load file:', error)
-    fileContent.value = `# Error loading file\n\nFailed to load ${path}:\n${error instanceof Error ? error.message : 'Unknown error'}`
+  } catch (error: any) {
+    // Check for auth errors
+    const msg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
+    if (msg.includes('authenticated') || msg.includes('expired')) {
+        authError.value = true
+        fileContent.value = '' // Clear content to prevent confusion
+        // Don't log as error in console to avoid noise, just warn
+        console.warn('Authentication required for file load')
+    } else {
+        console.error('Failed to load file:', error)
+        fileContent.value = `# Error loading file\n\nFailed to load ${path}:\n${error instanceof Error ? error.message : 'Unknown error'}`
+    }
   } finally {
     fileLoading.value = false
   }
+}
+
+async function handleReauth() {
+    try {
+        if (currentProvider.value.login) {
+            await currentProvider.value.login()
+            authError.value = false
+            // Retry file load
+            if (currentFile.value) {
+                await selectFile(currentFile.value)
+            }
+        }
+    } catch (e) {
+        toastRef.value?.error(`Login failed: ${e}`)
+    }
 }
 
 async function handleCreateFile(parentPath: string) {

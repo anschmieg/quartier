@@ -64,6 +64,21 @@
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+
+      <div class="w-px h-4 bg-border/50 mx-1" />
+
+       <TooltipProvider :delay-duration="0">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" @click="router.push('/dashboard')" class="outline-hidden! ring-0! ring-offset-0! focus:ring-0! focus-visible:ring-0! focus:border-none border-none shadow-none">
+              <Home class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Home</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
     
     <!-- Center: Toolbar (centered via flex) -->
@@ -171,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { Eye, Code, Keyboard, Users, MoreVertical, Sun, Moon, PanelRight, PanelLeft, Share2 } from 'lucide-vue-next'
+import { Eye, Code, Keyboard, Users, MoreVertical, Sun, Moon, PanelRight, PanelLeft, Share2, Home } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { SidebarToggle } from '@/components/toolbar'
@@ -179,6 +194,7 @@ import EditorToolbar from '@/components/editor/EditorToolbar.vue'
 import { useAwareness } from '@/composables/useAwareness'
 import { useElementSize, useDark, useToggle } from '@vueuse/core'
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBreakpoints } from '@/composables/useBreakpoints'
 import {
   DropdownMenu,
@@ -188,6 +204,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+const router = useRouter()
 const { otherUsers } = useAwareness()
 const { isSmall } = useBreakpoints()
 
