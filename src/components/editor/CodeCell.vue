@@ -1,164 +1,128 @@
 <template>
-  <div 
-    class="code-cell border border-border rounded-lg overflow-hidden my-4 bg-card"
-    :class="{ 'ring-2 ring-primary': isSelected }"
+  <div
+    class="code-cell my-5 overflow-hidden rounded-2xl border border-amber-900/10 bg-[#fffdfa] shadow-sm transition"
+    :class="{ 'ring-2 ring-amber-500/40': isSelected || optionsVisible }"
   >
-    <!-- Toolbar -->
-    <div class="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border" contenteditable="false">
-      <div class="flex items-center gap-2">
-        <!-- Language Badge -->
-        <span 
-          class="px-2 py-0.5 text-xs font-medium rounded"
-          :class="languageClass"
-        >
-          {{ displayLanguage }}
-        </span>
-        
-        <!-- Status Indicator -->
-        <span 
-          v-if="kernelStatus !== 'idle' && kernelStatus !== 'ready'"
-          class="flex items-center gap-1 text-xs text-muted-foreground"
-        >
-          <Loader2 v-if="kernelStatus === 'loading' || kernelStatus === 'busy'" class="h-3 w-3 animate-spin" />
-          <AlertCircle v-if="kernelStatus === 'error'" class="h-3 w-3 text-destructive" />
-          <span>{{ statusText }}</span>
-        </span>
-      </div>
-
-      <div class="flex items-center gap-1" contenteditable="false">
-        <!-- Run Button -->
-        <button
-          @click.stop="runCell"
-          :disabled="kernelStatus === 'busy' || kernelStatus === 'loading'"
-          class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          :class="kernelStatus === 'busy' ? 'text-muted-foreground' : 'text-primary'"
-        >
-          <Play v-if="kernelStatus !== 'busy'" class="h-3 w-3" />
-          <Square v-else class="h-3 w-3" />
-          {{ kernelStatus === 'busy' ? 'Stop' : 'Run' }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Code Content (ProseMirror editable) -->
-    <div 
-      :ref="contentRef"
-      class="p-3 font-mono text-sm bg-card min-h-12 focus:outline-hidden"
-    />
-
-    <!-- Output Section (Accordion) -->
-    <div v-if="hasOutput" class="border-t border-border" contenteditable="false">
-      <button
-        @click.stop="outputExpanded = !outputExpanded"
-        class="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
-      >
-        <span class="flex items-center gap-2">
-          <Terminal class="h-4 w-4 text-muted-foreground" />
-          <span class="font-medium">Output</span>
-          <span v-if="lastExecution" class="text-xs text-muted-foreground">
-            ({{ lastExecution.executionTime }}ms)
+    <div class="flex items-start justify-between gap-3 border-b border-amber-900/10 bg-[#fbf7ef] px-4 py-3" contenteditable="false">
+      <div class="min-w-0 space-y-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <span
+            class="rounded-full px-2.5 py-1 text-xs font-semibold"
+            :class="languageClass"
+            data-test="cell-language"
+          >
+            {{ displayLanguage }}
           </span>
-        </span>
-        <ChevronDown 
-          class="h-4 w-4 text-muted-foreground transition-transform" 
-          :class="{ 'rotate-180': outputExpanded }"
-        />
-      </button>
-
-      <div v-show="outputExpanded" class="px-3 pb-3">
-        <!-- Error -->
-        <div v-if="lastExecution?.error" class="p-2 rounded bg-destructive/10 text-destructive text-sm font-mono whitespace-pre-wrap">
-          {{ lastExecution.error }}
+          <span class="text-xs font-medium uppercase tracking-[0.2em] text-stone-400">
+            Quarto code cell
+          </span>
         </div>
 
-        <!-- Stdout -->
-        <div v-if="lastExecution?.stdout" class="p-2 rounded bg-muted text-sm font-mono whitespace-pre-wrap">
-          {{ lastExecution.stdout }}
-        </div>
-
-        <!-- Result -->
-        <div v-if="lastExecution?.result" class="p-2 rounded bg-muted text-sm font-mono whitespace-pre-wrap mt-2">
-          <span class="text-muted-foreground">Out: </span>{{ lastExecution.result }}
-        </div>
-
-        <!-- R Output -->
-        <div v-if="lastExecution?.output?.length" class="p-2 rounded bg-muted text-sm font-mono whitespace-pre-wrap">
-          <div v-for="(line, i) in lastExecution.output" :key="i">{{ line }}</div>
+        <div class="flex flex-wrap gap-2 text-xs text-stone-600">
+          <span v-if="metadata.label" class="rounded-full bg-white px-2.5 py-1 font-mono" data-test="cell-label-summary">
+            {{ metadata.label }}
+          </span>
+          <span v-if="metadata.figCap" class="rounded-full bg-white px-2.5 py-1" data-test="cell-caption-summary">
+            {{ metadata.figCap }}
+          </span>
+          <span v-if="metadata.echo" class="rounded-full bg-white px-2.5 py-1 font-mono" data-test="cell-echo-summary">
+            echo: {{ metadata.echo }}
+          </span>
+          <span v-if="!metadata.label && !metadata.figCap && !metadata.echo" class="text-stone-400">
+            Add label, caption, or display options
+          </span>
         </div>
       </div>
+
+      <button
+        type="button"
+        data-test="edit-cell-options"
+        class="shrink-0 rounded-full border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:bg-white hover:text-stone-950"
+        @click.stop="optionsVisible = !optionsVisible"
+      >
+        {{ optionsVisible ? 'Hide source options' : 'Edit source/options' }}
+      </button>
     </div>
+
+    <div v-if="optionsVisible" class="grid gap-3 border-b border-amber-900/10 bg-white/70 p-4" contenteditable="false">
+      <label class="grid gap-1 text-xs font-medium text-stone-600">
+        Label
+        <input
+          data-test="cell-label-input"
+          class="rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-sm text-stone-950 outline-hidden focus:border-amber-500"
+          :value="metadata.label"
+          placeholder="fig-example"
+          @input="updateOption('label', ($event.target as HTMLInputElement).value)"
+          @click.stop
+          @keydown.stop
+        >
+      </label>
+
+      <label class="grid gap-1 text-xs font-medium text-stone-600">
+        Figure caption
+        <input
+          data-test="cell-fig-cap-input"
+          class="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-950 outline-hidden focus:border-amber-500"
+          :value="metadata.figCap"
+          placeholder="A short caption"
+          @input="updateOption('fig-cap', ($event.target as HTMLInputElement).value)"
+          @click.stop
+          @keydown.stop
+        >
+      </label>
+
+      <label class="flex items-center justify-between rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-600">
+        Echo source in rendered output
+        <input
+          data-test="cell-echo-input"
+          type="checkbox"
+          :checked="metadata.echo !== 'false'"
+          @change="updateOption('echo', ($event.target as HTMLInputElement).checked ? 'true' : 'false')"
+          @click.stop
+          @keydown.stop
+        >
+      </label>
+    </div>
+
+    <div
+      :ref="contentRef"
+      class="min-h-16 bg-[#fffdfa] p-4 font-mono text-sm text-stone-900 focus:outline-hidden"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { Play, Square, Loader2, AlertCircle, Terminal, ChevronDown } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import { useNodeViewContext } from '@prosemirror-adapter/vue'
-import { useKernel, type ExecutionResult, type KernelStatus } from '@/services/kernel'
+import { parseCodeCellMetadata, updateCodeCellOption } from './code-cell-metadata'
 
-// Get node context from ProseMirror adapter
-const { node, contentRef, selected } = useNodeViewContext()
+const { node, contentRef, selected, view } = useNodeViewContext()
+const optionsVisible = ref(false)
 
-const outputExpanded = ref(true)
-const lastExecution = ref<ExecutionResult | null>(null)
-
-// Extract language from node attrs
-const language = computed(() => {
-  const lang = node.value.attrs?.language || ''
-  // Normalize: remove curly braces, lowercase
-  const cleaned = lang.replace(/[{}]/g, '').toLowerCase().trim()
-  return cleaned === 'r' ? 'r' : 'python'
-})
-
-const displayLanguage = computed(() => {
-  return language.value === 'python' ? 'Python' : 'R'
-})
-
+const metadata = computed(() => parseCodeCellMetadata(node.value.attrs?.language, node.value.textContent))
 const isSelected = computed(() => selected.value)
 
-// Get kernel for this language
-const kernel = computed(() => useKernel(language.value as 'python' | 'r'))
-const kernelStatus = computed<KernelStatus>(() => kernel.value.status.value)
-
-const statusText = computed(() => {
-  switch (kernelStatus.value) {
-    case 'loading': return 'Loading kernel...'
-    case 'busy': return 'Running...'
-    case 'error': return kernel.value.error.value || 'Error'
-    case 'dead': return 'Kernel dead'
-    default: return ''
+const displayLanguage = computed(() => {
+  switch (metadata.value.language) {
+    case 'python':
+      return 'Python'
+    case 'r':
+      return 'R'
+    default:
+      return metadata.value.language || 'Code'
   }
 })
 
 const languageClass = computed(() => {
-  return language.value === 'python'
-    ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
-    : 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
+  if (metadata.value.language === 'python') return 'bg-yellow-500/15 text-yellow-700'
+  if (metadata.value.language === 'r') return 'bg-blue-500/15 text-blue-700'
+  return 'bg-stone-200 text-stone-700'
 })
 
-const hasOutput = computed(() => {
-  return lastExecution.value !== null
-})
-
-async function runCell() {
-  if (kernelStatus.value === 'busy') {
-    await kernel.value.interrupt()
-    return
-  }
-
-  try {
-    // Get code from the node's text content
-    const code = node.value.textContent
-    const result = await kernel.value.execute(code)
-    lastExecution.value = result
-    outputExpanded.value = true
-  } catch (error: any) {
-    lastExecution.value = {
-      success: false,
-      error: error.message,
-      executionTime: 0,
-    }
-    outputExpanded.value = true
-  }
+function updateOption(name: 'label' | 'fig-cap' | 'echo', value: string) {
+  const nextText = updateCodeCellOption(node.value.textContent, name, value)
+  const tr = view.state.tr.insertText(nextText)
+  view.dispatch(tr)
+  view.focus()
 }
 </script>

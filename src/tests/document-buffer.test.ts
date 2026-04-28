@@ -32,7 +32,7 @@ const provider: WorkspaceProvider = {
   async writeDocument() { return { revision: 'rev-2', savedAt: Date.now() } },
   async deleteEntry() {},
   async renameEntry() {},
-  async createEntry(input) { return { path: input.path } },
+  async createEntry(_handle, input) { return { path: input.path } },
   async getAuthState(): Promise<ProviderAuthState> { return { status: 'authenticated', user: { label: 'buffer' } } },
 }
 

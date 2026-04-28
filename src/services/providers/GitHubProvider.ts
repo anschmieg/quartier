@@ -122,7 +122,7 @@ export class GitHubProvider implements WorkspaceProvider {
     const userCookie = document.cookie.match(/(^| )gh_user=([^;]+)/)
     if (!userCookie) return { status: 'anonymous' }
     try {
-      const parsed = JSON.parse(decodeURIComponent(userCookie[2]))
+      const parsed = JSON.parse(decodeURIComponent(userCookie[2] || '{}'))
       return {
         status: 'authenticated',
         user: {

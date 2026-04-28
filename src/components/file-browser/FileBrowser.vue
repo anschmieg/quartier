@@ -210,7 +210,7 @@ async function retryLoad() {
     }
 }
 
-async function loadContents(project: string, path: string) {
+async function loadContents(_project: string, path: string) {
   loading.value = true
   error.value = null
   

@@ -15,7 +15,7 @@
 <script setup lang="ts">
 import { watch, ref, shallowRef, onBeforeUnmount } from 'vue'
 import { Milkdown, useEditor } from '@milkdown/vue'
-import { useNodeViewFactory } from '@prosemirror-adapter/vue'
+import { useNodeViewFactory, type VueNodeViewComponent } from '@prosemirror-adapter/vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import { commonmark, codeBlockSchema } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
@@ -25,7 +25,8 @@ import { math } from '@milkdown/plugin-math'
 import { nord } from '@milkdown/theme-nord'
 import { $prose, $view, $remark } from '@milkdown/utils'
 import { keymap } from '@milkdown/prose/keymap'
-// @ts-ignore
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore remark-directive does not expose types for this import shape.
 import remarkDirective from 'remark-directive'
 // COLLAB DISABLED: import { collab, collabServiceCtx } from '@milkdown/plugin-collab'
 import { prism, prismConfig } from '@milkdown/plugin-prism'
@@ -69,6 +70,8 @@ import { remarkFencedDivPlugin } from './plugins/fenced-div/remark-plugin'
 import './plugins/frontmatter/style.css'
 import { useCollab, getCollabPlugins } from '@/composables/useCollab'
 import { convertQuartoToMilkdown, convertMilkdownToQuarto } from '@/utils/quarto-syntax'
+import { useCitationTriggerPlugin, citationNode, remarkCitationPlugin, remarkSimpleCitePlugin, type CitationTriggerEvent } from './plugins/citations'
+import CitationNode from './plugins/citations/CitationNode.vue'
 
 
 // Import base styles for structure (optional, but nord helps with complex nodes)
@@ -86,7 +89,13 @@ const props = defineProps<{
   showComments?: boolean
 }>()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+    (e: 'update:modelValue', value: string): void
+    (e: 'trigger-citation', event: CitationTriggerEvent): void
+    (e: 'dismiss-citation'): void
+}>()
+
+// ... (existing code)
 
 // Plugin to handle Escape key -> Blur
 const escapePlugin = $prose((_ctx) => {
@@ -99,6 +108,151 @@ const escapePlugin = $prose((_ctx) => {
       return false
     }
   })
+})
+
+// Citation Plugin
+// Citation Trigger Plugin
+const citationTriggerPlugin = useCitationTriggerPlugin(
+    (e) => emit('trigger-citation', e),
+    () => emit('dismiss-citation')
+)
+
+// Editor instance
+const { get, loading } = useEditor((root) => {
+  const editor = Editor.make()
+    .config((configCtx) => {
+      configCtx.set(rootCtx, root)
+      // Use captured initial value, NOT reactive props
+      configCtx.set(defaultValueCtx, initialValue)
+      
+      // Configure editor view options
+      configCtx.update(editorViewOptionsCtx, (prev) => ({
+        ...prev,
+        editable: () => props.editable ?? true,
+      }))
+      
+      // Setup listener for v-model
+      configCtx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
+        // Check if update is echo
+        if (markdown !== prevMarkdown) {
+          localValue.value = markdown
+          // Convert back to Quarto syntax before emitting
+          emit('update:modelValue', convertMilkdownToQuarto(markdown))
+        }
+      })
+
+      // Configure upload plugin
+      configCtx.update(uploadConfig.key, (prev) => ({
+         ...prev,
+         uploader: async (files, _schema) => {
+           const images: any[] = []
+           
+           for (let i = 0; i < files.length; i++) {
+             const file = files.item(i)
+             if (!file) continue
+             
+             // Placeholder: return a fake URL for now as we don't have a backend storage yet
+             console.log('[Upload] Mock upload for:', file.name)
+             
+             images.push({
+               url: 'https://placehold.co/600x400?text=' + encodeURIComponent(file.name),
+               alt: file.name,
+             })
+           }
+           
+           return images
+         }
+      }))
+    })
+    .config(nord)
+    .use(commonmark)
+    .use(remarkFrontmatterPlugin)
+    .use(frontmatterNode)
+    .use(frontmatterView)
+    .use(frontmatterSyntax)
+    .use(frontmatterValidation)
+    .use(createCompletionPlugin(onCompletionUpdate, onCompletionSelect))
+    .use(executableCodeView)
+    .use($remark('remark-fenced-div', () => remarkFencedDivPlugin as any))
+    .use($remark('remark-directive', () => remarkDirective))
+    .use(fencedDivNode)
+    .use(calloutNode)
+    .use(calloutInputRule)
+    .use(calloutView)
+    .use(commentPlugin)
+    .use(commentNode)
+    .use(commentInputRule)
+    .use(commentView)
+    .use(gfm)
+    .use(history)
+    .use(listener)
+    .use(math)
+    .config((ctx) => {
+      ctx.set(prismConfig.key, {
+        configureRefractor: (refractor) => {
+          refractor.register(r)
+          refractor.register(python)
+          refractor.register(julia)
+          refractor.register(bash)
+          refractor.register(sql)
+          refractor.register(yaml)
+          refractor.register(toml)
+          refractor.register(javascript)
+          refractor.register(typescript)
+          refractor.register(css)
+          refractor.register(markdown)
+          refractor.register(json)
+          refractor.register(java)
+          refractor.register(c)
+          refractor.register(cpp)
+          refractor.register(go)
+          refractor.register(rust)
+          refractor.register(lua)
+          refractor.register(ruby)
+          refractor.register(latex)
+          refractor.register(mermaid) 
+          refractor.register(dot)
+          refractor.register(scala)
+          
+          refractor.alias({
+            'r': ['{r}'],
+            'python': ['{python}', '{py}'],
+            'julia': ['{julia}', '{jl}'],
+            'bash': ['{bash}', '{sh}'],
+            'sql': ['{sql}'],
+            'yaml': ['{yaml}'],
+            'toml': ['{toml}'],
+            'javascript': ['{ojs}', '{javascript}', '{js}'],
+            'typescript': ['{typescript}', '{ts}', 'ts'],
+            'css': ['{css}'],
+            'markdown': ['{markdown}', '{md}'],
+            'json': ['{json}'],
+            'java': ['{java}'],
+            'c': ['{c}'],
+            'cpp': ['{cpp}', '{c++}'],
+            'go': ['{go}'],
+            'rust': ['{rust}'],
+            'lua': ['{lua}'],
+            'ruby': ['{ruby}', '{rb}']
+          })
+        }
+      })
+    })
+    .use(prism)
+    .use(emoji)
+    .use(indent)
+    .use(upload)
+    .use(escapePlugin)
+    .use(remarkCitationPlugin)
+    .use(remarkSimpleCitePlugin)
+    .use(citationNode)
+    .use(citationView)
+    .use(citationTriggerPlugin)
+
+    // Add collaboration plugins (conditionally enabled via useCollab)
+    getCollabPlugins().forEach(plugin => editor.use(plugin))
+    
+    return editor
 })
 
 // Capture initial value ONCE to prevent useEditor from being reactive
@@ -164,141 +318,12 @@ const commentView = $view(commentNode.node, () => nodeViewFactory({
     stopEvent: () => true, // Allow all events to pass through to the Vue component
 }))
 
-// Editor instance
-const { get, loading } = useEditor((root) => {
-  const editor = Editor.make()
-    .config((configCtx) => {
-      configCtx.set(rootCtx, root)
-      // Use captured initial value, NOT reactive props
-      configCtx.set(defaultValueCtx, initialValue)
-      
-      // Configure editor view options
-      configCtx.update(editorViewOptionsCtx, (prev) => ({
-        ...prev,
-        editable: () => props.editable ?? true,
-      }))
-      
-      // Setup listener for v-model
-      configCtx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
-        // Check if update is echo
-        if (markdown !== prevMarkdown) {
-          localValue.value = markdown
-          // Convert back to Quarto syntax before emitting
-          emit('update:modelValue', convertMilkdownToQuarto(markdown))
-        }
-      })
+// Create citation view
+const citationView = $view(citationNode.node, () => nodeViewFactory({
+    component: CitationNode as unknown as VueNodeViewComponent
+}))
 
-      // Configure upload plugin
-      configCtx.update(uploadConfig.key, (prev) => ({
-         ...prev,
-         uploader: async (files, _schema) => {
-           const images: any[] = []
-           
-           for (let i = 0; i < files.length; i++) {
-             const file = files.item(i)
-             if (!file) continue
-             
-             // Placeholder: return a fake URL for now as we don't have a backend storage yet
-             // In a real app, this would upload to R2/S3 and return the URL
-             console.log('[Upload] Mock upload for:', file.name)
-             
-             images.push({
-               url: 'https://placehold.co/600x400?text=' + encodeURIComponent(file.name),
-               alt: file.name,
-             })
-           }
-           
-           return images
-         }
-      }))
-    })
-    .config(nord)
-    .use(commonmark)
-    .use(remarkFrontmatterPlugin)
-    .use(frontmatterNode)
-    .use(frontmatterView)
-    .use(frontmatterSyntax)
-    .use(frontmatterValidation)
-    .use(createCompletionPlugin(onCompletionUpdate, onCompletionSelect))
-    .use(executableCodeView)
-    .use($remark('remark-fenced-div', () => remarkFencedDivPlugin as any))
-    .use($remark('remark-directive', () => remarkDirective))
-    .use(fencedDivNode)
-    .use(calloutNode)
-    .use(calloutInputRule)
-    .use(calloutView)
-    .use(commentPlugin)
-    .use(commentNode)
-    .use(commentInputRule)
-    .use(commentView)
-    .use(gfm)
-    .use(history)
-    .use(listener)
-    .use(math)
-    .config((ctx) => {
-      ctx.set(prismConfig.key, {
-        configureRefractor: (refractor) => {
-          refractor.register(r)
-          refractor.register(python)
-          refractor.register(julia)
-          refractor.register(bash)
-          refractor.register(sql)
-          refractor.register(yaml)
-          refractor.register(toml)
-          refractor.register(javascript)
-          refractor.register(typescript)
-          refractor.register(css)
-          refractor.register(markdown)
-          refractor.register(json)
-          refractor.register(java)
-          refractor.register(c)
-          refractor.register(cpp)
-          refractor.register(go)
-          refractor.register(rust)
-          refractor.register(lua)
-          refractor.register(ruby)
-          refractor.register(latex)
-          // mermaid might conflict if not handled carefully, but registering it for Prism is usually safe
-          refractor.register(mermaid) 
-          refractor.register(dot)
-          refractor.register(scala)
-          
-          // Map Quarto style "{r}" to "r"
-          refractor.alias({
-            'r': ['{r}'],
-            'python': ['{python}', '{py}'],
-            'julia': ['{julia}', '{jl}'],
-            'bash': ['{bash}', '{sh}'],
-            'sql': ['{sql}'],
-            'yaml': ['{yaml}'],
-            'toml': ['{toml}'],
-            'javascript': ['{ojs}', '{javascript}', '{js}'], // Map ojs to js
-            'typescript': ['{typescript}', '{ts}', 'ts'],
-            'css': ['{css}'],
-            'markdown': ['{markdown}', '{md}'],
-            'json': ['{json}'],
-            'java': ['{java}'],
-            'c': ['{c}'],
-            'cpp': ['{cpp}', '{c++}'],
-            'go': ['{go}'],
-            'rust': ['{rust}'],
-            'lua': ['{lua}'],
-            'ruby': ['{ruby}', '{rb}']
-          })
-        }
-      })
-    })
-    .use(prism)
-    .use(emoji)
-    .use(indent)
-    .use(upload)
-    .use(escapePlugin)
 
-    // Add collaboration plugins (conditionally enabled via useCollab)
-    getCollabPlugins().forEach(plugin => editor.use(plugin))
-    
-    return editor
-})
 
 // Initialize collaboration logic (conditionally enabled via useCollab)
 // This handles Yjs doc, PartyKit connection, and awareness
@@ -306,8 +331,25 @@ useCollab(props.roomId, props.userEmail, get, initialValue, () => props.enableCo
 
 // Expose the editor instance getter
 defineExpose({
-  getEditor: get
+  getEditor: get,
+  insertCitation
 })
+
+// Helper to insert citation
+function insertCitation(key: string) {
+    const editorInstance = get()
+    if (!editorInstance) return
+
+    editorInstance.action(ctx => {
+        const view = ctx.get(editorViewCtx)
+        const { state, dispatch } = view
+        const { tr } = state
+        // Insert key and closing bracket
+        // We assume cursor is after '[@'
+        dispatch(tr.insertText(`${key}]`))
+        view.focus()
+    })
+}
 
 // Track unmount state to prevent watcher firing during destruction
 const isUnmounted = ref(false)

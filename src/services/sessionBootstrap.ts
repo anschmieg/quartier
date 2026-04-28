@@ -22,6 +22,10 @@ interface ShareJoinResponse {
   permission: 'edit' | 'view'
 }
 
+interface ErrorResponse {
+  error?: string
+}
+
 function deriveWorkspace(paths: string[]): { workspace: WorkspaceRef | null; initialDocumentPath: string | null } {
   const firstPath = paths[0]?.replace(/\/\*$/, '') ?? ''
   const parts = firstPath.split('/')
@@ -57,7 +61,7 @@ export class SessionBootstrapService {
   async preview(token: string): Promise<SharePreviewResponse> {
     const res = await fetch(`/share/${token}`, { credentials: 'include' })
     if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: 'Invalid link' }))
+      const data = await res.json().catch(() => ({ error: 'Invalid link' })) as ErrorResponse
       throw new Error(data.error || 'Invalid link')
     }
     return await res.json()
@@ -69,7 +73,7 @@ export class SessionBootstrapService {
       credentials: 'include',
     })
     if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: 'Failed to join session' }))
+      const data = await res.json().catch(() => ({ error: 'Failed to join session' })) as ErrorResponse
       throw new Error(data.error || 'Failed to join session')
     }
     const data = await res.json() as ShareJoinResponse

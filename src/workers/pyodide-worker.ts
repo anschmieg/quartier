@@ -116,10 +116,11 @@ self.onmessage = async (event: MessageEvent) => {
             }
             break
 
-        case 'execute':
+        case 'execute': {
             const response = await executeCode(data as ExecuteRequest)
             self.postMessage(response)
             break
+        }
 
         case 'interrupt':
             // Pyodide doesn't support true interrupts, but we can restart

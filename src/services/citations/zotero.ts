@@ -1,6 +1,11 @@
 import type { CitationItem, CitationSearchResult } from './types'
 import { useStorage } from '@vueuse/core'
 
+interface ZoteroKeyResponse {
+    userID?: number | string
+    username?: string
+}
+
 // Persist auth
 export const zoteroConfig = useStorage('quartier:zotero-config', {
     apiKey: '',
@@ -37,7 +42,7 @@ export class ZoteroService {
             }
             
             const total = parseInt(response.headers.get('Total-Results') || '0', 10)
-            const data = await response.json()
+            const data = await response.json() as unknown
             
             if (!Array.isArray(data)) {
                 console.warn('Zotero API returned non-array:', data)
@@ -84,7 +89,7 @@ export class ZoteroService {
                 throw new Error('Invalid API Key')
             }
             
-            const data = await response.json()
+            const data = await response.json() as ZoteroKeyResponse
             if (!data.userID) {
                 throw new Error('No User ID associated with this key')
             }

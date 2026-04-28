@@ -4,7 +4,8 @@ import { Plugin, PluginKey } from '@milkdown/prose/state'
 import { Decoration, DecorationSet } from '@milkdown/prose/view'
 import { Node } from '@milkdown/prose/model'
 import { refractor } from 'refractor/core'
-// @ts-ignore - types for refractor langs are often missing
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore types for refractor langs are often missing
 import yaml from 'refractor/yaml'
 import { frontmatterSchemaName } from './index'
 

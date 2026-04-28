@@ -81,6 +81,12 @@ author: "Jane Doe"
             expect(result).toBe(input)
         })
 
+        it('preserves Quarto executable code cell options', () => {
+            const input = '```{python}\n#| label: fig-example\n#| fig-cap: "Example figure"\n#| echo: false\n\nprint("hello")\n```'
+            const result = testRoundtrip(input)
+            expect(result.quarto).toBe(input)
+        })
+
         it('preserves horizontal rules', () => {
             const input = `# Section 1
 

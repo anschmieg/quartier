@@ -99,7 +99,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { historyService, type RecentProject } from '@/services/history'
 import { workspaceProviderRegistry } from '@/core/workspace/providerRegistry'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -114,7 +113,6 @@ import LocalProjectSelector from '@/components/layout/LocalProjectSelector.vue'
 import RepoSelector from '@/components/github/RepoSelector.vue'
 import CloudProjectSelector from '@/components/layout/CloudProjectSelector.vue'
 
-const router = useRouter()
 const workspaceNavigation = useWorkspaceNavigation()
 const workspaceSession = useWorkspaceSession()
 const recentProjects = computed(() => historyService.getProjects())

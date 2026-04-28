@@ -1,4 +1,4 @@
-import { createStorage } from 'unstorage'
+import { createStorage, type StorageValue } from 'unstorage'
 import localStorageDriver from 'unstorage/drivers/localstorage'
 import type { SessionRef, WorkspaceRef } from '@/core/workspace/types'
 
@@ -108,7 +108,7 @@ export class AppStateRepository {
     return (raw as T | null) ?? null
   }
 
-  async setCredential(scope: string, value: unknown): Promise<void> {
+  async setCredential(scope: string, value: StorageValue): Promise<void> {
     await storage.setItem(`${CRED_PREFIX}${scope}`, value)
   }
 

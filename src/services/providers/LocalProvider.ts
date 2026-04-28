@@ -13,7 +13,8 @@ import type {
   WriteResult,
 } from '@/core/workspace/types'
 import { createStorage } from 'unstorage'
-// @ts-ignore
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore unstorage's indexeddb driver export shape is not typed consistently.
 import indexedDbDriver from 'unstorage/drivers/indexedb'
 import { get, set, keys as idbKeys, del } from 'idb-keyval'
 

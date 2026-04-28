@@ -3,7 +3,8 @@ import { collab, collabServiceCtx } from '@milkdown/plugin-collab'
 import * as Y from 'yjs'
 import YPartyKitProvider from 'y-partykit/provider'
 import { updateAwarenessState, clearAwarenessState } from '@/composables/useAwareness'
-// @ts-ignore
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore y-partykit/provider currently interferes with Vue's typed export resolution.
 import { watchEffect } from 'vue'
 import { useWorkspaceSession } from './useWorkspaceSession'
 

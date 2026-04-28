@@ -146,6 +146,7 @@ const sharePath = computed(() => {
       }
       return repoName.value + '/*' // If file at root, folder = repo
     case 'repo': return repoName.value + '/*'
+    default: return repoName.value + '/*'
   }
 })
 

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LandingPage from '@/components/landing/LandingPage.vue'
 import Dashboard from '@/components/dashboard/Dashboard.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import OfflineQuartoWriter from '@/components/writer/OfflineQuartoWriter.vue'
 import { historyService } from '@/services/history'
 import { initializeAuthContext, useAuthContextState } from '@/services/authContext'
 
@@ -26,6 +27,12 @@ const routes = [
         path: '/dashboard',
         name: 'dashboard',
         component: Dashboard,
+        meta: { public: true }
+    },
+    {
+        path: '/writer',
+        name: 'writer',
+        component: OfflineQuartoWriter,
         meta: { public: true }
     },
     {

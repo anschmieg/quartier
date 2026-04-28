@@ -32,7 +32,7 @@
         :selected-file="currentFile"
         :is-dirty="isDirty"
         :is-host="isHost"
-        :allowed-paths="allowedPaths"
+        :allowed-paths="[...allowedPaths]"
         @open-source-selector="handleOpenSourceSelector"
         @select-file="selectFile"
         @open-shared="openSharedSessions"
@@ -134,7 +134,7 @@
     <!-- Modals -->
     <CommandPalette 
       ref="commandPaletteRef" 
-      :files="recentFiles" 
+      :files="[...recentFiles]" 
       @select="selectFile" 
       @action="handlePaletteAction"
     />
@@ -316,7 +316,8 @@ const allowedPaths = computed(() => {
 // This must be a function so the toolbar can call it lazily
 const getEditorInstance = () => {
   // EditorWrapper exposes getMilkdownEditor
-  // @ts-ignore - accessing exposed method
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore accessing exposed method
   return editorWrapperRef.value?.getMilkdownEditor?.() ?? undefined
 }
 
@@ -545,11 +546,12 @@ function handlePaletteAction(action: string) {
     case 'toggle-right-sidebar':
       showRightSidebar.value = !showRightSidebar.value
       break
-    case 'toggle-mode':
+    case 'toggle-mode': {
       const newMode = editorMode.value === 'visual' ? 'source' : 'visual'
       editorMode.value = newMode
       userPreferredMode.value = newMode
       break
+    }
     case 'manage-source':
       if (isHost.value) handleOpenSourceSelector(activeProviderId.value); break
     case 'new-file':

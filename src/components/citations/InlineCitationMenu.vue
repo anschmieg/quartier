@@ -73,7 +73,7 @@
        
        <div v-else-if="items.length === 0" class="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
           <p class="text-sm">No results found</p>
-          <p v-if="currentTab === 'library' && !isZoteroAuth" class="text-xs mt-2 text-red-400">
+          <p v-if="currentTab === 'zotero' && !isZoteroAuth" class="text-xs mt-2 text-red-400">
              Zotero not configured.
           </p>
        </div>
@@ -101,7 +101,8 @@
     <!-- Footer -->
     <div class="border-t bg-muted/30 p-1 px-2 text-[10px] text-muted-foreground flex justify-between items-center">
        <span>Enter to insert</span>
-       <span v-if="currentTab === 'library'">Via {{ isZoteroAuth ? 'Zotero' : 'Crossref' }}</span>
+       <span v-if="currentTab === 'zotero'">Via Zotero</span>
+       <span v-else-if="currentTab === 'crossref'">Via Crossref</span>
     </div>
   </div>
 </template>
@@ -146,7 +147,7 @@ const saveZoteroConfig = async () => {
     validationError.value = ''
     
     try {
-        const { userId, username } = await zoteroService.validateKey(configForm.value.apiKey)
+        const { userId } = await zoteroService.validateKey(configForm.value.apiKey)
         
         // Save
         zoteroConfig.value.apiKey = configForm.value.apiKey
@@ -164,7 +165,9 @@ const loading = ref(false)
 const items = ref<CitationItem[]>([])
 const selectedIndex = ref(0)
 
-const tabs = [
+type CitationTab = 'project' | 'crossref' | 'zotero'
+
+const tabs: Array<{ id: CitationTab; label: string }> = [
     { id: 'project', label: 'Project' },
     { id: 'crossref', label: 'Crossref' },
     { id: 'zotero', label: 'Zotero' }
@@ -199,9 +202,8 @@ const moveSelection = (delta: number) => {
 }
 
 const selectCurrent = () => {
-    if (items.value[selectedIndex.value]) {
-        selectItem(items.value[selectedIndex.value])
-    }
+    const item = items.value[selectedIndex.value]
+    if (item) selectItem(item)
 }
 
 const selectItem = (item: CitationItem) => {
