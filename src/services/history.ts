@@ -1,68 +1,65 @@
-import { useStorage } from '@vueuse/core'
+import { ref } from 'vue'
+import { appStateRepository, type RecentWorkspace } from '@/core/state/AppStateRepository'
 
 export interface RecentProject {
-  id: string // composite: providerId:projectId
+  id: string
   providerId: string
   projectId: string
   name: string
   lastAccessed: number
-  path?: string // context specific (e.g. file path)
+  path?: string
 }
 
 class ProjectHistoryService {
-  // Persist to localStorage
-  private recentProjects = useStorage<RecentProject[]>('quartier:project-history', [])
+  private recentProjects = ref<RecentProject[]>([])
+  private initialized = false
 
-  /**
-   * Add or update a project in the history
-   */
-  addProject(providerId: string, projectId: string, name?: string) {
+  async initialize() {
+    if (this.initialized) return
+    const state = await appStateRepository.load()
+    this.recentProjects.value = state.recentWorkspaces.map(this.fromRecentWorkspace)
+    this.initialized = true
+  }
+
+  async addProject(providerId: string, projectId: string, name?: string) {
+    await this.initialize()
+    const projectName = name || projectId.split('/').pop() || projectId
     const id = `${providerId}:${projectId}`
     const now = Date.now()
-    
-    // Find existing
-    const existingIndex = this.recentProjects.value.findIndex(p => p.id === id)
-    
-    // Default name if not provided
-    const projectName = name || projectId.split('/').pop() || projectId
-    
-    if (existingIndex >= 0) {
-      // Move to top and update timestamp
-      const existing = this.recentProjects.value[existingIndex]
-      if (!existing) return // Should not happen given existingIndex check
-      
-      this.recentProjects.value.splice(existingIndex, 1)
-      this.recentProjects.value.unshift({
-        id: existing.id,
-        providerId: existing.providerId,
-        projectId: existing.projectId,
-        path: existing.path,
-        name: projectName,
-        lastAccessed: now
-      })
-    } else {
-      // Add new
-      this.recentProjects.value.unshift({
-        id,
-        providerId,
-        projectId,
-        name: projectName,
-        lastAccessed: now
-      })
-    }
-    
-    // Limit to 20 items
-    if (this.recentProjects.value.length > 20) {
-      this.recentProjects.value = this.recentProjects.value.slice(0, 20)
-    }
+
+    const next = [
+      { id, providerId, projectId, name: projectName, lastAccessed: now },
+      ...this.recentProjects.value.filter((project) => project.id !== id),
+    ].slice(0, 20)
+
+    this.recentProjects.value = next
+    await appStateRepository.patch({
+      recentWorkspaces: next.map((project) => ({
+        providerId: project.providerId,
+        workspaceId: project.projectId,
+        displayName: project.name,
+        lastAccessed: project.lastAccessed,
+      })),
+    })
   }
 
   getProjects(): RecentProject[] {
     return this.recentProjects.value
   }
 
-  clear() {
+  async clear() {
     this.recentProjects.value = []
+    await appStateRepository.patch({ recentWorkspaces: [] })
+  }
+
+  private fromRecentWorkspace(workspace: RecentWorkspace): RecentProject {
+    return {
+      id: `${workspace.providerId}:${workspace.workspaceId}`,
+      providerId: workspace.providerId,
+      projectId: workspace.workspaceId,
+      name: workspace.displayName,
+      lastAccessed: workspace.lastAccessed,
+    }
   }
 }
 

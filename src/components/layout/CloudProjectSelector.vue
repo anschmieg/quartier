@@ -115,11 +115,11 @@ import { ref, watch } from 'vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Loader2, Cloud, Folder, ArrowLeft, ChevronRight } from 'lucide-vue-next'
-import type { StorageProvider } from '@/types/providers'
+import type { WorkspaceProvider } from '@/types/providers'
 
 const props = defineProps<{
   open: boolean
-  provider: StorageProvider | null
+  provider: WorkspaceProvider | null
 }>()
 
 const emit = defineEmits<{
@@ -156,7 +156,8 @@ async function checkAuth() {
     error.value = null
     
     try {
-        isAuthenticated.value = await props.provider.isAuthenticated?.() ?? false
+        const authState = await props.provider.getAuthState()
+        isAuthenticated.value = authState.status === 'authenticated'
         if (isAuthenticated.value) {
             await loadProjects()
         }
@@ -209,13 +210,22 @@ async function handleLogout() {
 }
 
 async function loadProjects() {
-    if (!props.provider?.listProjects) return
+    if (!props.provider) return
     loading.value = true
     try {
-        // Pass currentFolderId (undefined = root)
-        // Need to cast to any because generic interface might not contain this param strictly defined yet
-        // but we know GoogleDriveProvider supports it.
-        projects.value = await (props.provider.listProjects as any)(currentFolderId.value)
+        const workspaces = currentFolderId.value
+          ? await props.provider.listEntries(await props.provider.openWorkspace({
+              providerId: props.provider.id,
+              workspaceId: currentFolderId.value,
+              displayName: currentFolderName.value,
+            }), '')
+          : await props.provider.listWorkspaces()
+        projects.value = workspaces
+          .filter((workspace: any) => workspace.type ? workspace.type === 'folder' : true)
+          .map((workspace: any) => ({
+            id: workspace.workspaceId || workspace.path,
+            name: workspace.displayName || workspace.name,
+          }))
     } catch (e) {
         console.error('Failed to list projects:', e)
         error.value = 'Failed to list folders'

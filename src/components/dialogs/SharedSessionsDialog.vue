@@ -133,6 +133,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { 
   Dialog, 
   DialogContent, 
@@ -145,6 +146,7 @@ import { Button } from '@/components/ui/button'
 import { Share2, FileText, FolderOpen, FolderGit2, Link, Trash2, Copy, Check, X } from 'lucide-vue-next'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { EmptyState } from '@/components/ui/empty-state'
+import { useWorkspaceSession } from '@/composables/useWorkspaceSession'
 
 interface SharedSession {
   id: string
@@ -170,6 +172,8 @@ const expandedSession = ref<string | null>(null)
 const shareLinks = ref<ShareLink[]>([])
 const copiedToken = ref<string | null>(null)
 const sessionToDelete = ref<SharedSession | null>(null)
+const router = useRouter()
+const workspaceSession = useWorkspaceSession()
 
 function isRepo(path: string | undefined): boolean {
   if (!path) return false
@@ -271,29 +275,34 @@ async function deleteSession() {
   }
 }
 
-function openSession(session: SharedSession) {
+async function openSession(session: SharedSession) {
   if (!session.paths || session.paths.length === 0) return
   
-  // Set repo and file in localStorage
   const firstPath = session.paths[0]?.replace(/\/\*$/, '') ?? ''
   const parts = firstPath.split('/')
   
   if (parts.length >= 2) {
-    localStorage.setItem('quartier:repo', `${parts[0]}/${parts[1]}`)
-    
-    // If it's a specific file, open it
-    if (parts.length > 2 && (parts[parts.length - 1] ?? '').includes('.')) {
-      localStorage.setItem('quartier:currentFile', JSON.stringify(parts.slice(2).join('/')))
-    }
+    await workspaceSession.bootstrapSession({
+      workspace: {
+        providerId: 'github',
+        workspaceId: `${parts[0]}/${parts[1]}`,
+        displayName: `${parts[0]}/${parts[1]}`,
+      },
+      initialDocumentPath: parts.length > 2 && (parts[parts.length - 1] ?? '').includes('.')
+        ? parts.slice(2).join('/')
+        : null,
+      session: {
+        sessionId: session.id,
+        roomId: session.id,
+        role: 'guest',
+        allowedPaths: session.paths,
+        owner: session.owner,
+        members: session.members || [],
+      },
+    })
   }
-  
-  // Store active session
-  localStorage.setItem('quartier:activeSession', JSON.stringify(session))
-  
   isOpen.value = false
-  
-  // Reload to apply changes
-  window.location.reload()
+  await router.push('/app')
 }
 
 function open(newMode: 'shared-with-me' | 'shared-by-me' = 'shared-with-me') {

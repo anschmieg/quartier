@@ -12,6 +12,19 @@
 import { getCsrfToken } from '@/utils/csrf'
 
 class ProxyGitHubService {
+  private buildSessionParam(sessionId?: string): string {
+    return sessionId ? `&session=${encodeURIComponent(sessionId)}` : ''
+  }
+
+  private decodeContent(base64Content: string): string {
+    const normalized = base64Content.replace(/\n/g, '')
+    const binaryString = atob(normalized)
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    return new TextDecoder('utf-8').decode(bytes)
+  }
 
   async listRepos() {
     console.log('[ProxyGitHubService] Fetching repos...')
@@ -38,26 +51,8 @@ class ProxyGitHubService {
     }
   }
 
-  /**
-   * Get active session ID from localStorage if available
-   */
-  private getSessionParam(): string {
-    try {
-      const activeSession = localStorage.getItem('quartier:activeSession')
-      if (activeSession) {
-        const session = JSON.parse(activeSession)
-        if (session.id) {
-          return `&session=${encodeURIComponent(session.id)}`
-        }
-      }
-    } catch (e) {
-      // Ignore parse errors
-    }
-    return ''
-  }
-
-  async loadRepo(owner: string, repo: string, path: string = '') {
-    const sessionParam = this.getSessionParam()
+  async loadRepo(owner: string, repo: string, path: string = '', options?: { sessionId?: string }) {
+    const sessionParam = this.buildSessionParam(options?.sessionId)
     const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}${sessionParam}`
     const response = await fetch(url)
     if (!response.ok) {
@@ -66,8 +61,8 @@ class ProxyGitHubService {
     return await response.json()
   }
 
-  async readFile(owner: string, repo: string, path: string): Promise<string> {
-    const sessionParam = this.getSessionParam()
+  async readDocument(owner: string, repo: string, path: string, options?: { sessionId?: string }): Promise<{ content: string; sha: string | null }> {
+    const sessionParam = this.buildSessionParam(options?.sessionId)
     const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}${sessionParam}`
     console.log('[ProxyGitHubService] Reading file:', { owner, repo, path })
 
@@ -91,22 +86,22 @@ class ProxyGitHubService {
         throw new Error('No content field in response')
       }
 
-      // Decode base64 content with proper UTF-8 handling
-      const base64Content = data.content.replace(/\n/g, '') // Remove newlines from base64
-      // atob() returns Latin-1, need to convert to UTF-8
-      const binaryString = atob(base64Content)
-      const bytes = new Uint8Array(binaryString.length)
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i)
-      }
-      const decoded = new TextDecoder('utf-8').decode(bytes)
+      const decoded = this.decodeContent(data.content)
 
       console.log('[ProxyGitHubService] File loaded, size:', decoded.length)
-      return decoded
+      return {
+        content: decoded,
+        sha: data.sha || null,
+      }
     } catch (e) {
       console.error('[ProxyGitHubService] readFile error:', e)
       throw e
     }
+  }
+
+  async readFile(owner: string, repo: string, path: string, options?: { sessionId?: string }): Promise<string> {
+    const result = await this.readDocument(owner, repo, path, options)
+    return result.content
   }
 
   async commitChanges(
@@ -170,9 +165,9 @@ class ProxyGitHubService {
   /**
    * Get file SHA (needed for delete/rename)
    */
-  async getFileSha(owner: string, repo: string, path: string): Promise<string | null> {
+  async getFileSha(owner: string, repo: string, path: string, options?: { sessionId?: string }): Promise<string | null> {
     try {
-      const sessionParam = this.getSessionParam()
+      const sessionParam = this.buildSessionParam(options?.sessionId)
       const url = `/api/github/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}${sessionParam}`
       const response = await fetch(url)
       if (!response.ok) return null
@@ -297,4 +292,3 @@ class ProxyGitHubService {
 // For now, let's enable real service even in DEV if the user wants real flow
 // But the user needs the proxy to work.
 export const githubService = new ProxyGitHubService()
-

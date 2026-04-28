@@ -1,82 +1,32 @@
-import { ref, computed, onMounted } from 'vue'
-
-/**
- * GitHub user info stored in cookie
- */
-export interface GitHubUser {
-    login: string
-    name?: string
-    avatar_url?: string
-}
-
-/**
- * Parse a cookie value by name
- */
-function getCookie(name: string): string | null {
-    const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`))
-    return match?.[2] ? decodeURIComponent(match[2]) : null
-}
+import { computed, onMounted } from 'vue'
+import { initializeAuthContext, refreshGuestAuthContext, useAuthContextState } from '@/services/authContext'
 
 /**
  * Composable for managing GitHub authentication state
  */
 export function useAuth() {
-    const user = ref<GitHubUser | null>(null)
-    const accessUser = ref<{ email: string } | null>(null)
-    const isLoading = ref(true)
+    const state = useAuthContextState()
 
-    const isAuthenticated = computed(() => user.value !== null)
-    const isAccessAuthenticated = computed(() => accessUser.value !== null)
+    const isLoading = computed(() => state.status === 'loading' || state.status === 'idle')
+    const user = computed(() => state.hostUser ? ({
+        login: state.hostUser.login,
+        name: state.hostUser.name,
+        avatar_url: state.hostUser.avatarUrl,
+    }) : null)
+    const accessUser = computed(() => state.guestUser ? ({
+        email: state.guestUser.email,
+        name: state.guestUser.name,
+    }) : null)
+    const isAuthenticated = computed(() => state.authMode === 'host-authenticated')
+    const isAccessAuthenticated = computed(() => state.authMode === 'guest-authenticated' || state.authMode === 'host-authenticated')
     const isHost = computed(() => isAuthenticated.value)
     const isGuest = computed(() => !isAuthenticated.value)
-
-    /**
-     * Load user from cookie on mount
-     */
-    function loadUser() {
-        try {
-            const userCookie = getCookie('gh_user')
-            if (userCookie) {
-                user.value = JSON.parse(userCookie) as GitHubUser
-            } else {
-                user.value = null
-            }
-        } catch (error) {
-            console.error('Failed to parse user cookie:', error)
-            user.value = null
-        }
-    }
-
-    /**
-     * Check Cloudflare Access identity
-     */
-    async function checkAccessAuth() {
-        try {
-            const res = await fetch('/api/auth/me', { credentials: 'include' })
-            if (res.ok) {
-                const data = await res.json() as any
-                if (data.user?.email) {
-                    accessUser.value = { email: data.user.email }
-                } else if (data.email) {
-                    // Fallback in case API changes
-                    accessUser.value = { email: data.email }
-                }
-            }
-        } catch (e) {
-            console.error('Failed to check access auth:', e)
-        }
-    }
 
     /**
      * Initialize auth state
      */
     async function init() {
-        isLoading.value = true
-        loadUser()
-        if (!user.value) {
-            await checkAccessAuth()
-        }
-        isLoading.value = false
+        await initializeAuthContext()
     }
 
     /**
@@ -103,8 +53,6 @@ export function useAuth() {
     async function logout() {
         try {
             await fetch('/api/oauth/logout', { method: 'POST' })
-            user.value = null
-            accessUser.value = null
             // Redirect to home or reload
             window.location.href = '/'
         } catch (error) {
@@ -127,7 +75,7 @@ export function useAuth() {
         isGuest,
         login,
         logout,
-        loadUser,
-        checkAccessAuth
+        loadUser: init,
+        checkAccessAuth: refreshGuestAuthContext
     }
 }

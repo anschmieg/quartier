@@ -1,5 +1,17 @@
-import type { StorageProvider, ProviderCapabilities } from '../../types/providers'
-import type { FileItem } from '../../types/files'
+import type {
+  CreateEntryInput,
+  CreateResult,
+  DocumentSnapshot,
+  ProviderAuthState,
+  ProviderCapabilities,
+  WorkspaceEntry,
+  WorkspaceHandle,
+  WorkspaceProvider,
+  WorkspaceRef,
+  WorkspaceSummary,
+  WriteDocumentOptions,
+  WriteResult,
+} from '@/core/workspace/types'
 import { createStorage } from 'unstorage'
 // @ts-ignore
 import indexedDbDriver from 'unstorage/drivers/indexedb'
@@ -12,33 +24,33 @@ export interface LocalProjectMetadata {
   lastOpened: number
 }
 
-export class LocalProvider implements StorageProvider {
+const capabilities: ProviderCapabilities = {
+  supportsCommit: false,
+  supportsRealtime: false,
+  supportsShare: false,
+  supportsRename: true,
+  supportsFolders: true,
+  supportsBinaryRead: true,
+  supportsExecution: false,
+  supportsLanguageService: true,
+}
+
+export class LocalProvider implements WorkspaceProvider {
   id = 'local'
   name = 'Local'
   icon = 'monitor'
-  capabilities: ProviderCapabilities = {
-    canCommit: false,
-    canShare: false,
-    canDelete: true,
-    canRename: true,
-    isOffline: true,
-    hasSessions: false
-  }
 
-  // Browser-based storage
   private browserStorage = createStorage({
-    driver: (typeof indexedDbDriver === 'function' 
-      ? indexedDbDriver 
-      : (indexedDbDriver as any).default)({ base: 'quartier:local:' })
+    driver: (typeof indexedDbDriver === 'function'
+      ? indexedDbDriver
+      : (indexedDbDriver as any).default)({ base: 'quartier:local:' }),
   })
 
-  // Disk handles (Map project ID to handle)
   private diskHandles = new Map<string, FileSystemDirectoryHandle>()
   private initialized = false
 
   private async initialize() {
     if (this.initialized) return
-    // Load persisted disk handles from idb-keyval
     const keys = await idbKeys()
     for (const key of keys) {
       if (typeof key === 'string' && key.startsWith('quartier:handle:')) {
@@ -53,94 +65,175 @@ export class LocalProvider implements StorageProvider {
   }
 
   async listProjects(): Promise<LocalProjectMetadata[]> {
+    const workspaces = await this.listWorkspaces()
+    return workspaces.map((workspace) => ({
+      id: workspace.workspaceId,
+      name: workspace.displayName,
+      type: workspace.workspaceId.startsWith('disk:') ? 'disk' : 'browser',
+      lastOpened: Date.now(),
+    }))
+  }
+
+  async listWorkspaces(): Promise<WorkspaceSummary[]> {
     await this.initialize()
-    
-    // 1. Get browser projects (namespaces)
-    const bKeys = await this.browserStorage.getKeys()
-    const browserProjects: LocalProjectMetadata[] = bKeys
-      .filter(k => k.endsWith(':.quartier'))
-      .map(k => {
-          const name = k.split(':')[0] || 'Unknown'
-          return {
-            id: `browser:${name}`,
-            name: name,
-            type: 'browser',
-            lastOpened: Date.now()
-          }
+    const browserKeys = await this.browserStorage.getKeys()
+    const browserProjects = browserKeys
+      .filter((key) => key.endsWith(':.quartier'))
+      .map((key) => {
+        const name = key.split(':')[0] || 'Unknown'
+        return {
+          providerId: this.id,
+          workspaceId: `browser:${name}`,
+          displayName: name,
+          metadata: { type: 'browser' },
+        } satisfies WorkspaceSummary
       })
 
-    // 2. Get active disk projects
-    const diskProjects: LocalProjectMetadata[] = Array.from(this.diskHandles.entries()).map(([id, handle]) => ({
-      id: id,
-      name: handle.name,
-      type: 'disk',
-      lastOpened: Date.now()
-    }))
+    const diskProjects = Array.from(this.diskHandles.entries()).map(([id, handle]) => ({
+      providerId: this.id,
+      workspaceId: id,
+      displayName: handle.name,
+      metadata: { type: 'disk' },
+    } satisfies WorkspaceSummary))
 
     return [...browserProjects, ...diskProjects]
   }
 
-  async listFiles(project: string, path: string = ''): Promise<FileItem[]> {
+  async openWorkspace(ref: WorkspaceRef): Promise<WorkspaceHandle> {
     await this.initialize()
-    if (project.startsWith('disk:')) {
-      return this.listDiskFiles(project, path)
+    return {
+      ...ref,
+      metadata: {
+        type: ref.workspaceId.startsWith('disk:') ? 'disk' : 'browser',
+      },
     }
-    return this.listBrowserFiles(project.replace('browser:', ''), path)
   }
 
-  async readFile(project: string, path: string): Promise<string> {
+  getCapabilities(_handle: WorkspaceHandle): ProviderCapabilities {
+    return capabilities
+  }
+
+  async listEntries(handle: WorkspaceHandle, path = ''): Promise<WorkspaceEntry[]> {
     await this.initialize()
-    if (project.startsWith('disk:')) {
-      return this.readDiskFile(project, path)
+    if (handle.workspaceId.startsWith('disk:')) {
+      return this.listDiskEntries(handle.workspaceId, path)
     }
-    return this.readBrowserFile(project.replace('browser:', ''), path)
+    return this.listBrowserEntries(handle.workspaceId.replace('browser:', ''), path)
   }
 
-  async writeFile(project: string, path: string, content: string, _message?: string): Promise<void> {
+  async readDocument(handle: WorkspaceHandle, path: string): Promise<DocumentSnapshot> {
     await this.initialize()
-    if (project.startsWith('disk:')) {
-      return this.writeDiskFile(project, path, content)
+    const content = handle.workspaceId.startsWith('disk:')
+      ? await this.readDiskFile(handle.workspaceId, path)
+      : await this.readBrowserFile(handle.workspaceId.replace('browser:', ''), path)
+    return {
+      content,
+      revision: `${Date.now()}`,
+      metadata: { path },
     }
-    return this.writeBrowserFile(project.replace('browser:', ''), path, content)
   }
 
-  async deleteFile(project: string, path: string): Promise<void> {
+  async writeDocument(handle: WorkspaceHandle, path: string, content: string, _options?: WriteDocumentOptions): Promise<WriteResult> {
     await this.initialize()
-    if (project.startsWith('disk:')) {
-      return this.deleteDiskFile(project, path)
+    if (handle.workspaceId.startsWith('disk:')) {
+      await this.writeDiskFile(handle.workspaceId, path, content)
+    } else {
+      await this.writeBrowserFile(handle.workspaceId.replace('browser:', ''), path, content)
     }
-    return this.deleteBrowserFile(project.replace('browser:', ''), path)
+    return {
+      revision: `${Date.now()}`,
+      savedAt: Date.now(),
+    }
   }
 
-  async renameFile(project: string, oldPath: string, newPath: string): Promise<void> {
-    const content = await this.readFile(project, oldPath)
-    await this.writeFile(project, newPath, content)
-    await this.deleteFile(project, oldPath)
+  async deleteEntry(handle: WorkspaceHandle, path: string): Promise<void> {
+    await this.initialize()
+    if (handle.workspaceId.startsWith('disk:')) {
+      await this.deleteDiskFile(handle.workspaceId, path)
+    } else {
+      await this.deleteBrowserFile(handle.workspaceId.replace('browser:', ''), path)
+    }
   }
 
-  // --- Browser Storage Helpers ---
+  async renameEntry(handle: WorkspaceHandle, from: string, to: string): Promise<void> {
+    const snapshot = await this.readDocument(handle, from)
+    await this.writeDocument(handle, to, snapshot.content)
+    await this.deleteEntry(handle, from)
+  }
 
-  private async listBrowserFiles(ns: string, path: string): Promise<FileItem[]> {
+  async createEntry(handle: WorkspaceHandle, input: CreateEntryInput): Promise<CreateResult> {
+    if (input.type === 'folder') {
+      if (handle.workspaceId.startsWith('disk:')) {
+        const root = await this.getHandle(handle.workspaceId)
+        await this.getDirHandle(root, input.path, { create: true })
+      } else {
+        await this.browserStorage.setItem(`${handle.workspaceId.replace('browser:', '')}:${input.path}/.quartier-folder`, '')
+      }
+      return { path: input.path }
+    }
+
+    const result = await this.writeDocument(handle, input.path, input.content || '')
+    return {
+      path: input.path,
+      revision: result.revision,
+    }
+  }
+
+  async getAuthState(): Promise<ProviderAuthState> {
+    return { status: 'authenticated', user: { label: 'Local Workspace' } }
+  }
+
+  async openDirectory(): Promise<string> {
+    if (!('showDirectoryPicker' in window)) throw new Error('File System Access API not supported')
+    const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' })
+    const id = `disk:${handle.name}`
+    this.diskHandles.set(id, handle)
+    await set(`quartier:handle:${id}`, handle)
+    return id
+  }
+
+  async removeProject(id: string) {
+    if (id.startsWith('disk:')) {
+      this.diskHandles.delete(id)
+      await del(`quartier:handle:${id}`)
+      return
+    }
+
+    const ns = id.replace('browser:', '')
+    const keys = await this.browserStorage.getKeys(`${ns}:`)
+    for (const key of keys) {
+      await this.browserStorage.removeItem(key)
+    }
+  }
+
+  async createBrowserProject(name: string): Promise<string> {
+    const id = `browser:${name}`
+    await this.browserStorage.setItem(`${name}:.quartier`, JSON.stringify({ created: Date.now() }))
+    return id
+  }
+
+  private async listBrowserEntries(ns: string, path: string): Promise<WorkspaceEntry[]> {
     const keys = await this.browserStorage.getKeys(ns ? `${ns}:` : '')
-    const items: FileItem[] = []
+    const items: WorkspaceEntry[] = []
     const seen = new Set<string>()
 
     for (const key of keys) {
       const relativePath = ns ? key.replace(`${ns}:`, '') : key
       if (path && !relativePath.startsWith(`${path}/`)) continue
-      
+
       const subPath = path ? relativePath.replace(`${path}/`, '') : relativePath
       const parts = subPath.split('/')
       const name = parts[0]
-      if (!name || name === '.quartier') continue
+      if (!name || name.startsWith('.quartier')) continue
 
-      const fullItemPath = path ? `${path}/${name}` : name
-      if (seen.has(fullItemPath)) continue
-      seen.add(fullItemPath)
-      
+      const fullPath = path ? `${path}/${name}` : name
+      if (seen.has(fullPath)) continue
+      seen.add(fullPath)
+
       items.push({
-        path: fullItemPath,
-        type: parts.length > 1 ? 'dir' : 'file'
+        path: fullPath,
+        name,
+        type: parts.length > 1 ? 'folder' : 'file',
       })
     }
     return items
@@ -159,16 +252,16 @@ export class LocalProvider implements StorageProvider {
     await this.browserStorage.removeItem(`${ns}:${path}`)
   }
 
-  // --- Disk Storage Helpers ---
-
-  private async listDiskFiles(project: string, _path: string): Promise<FileItem[]> {
+  private async listDiskEntries(project: string, path: string): Promise<WorkspaceEntry[]> {
     const handle = await this.getHandle(project)
-    const items: FileItem[] = []
-    for await (const entry of (handle as any).values()) {
-       items.push({
-         path: entry.name,
-         type: entry.kind === 'directory' ? 'dir' : 'file'
-       })
+    const dirHandle = path ? await this.getDirHandle(handle, path) : handle
+    const items: WorkspaceEntry[] = []
+    for await (const entry of (dirHandle as any).values()) {
+      items.push({
+        path: path ? `${path}/${entry.name}` : entry.name,
+        name: entry.name,
+        type: entry.kind === 'directory' ? 'folder' : 'file',
+      })
     }
     return items
   }
@@ -194,49 +287,18 @@ export class LocalProvider implements StorageProvider {
     const fileName = parts.pop()!
     const dirPath = parts.join('/')
     const dirHandle = dirPath ? await this.getDirHandle(handle, dirPath) : handle
-    await (dirHandle as any).removeEntry(fileName)
+    await (dirHandle as any).removeEntry(fileName, { recursive: true })
   }
 
   private async getHandle(id: string): Promise<FileSystemDirectoryHandle> {
     const handle = this.diskHandles.get(id)
     if (!handle) throw new Error('No folder handle found')
-    
-    // Check permission - this might trigger a prompt
     const status = await (handle as any).queryPermission({ mode: 'readwrite' })
     if (status !== 'granted') {
-      const newStatus = await (handle as any).requestPermission({ mode: 'readwrite' })
-      if (newStatus !== 'granted') throw new Error('Permission denied to access folder')
+      const nextStatus = await (handle as any).requestPermission({ mode: 'readwrite' })
+      if (nextStatus !== 'granted') throw new Error('Permission denied to access folder')
     }
-    
     return handle
-  }
-
-  async openDirectory(): Promise<string> {
-    if (!('showDirectoryPicker' in window)) throw new Error('File System Access API not supported')
-    const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' })
-    const id = `disk:${handle.name}`
-    this.diskHandles.set(id, handle)
-    // Persist handle
-    await set(`quartier:handle:${id}`, handle)
-    return id
-  }
-
-  async removeProject(id: string) {
-    if (id.startsWith('disk:')) {
-      this.diskHandles.delete(id)
-      await del(`quartier:handle:${id}`)
-    } else {
-      // For browser, we'd need to clear all keys in that namespace
-      const ns = id.replace('browser:', '')
-      const keys = await this.browserStorage.getKeys(`${ns}:`)
-      for (const k of keys) await this.browserStorage.removeItem(k)
-    }
-  }
-
-  async createBrowserProject(name: string): Promise<string> {
-    const id = `browser:${name}`
-    await this.browserStorage.setItem(`${name}:.quartier`, JSON.stringify({ created: Date.now() }))
-    return id
   }
 
   private async getFileHandle(root: FileSystemDirectoryHandle, path: string, options = {}): Promise<FileSystemFileHandle> {

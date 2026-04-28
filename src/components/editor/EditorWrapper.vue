@@ -45,6 +45,8 @@
                 :userEmail="userEmail"
                 :enableCollab="enableCollab"
                 :showComments="showComments"
+                @trigger-citation="handleTriggerCitation"
+                @dismiss-citation="closeCitationMenu"
               />
             </div>
             <div v-else key="source" class="h-full overflow-auto">
@@ -57,6 +59,16 @@
         </ProsemirrorAdapterProvider>
       </MilkdownProvider>
     </div>
+
+    <!-- Citation Menu -->
+    <InlineCitationMenu
+      v-if="citationState.visible"
+      :visible="citationState.visible"
+      :coords="citationState.coords"
+      :project-bib="projectBib"
+      @select="handleCitationSelect"
+      @close="closeCitationMenu"
+    />
   </div>
 </template>
 
@@ -66,19 +78,15 @@ import { MilkdownProvider } from '@milkdown/vue'
 import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/vue'
 import CodeEditor from './CodeEditor.vue'
 import MilkdownEditor from './MilkdownEditor.vue'
+import InlineCitationMenu from '@/components/citations/InlineCitationMenu.vue'
+import type { CitationItem } from '@/services/citations/types'
+import { bibtexService } from '@/services/citations/bibtex'
+import { useWorkspaceSession } from '@/composables/useWorkspaceSession'
+
+
 
 // Reference to the Milkdown component to access exposed methods
 const milkdownRef = ref<any>(null)
-
-// Helper to get the underlying editor instance
-const getMilkdownEditor = () => {
-  return milkdownRef.value?.getEditor?.()
-}
-
-// Expose so parent (AppLayout) can grab it
-defineExpose({
-  getMilkdownEditor
-})
 
 const props = defineProps<{
   initialContent: string
@@ -91,6 +99,117 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['update:content', 'save'])
+const workspaceSession = useWorkspaceSession()
+
+// Citation State
+const citationState = ref({
+  visible: false,
+  coords: { x: 0, y: 0 },
+  query: ''
+})
+
+const projectBib = ref('')
+
+// Helper to get the underlying editor instance
+const getMilkdownEditor = () => {
+  return milkdownRef.value?.getEditor?.()
+}
+
+// Handlers
+const handleTriggerCitation = (e: { coords: { x: number, y: number }, query: string }) => {
+  citationState.value = {
+    visible: true,
+    coords: e.coords,
+    query: e.query
+  }
+  loadProjectRef()
+}
+
+const closeCitationMenu = () => {
+  citationState.value.visible = false
+}
+
+const loadProjectRef = async () => {
+  // Try to load references.bib from the current project root
+  // We assume relative path 'references.bib'
+  try {
+     const fs = workspaceSession.getProvider()
+     const handle = workspaceSession.state.activeHandle
+     
+     if (!props.filename || !fs || !handle) return
+     
+     const folder = props.filename.substring(0, props.filename.lastIndexOf('/'))
+     const bibPath = folder ? `${folder}/references.bib` : 'references.bib'
+     
+     // This is a "best guess" or we could enforce a standard
+     // But we can check if file exists via generic read?
+     // Provider interface reads by absolute path usually.
+     // Let's try reading
+     const snapshot = await fs.readDocument(handle, bibPath)
+     projectBib.value = snapshot.content || ''
+     
+     // Update global citations for rendering
+     await bibtexService.update(snapshot.content || '')
+  } catch (e) {
+     projectBib.value = ''
+     await bibtexService.update('')
+  }
+}
+
+// Watch filename to load refs immediately
+watch(() => props.filename, loadProjectRef, { immediate: true })
+
+const handleCitationSelect = async (item: CitationItem) => {
+   const key = bibtexService.generateKey(item)
+   
+   // 1. Insert into Editor
+   if (milkdownRef.value?.insertCitation) {
+       milkdownRef.value.insertCitation(key)
+   }
+   
+   // 2. Append to references.bib if needed
+   if (item.source !== 'local') {
+       try {
+           const fs = workspaceSession.getProvider()
+           const handle = workspaceSession.state.activeHandle
+           
+           if (!props.filename || !fs || !handle) return
+           
+           const folder = props.filename.substring(0, props.filename.lastIndexOf('/'))
+           const bibPath = folder ? `${folder}/references.bib` : 'references.bib'
+           
+           const bibEntry = await bibtexService.toBibTex(item)
+           
+           // Append or Create
+           let currentContent = ''
+           try {
+               currentContent = (await fs.readDocument(handle, bibPath)).content || ''
+           } catch (e) {
+               // file doesn't exist, create new
+           }
+           
+           // Simple duplicate check (key based)
+           if (!currentContent.includes(key)) {
+               const newContent = currentContent + '\n\n' + bibEntry
+               await fs.writeDocument(handle, bibPath, newContent)
+               projectBib.value = newContent
+               // Sync global service
+               await bibtexService.update(newContent)
+           }
+       } catch (e) {
+           console.error('Failed to update references.bib', e)
+       }
+   }
+   
+   closeCitationMenu()
+}
+
+// Expose so parent (AppLayout) can grab it
+defineExpose({
+  getMilkdownEditor
+})
+
+
 
 const content = ref(props.initialContent)
 const saving = ref(false)

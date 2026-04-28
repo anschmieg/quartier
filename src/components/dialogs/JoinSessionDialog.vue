@@ -111,10 +111,13 @@ import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { devFetch } from '@/utils/devTools'
 import { useAuth } from '@/composables/useAuth'
+import { sessionBootstrapService } from '@/services/sessionBootstrap'
+import { useSessionCollab } from '@/composables/useSessionCollab'
 
 const route = useRoute()
 const router = useRouter()
 const { isAccessAuthenticated, checkAccessAuth } = useAuth()
+const sessionCollab = useSessionCollab()
 
 const emit = defineEmits<{
   'joined': []
@@ -143,24 +146,7 @@ onMounted(async () => {
   }
   
   try {
-    const res = await devFetch(`/share/${token}`, { credentials: 'include' })
-    const text = await res.text()
-    
-    if (!res.headers.get('content-type')?.includes('application/json')) {
-      if (text.includes('cloudflare') || text.includes('access')) {
-        error.value = 'Share endpoint blocked by Cloudflare Access.'
-      } else {
-        error.value = 'Unexpected response format'
-      }
-      return
-    }
-    
-    const data = JSON.parse(text)
-    if (!res.ok) {
-      error.value = data.error || 'Invalid link'
-      return
-    }
-    
+    const data = await sessionBootstrapService.preview(token)
     session.value = data.session
     permission.value = data.permission
   } catch (e) {
@@ -190,43 +176,12 @@ async function joinSession() {
       return
     }
 
-    const res = await devFetch(`/api/share/${token}`, {
-      method: 'POST',
-      credentials: 'include'
-    })
-    
-    if (!res.ok) {
-      if (res.status === 401) {
-        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search)
-        window.location.href = `/app?return_to=${returnUrl}`
-        return
-      }
-      const data = await res.json() as any
-      error.value = data.error || 'Failed to join'
+    const joined = await sessionCollab.joinShareToken(token)
+    if (!joined) {
+      error.value = sessionCollab.error.value || 'Failed to join'
       return
     }
-    
-    const data = await res.json() as any
-    localStorage.setItem('quartier:activeSession', JSON.stringify(data.session))
-    
-    // Set repo/file logic
-    if (data.session.paths.length > 0) {
-      const firstPath = data.session.paths[0].replace(/\/\*$/, '')
-      const parts = firstPath.split('/')
-      if (parts.length >= 2) {
-        const repoSlug = `${parts[0]}/${parts[1]}`
-        localStorage.setItem('quartier:repo', repoSlug)
-        if (parts.length > 2) {
-          const filePath = parts.slice(2).join('/')
-          if (filePath.includes('.')) {
-            localStorage.setItem('quartier:currentFile', JSON.stringify(filePath))
-          } else {
-             localStorage.removeItem('quartier:currentFile')
-          }
-        }
-      }
-    }
-    
+
     emit('joined')
     
   } catch (e) {

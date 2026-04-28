@@ -92,13 +92,15 @@ import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { storageManager } from '@/services/storageManager'
+import { useWorkspaceSession } from '@/composables/useWorkspaceSession'
 
 interface FileItem {
   path: string
   name?: string
   type: 'file' | 'dir'
 }
+
+const workspaceSession = useWorkspaceSession()
 
 const props = withDefaults(defineProps<{
   project?: string | null
@@ -173,7 +175,7 @@ const searchedFiles = computed(() => {
   })
 })
 
-const currentProvider = computed(() => storageManager.activeProvider)
+const currentProvider = computed(() => workspaceSession.getProvider())
 
 // Watch for project or provider changes
 watch(() => props.project, async (newProject) => {
@@ -193,7 +195,7 @@ const isAuthError = computed(() => {
 })
 
 async function retryLoad() {
-    if (isAuthError.value && currentProvider.value.login) {
+    if (isAuthError.value && currentProvider.value?.login) {
         try {
             await currentProvider.value.login()
         } catch (e) {
@@ -214,15 +216,24 @@ async function loadContents(project: string, path: string) {
   
   try {
     const provider = currentProvider.value
+    const handle = workspaceSession.state.activeHandle
+    if (!provider || !handle) {
+      files.value = []
+      return
+    }
     // 1. Load current path
-    let allItems = await provider.listFiles(project, path)
+    let allItems = (await provider.listEntries(handle, path)).map((item) => ({
+      path: item.path,
+      name: item.name,
+      type: item.type === 'folder' ? 'dir' as const : 'file' as const,
+    }))
     
     // 2. Load expanded folders (recursive hydration) - Only needed for providers that don't return full trees
-    if (path === '' && provider.id === 'github') { // GitHub is shallow, need hydration
+    if (path === '' && provider.id === 'github') {
         const expanded = currentExpandedFolders.value
         if (expanded.length > 0) {
             const expandedPromises = expanded.map(folderPath => 
-                provider.listFiles(project, folderPath)
+                provider.listEntries(handle, folderPath)
                     .catch((e: any) => {
                         console.warn(`Failed to hydrate folder ${folderPath}:`, e)
                         return []
@@ -231,7 +242,11 @@ async function loadContents(project: string, path: string) {
             
             const expandedResults = await Promise.all(expandedPromises)
             expandedResults.forEach(items => {
-                allItems = [...allItems, ...items]
+                allItems = [...allItems, ...items.map((item: any) => ({
+                  path: item.path,
+                  name: item.name,
+                  type: item.type === 'folder' ? 'dir' as const : 'file' as const,
+                }))]
             })
         }
     }
@@ -243,8 +258,8 @@ async function loadContents(project: string, path: string) {
     files.value = Array.from(uniqueItems.values())
     currentPath.value = path
   } catch (e: any) {
-    console.error(`[FileBrowser] Failed to load contents from ${currentProvider.value.name}:`, e)
-    error.value = e.message || `Failed to load ${currentProvider.value.name} contents`
+    console.error(`[FileBrowser] Failed to load contents from ${currentProvider.value?.name || 'provider'}:`, e)
+    error.value = e.message || `Failed to load ${currentProvider.value?.name || 'provider'} contents`
   } finally {
     loading.value = false
   }
@@ -266,6 +281,8 @@ async function handleExpandFolder(folderPath: string) {
   addExpandedFolder(folderPath)
   
   const provider = currentProvider.value
+  const handle = workspaceSession.state.activeHandle
+  if (!provider || !handle) return
   
   // Check if children already loaded (only for shallow providers like GitHub)
   const existingChildren = files.value.some(f => 
@@ -274,8 +291,15 @@ async function handleExpandFolder(folderPath: string) {
   if (existingChildren) return
   
   try {
-    const contents = await provider.listFiles(props.project, folderPath)
-    files.value = [...files.value, ...contents]
+    const contents = await provider.listEntries(handle, folderPath)
+    files.value = [
+      ...files.value,
+      ...contents.map((item) => ({
+        path: item.path,
+        name: item.name,
+        type: item.type === 'folder' ? 'dir' as const : 'file' as const,
+      })),
+    ]
   } catch (error) {
     console.error('Failed to expand folder:', error)
   }

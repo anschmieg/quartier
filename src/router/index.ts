@@ -3,6 +3,7 @@ import LandingPage from '@/components/landing/LandingPage.vue'
 import Dashboard from '@/components/dashboard/Dashboard.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { historyService } from '@/services/history'
+import { initializeAuthContext, useAuthContextState } from '@/services/authContext'
 
 const routes = [
     {
@@ -10,7 +11,8 @@ const routes = [
         name: 'landing',
         component: LandingPage,
         meta: { public: true },
-        beforeEnter: (to: any, _from: any, next: any) => {
+        beforeEnter: async (to: any, _from: any, next: any) => {
+            await historyService.initialize()
             // If we have history, go to dashboard instead of landing
             // But allow explicit access via query param ?landing=true if needed
             if (historyService.getProjects().length > 0 && !to.query.landing) {
@@ -52,19 +54,28 @@ const router = createRouter({
 
 // Handle return_to redirection after Cloudflare Access login
 router.beforeEach((to, _from, next) => {
-    if (to.query.return_to) {
-        const returnTo = to.query.return_to as string
-        // Validate it's a relative path to prevent open redirect
-        if (returnTo.startsWith('/')) {
-            // Remove the param to clean up URL and redirect
-            const nextPath = returnTo
-            // Delete the query param from current navigation
-            delete to.query.return_to
-            next(nextPath)
+    Promise.resolve().then(async () => {
+        if (to.query.return_to) {
+            const returnTo = to.query.return_to as string
+            if (returnTo.startsWith('/')) {
+                next(returnTo)
+                return
+            }
+        }
+
+        await initializeAuthContext()
+        const auth = useAuthContextState()
+
+        if (to.path === '/app' && auth.authMode === 'anonymous') {
+            next('/')
             return
         }
-    }
-    next()
+
+        next()
+    }).catch((error) => {
+        console.error('Router guard failed:', error)
+        next()
+    })
 })
 
 export default router

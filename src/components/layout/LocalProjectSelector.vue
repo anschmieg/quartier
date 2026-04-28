@@ -74,7 +74,7 @@ import { Button } from '@/components/ui/button'
 import { Monitor, Laptop, Folder, FolderOpen, Plus, Check, X } from 'lucide-vue-next'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { EmptyState } from '@/components/ui/empty-state'
-import { storageManager } from '@/services/storageManager'
+import { workspaceProviderRegistry } from '@/core/workspace/providerRegistry'
 import type { LocalProvider, LocalProjectMetadata } from '@/services/providers/LocalProvider'
 
 const props = defineProps<{
@@ -100,7 +100,7 @@ const filteredProjects = computed(() => {
 async function loadProjects() {
   loading.value = true
   try {
-    const provider = storageManager.allProviders.find(p => p.id === 'local') as LocalProvider
+    const provider = workspaceProviderRegistry.get('local') as LocalProvider
     if (provider) {
       projects.value = await provider.listProjects()
     }
@@ -118,7 +118,7 @@ function selectProject(project: LocalProjectMetadata) {
 
 async function removeProject(id: string) {
   if (!confirm('Remove this project from list? (Files will not be deleted)')) return
-  const provider = storageManager.allProviders.find(p => p.id === 'local') as LocalProvider
+  const provider = workspaceProviderRegistry.get('local') as LocalProvider
   if (provider) {
     await provider.removeProject(id)
     await loadProjects()
@@ -126,7 +126,7 @@ async function removeProject(id: string) {
 }
 
 async function handleOpenDisk() {
-    const provider = storageManager.allProviders.find(p => p.id === 'local') as LocalProvider
+    const provider = workspaceProviderRegistry.get('local') as LocalProvider
     if (provider) {
         try {
             const id = await provider.openDirectory()
@@ -141,7 +141,7 @@ async function handleOpenDisk() {
 async function handleCreateSandbox() {
     const name = window.prompt('Sandbox Name:', 'my-research')
     if (!name) return
-    const provider = storageManager.allProviders.find(p => p.id === 'local') as LocalProvider
+    const provider = workspaceProviderRegistry.get('local') as LocalProvider
     if (provider) {
         const id = await provider.createBrowserProject(name)
         emit('select', id)

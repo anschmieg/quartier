@@ -7,7 +7,7 @@
       :show-right-sidebar="showRightSidebar"
       :editor-mode="editorMode"
       :get-editor="getEditorInstance"
-      :can-share="!!currentFile && currentProvider.capabilities.canShare"
+      :can-share="!!currentFile && !!workspaceSession.state.providerCapabilities?.supportsShare"
       :session-member-count="sessionMemberCount"
       @command-palette="openCommandPalette"
       @share="openShareDialog"
@@ -57,7 +57,7 @@
               :initial-content="fileContent"
               :mode="editorMode"
               :room-id="activeSession?.roomId"
-              :user-email="(user as any)?.email"
+              :user-email="accessUser?.email || user?.login"
               :enable-collab="isShared"
               :filename="currentFile || undefined"
               :show-comments="showComments"
@@ -117,7 +117,7 @@
       <AppRightSidebar 
         :visible="showRightSidebar"
         :can-save="!!currentFile"
-        :can-share="!!currentFile && currentProvider.capabilities.canShare"
+        :can-share="!!currentFile && !!workspaceSession.state.providerCapabilities?.supportsShare"
         :auto-save-status="autoSaveStatus"
         :is-dirty-to-provider="isDirtyToProvider"
         :provider-id="activeProviderId"
@@ -167,12 +167,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { onBeforeRouteLeave, useRoute } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
-
-const { isAuthenticated, isAccessAuthenticated, isHost, user, accessUser } = useAuth()
-import { useStorage } from '@vueuse/core'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import EditorWrapper from '@/components/editor/EditorWrapper.vue'
@@ -184,41 +181,64 @@ import SharedSessionsDialog from '@/components/dialogs/SharedSessionsDialog.vue'
 import Toast from '@/components/ui/Toast.vue'
 import { useMagicKeys, whenever } from '@vueuse/core'
 import { LoadingSpinner } from '@/components/ui/loading'
-import { storageManager } from '@/services/storageManager'
-import { storage } from '@/services/storage'
-
 import JoinSessionDialog from '@/components/dialogs/JoinSessionDialog.vue'
 import LocalProjectSelector from '@/components/layout/LocalProjectSelector.vue'
 import CloudProjectSelector from '@/components/layout/CloudProjectSelector.vue'
 import AppRightSidebar from '@/components/layout/AppRightSidebar.vue'
 import { Button } from '@/components/ui/button'
+import { useWorkspaceSession } from '@/composables/useWorkspaceSession'
+import { useWorkspaceNavigation } from '@/composables/useWorkspaceNavigation'
+import { useDocumentBuffer } from '@/composables/useDocumentBuffer'
+import { useDocumentSave } from '@/composables/useDocumentSave'
+import { workspaceProviderRegistry } from '@/core/workspace/providerRegistry'
 
 // Router
 const route = useRoute()
+const router = useRouter()
+const { isAuthenticated, isAccessAuthenticated, isHost, user, accessUser } = useAuth()
+const workspaceSession = useWorkspaceSession()
+const workspaceNavigation = useWorkspaceNavigation()
+const documentBuffer = useDocumentBuffer()
+const documentSave = useDocumentSave()
+const nullProvider = { id: '', name: 'Source', icon: 'cloud' } as any
 
-// State
-const project = ref<string | null>(storageManager.activeProject)
-const activeProviderId = ref<string>(storageManager.activeProvider.id)
-const currentProvider = computed(() => storageManager.activeProvider)
+const project = computed(() => workspaceSession.state.activeWorkspace?.displayName ?? null)
+const activeProviderId = computed(() => workspaceSession.state.activeWorkspace?.providerId || '')
+const currentProvider = computed(() => workspaceSession.getProvider() || nullProvider)
 const isGitHub = computed(() => activeProviderId.value === 'github')
-
-// Watch changes in storageManager
-watch(() => storageManager.activeProject, (val) => {
-    project.value = val
+const currentFile = computed(() => workspaceSession.state.activeDocumentPath)
+const showSidebar = computed({
+  get: () => workspaceSession.state.ui.showSidebar,
+  set: (value: boolean) => {
+    workspaceSession.updateUiState({ showSidebar: value })
+  }
 })
-watch(() => storageManager.activeProvider, (val) => {
-    activeProviderId.value = val.id
+const showRightSidebar = computed({
+  get: () => workspaceSession.state.ui.showRightSidebar,
+  set: (value: boolean) => {
+    workspaceSession.updateUiState({ showRightSidebar: value })
+  }
+})
+const editorMode = computed<'visual' | 'source'>({
+  get: () => workspaceSession.state.ui.editorMode,
+  set: (value) => {
+    workspaceSession.updateUiState({ editorMode: value })
+  }
+})
+const userPreferredMode = computed<'visual' | 'source'>({
+  get: () => workspaceSession.state.ui.userPreferredMode,
+  set: (value) => {
+    workspaceSession.updateUiState({ userPreferredMode: value })
+  }
+})
+const showComments = computed({
+  get: () => workspaceSession.state.ui.showComments,
+  set: (value: boolean) => {
+    workspaceSession.updateUiState({ showComments: value })
+  }
 })
 
-const currentFile = useStorage<string | null>('quartier:currentFile', null)
-const showSidebar = useStorage('quartier:showSidebar', true)
-const showRightSidebar = useStorage('quartier:showRightSidebar', false)
-const editorMode = useStorage<'visual' | 'source'>('quartier:editorMode', 'visual')
-// Track what the user *wants* to use (to restore after force-source mode)
-const userPreferredMode = useStorage<'visual' | 'source'>('quartier:userPreferredMode', 'visual')
-const showComments = useStorage('quartier:showComments', true)
-
-const activeSession = useStorage<{ roomId: string } | null>('quartier:activeSession', null)
+const activeSession = computed(() => workspaceSession.state.activeSession)
 const isShared = computed(() => !!activeSession.value)
 
 // Helper to check for code files
@@ -242,10 +262,10 @@ watch(sidebarMode, (newMode, oldMode) => {
 })
 
 // Transient State (not persisted)
-const fileContent = ref('')
 const originalFileContent = ref('')
-const fileLoading = ref(false)
-const authError = ref(false)
+const fileContent = computed(() => documentBuffer.state.content)
+const fileLoading = computed(() => documentBuffer.meta.value.loading)
+const authError = computed(() => documentBuffer.meta.value.authError)
 const commandPaletteRef = ref()
 const commitDialogRef = ref()
 const toastRef = ref()
@@ -258,31 +278,23 @@ const showLocalSelector = ref(false)
 const showCloudSelector = ref(false)
 const targetCloudProvider = ref<any>(null)
 
-const userEmail = ref<string | undefined>(undefined)
-const recentFiles = useStorage<string[]>('quartier:recentFiles', [])
-function addToRecent(path: string) {
-  recentFiles.value = [path, ...recentFiles.value.filter(p => p !== path)].slice(0, 10)
-}
-// const connectionStatus = ref<ConnectionStatus>('disconnected')
-const connectionStatus = ref<'connecting' | 'connected' | 'disconnected' | 'error'>('connected') // TODO: Wire up real status from MilkdownEditor
-const autoSaveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
-
-// Dirty state tracking (Local vs UI)
-let lastLocalSaveContent = ''
-// Provider state tracking (Provider vs local cache)
-const lastProviderContent = ref('')
-
-const isDirtyToLocal = computed(() => {
-  if (!currentFile.value) return false
-  return fileContent.value !== lastLocalSaveContent
+const recentFiles = computed(() => workspaceSession.state.ui.recentFiles)
+const connectionStatus = computed<'connecting' | 'connected' | 'disconnected' | 'error'>(() => {
+  switch (workspaceSession.state.connectionState.status) {
+    case 'connected':
+      return 'connected'
+    case 'failed':
+      return 'error'
+    case 'disconnected':
+    case 'idle':
+      return 'disconnected'
+    default:
+      return 'connecting'
+  }
 })
-
-const isDirtyToProvider = computed(() => {
-  if (!currentFile.value) return false
-  return fileContent.value !== lastProviderContent.value
-})
-
-const isDirty = isDirtyToLocal // keep legacy prop for UI
+const autoSaveStatus = computed(() => documentBuffer.meta.value.status)
+const isDirtyToProvider = computed(() => documentBuffer.state.dirty)
+const isDirty = isDirtyToProvider
 
 
 
@@ -293,29 +305,12 @@ const fullFilePath = computed(() => {
 })
 
 const sessionMemberCount = computed(() => {
-  try {
-    const activeSession = localStorage.getItem('quartier:activeSession')
-    if (activeSession) {
-      const session = JSON.parse(activeSession)
-      return session.members?.length || session.memberCount || 1
-    }
-  } catch (e) { /* ignore */ }
-  return 1
+  return activeSession.value?.members.length || 1
 })
 
 const allowedPaths = computed(() => {
-  try {
-    const activeSession = localStorage.getItem('quartier:activeSession')
-    if (activeSession) {
-      const session = JSON.parse(activeSession)
-      return session.paths || []
-    }
-  } catch (e) { /* ignore */ }
-  return []
+  return activeSession.value?.allowedPaths || []
 })
-
-// Auto-sync state
-let autoSyncInterval: ReturnType<typeof setInterval> | null = null
 
 // Getter for the editor instance (passed down to toolbar)
 // This must be a function so the toolbar can call it lazily
@@ -329,120 +324,38 @@ const getEditorInstance = () => {
 const { Meta_K, Ctrl_K } = useMagicKeys()
 whenever(() => Meta_K?.value || Ctrl_K?.value, () => openCommandPalette())
 
-// Track connection status for current file
-// let unsubscribeConnectionStatus: (() => void) | null = null
-
-// watch([repo, currentFile], ([newRepo, newFile]: [string | undefined, string | null]) => {
-//   // Unsubscribe from previous file
-//   if (unsubscribeConnectionStatus) {
-//     unsubscribeConnectionStatus()
-//     unsubscribeConnectionStatus = null
-//   }
-  
-//   // Subscribe to new file if both repo and file are set
-//   if (newRepo && newFile) {
-//     const [owner, name] = newRepo.split('/')
-//     if (owner && name) {
-//       // Get initial status
-//       // connectionStatus.value = getConnectionStatus(owner, name, newFile)
-      
-//       // Subscribe to status changes
-//       /*
-//       unsubscribeConnectionStatus = onConnectionStatusChange(
-//         owner,
-//         name,
-//         newFile,
-//         (status) => {
-//           connectionStatus.value = status
-//         }
-//       )
-//       */
-//     }
-//   } else {
-//     connectionStatus.value = 'disconnected'
-//   }
-// })
-
 // Restore file content on mount
 onMounted(async () => {
-  console.log('[AppLayout] onMounted - project:', project.value, 'currentFile:', currentFile.value)
-  
-  // Auth state allows checking if we are host or guest
-  // userEmail is largely redundant if we use useAuth, but we keep it for now
-  if (accessUser.value?.email) {
-    userEmail.value = accessUser.value.email
-    console.log('[AppLayout] User email:', userEmail.value)
-  } else if (user.value?.login) {
-    // If Github user, we might want their email too, but for now just log
-    console.log('[AppLayout] GitHub User:', user.value.login)
+  await workspaceSession.initialize()
+  if (currentFile.value && (isAuthenticated.value || isAccessAuthenticated.value)) {
+    await documentBuffer.loadActiveDocument()
+    originalFileContent.value = documentBuffer.state.content
   }
-  
-  if (project.value && currentFile.value) {
-    console.log('[AppLayout] Restoring file on mount:', currentFile.value)
-    
-    // Only try to load file if we have auth (Host or Access)
-    if (isAuthenticated.value || isAccessAuthenticated.value) {
-        await selectFile(currentFile.value)
+})
+
+watch(
+  () => [workspaceSession.state.activeHandle, workspaceSession.state.activeDocumentPath] as const,
+  async ([handle, path]) => {
+    if (!handle || !path) {
+      documentBuffer.clear()
+      originalFileContent.value = ''
+      return
     }
-  } else {
-    console.log('[AppLayout] No file to restore')
+    await documentBuffer.loadActiveDocument()
+    originalFileContent.value = documentBuffer.state.content
+  },
+  { immediate: true }
+)
+
+watch(currentFile, (path) => {
+  if (path && isCodeFile.value && editorMode.value === 'visual') {
+    editorMode.value = 'source'
+    return
   }
-  
-  // Auto-save to Local Cache (Drafts)
-  autoSyncInterval = setInterval(async () => {
-    if (!project.value || !currentFile.value) return
-    if (!isDirtyToLocal.value) return
-    if (fileLoading.value) return
-    
-    autoSaveStatus.value = 'saving'
-    try {
-      // We use a dedicated local-drafts namespace in unstorage
-      const draftKey = `draft:${activeProviderId.value}:${project.value}:${currentFile.value}`
-      await storage.setItem(draftKey, fileContent.value)
-      lastLocalSaveContent = fileContent.value
-      autoSaveStatus.value = 'saved'
-      
-      setTimeout(() => {
-        if (autoSaveStatus.value === 'saved') autoSaveStatus.value = 'idle'
-      }, 2000)
-    } catch (e) {
-      console.error('[AutoDraft] Failed to save draft:', e)
-      autoSaveStatus.value = 'idle'
-    }
-  }, 5000) // Much more frequent for drafts (5s)
-
-  // Warn about unsaved changes before unload
-  window.addEventListener('beforeunload', handleBeforeUnload)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('beforeunload', handleBeforeUnload)
-  if (autoSyncInterval) {
-    clearInterval(autoSyncInterval)
-    autoSyncInterval = null
-  }
-  // if (unsubscribeConnectionStatus) {
-  //   unsubscribeConnectionStatus()
-  //   unsubscribeConnectionStatus = null
-  // }
-})
-
-// Internal router guard to prevent data loss
-onBeforeRouteLeave(() => {
-  if (isDirty.value) {
-    return window.confirm('You have unsaved changes. Are you sure you want to leave?')
+  if (path && !isCodeFile.value && editorMode.value === 'source' && userPreferredMode.value === 'visual') {
+    editorMode.value = 'visual'
   }
 })
-
-function handleBeforeUnload(e: BeforeUnloadEvent) {
-  if (isDirtyToProvider.value) {
-    const msg = `You have unsaved changes to ${currentProvider.value.name}. Changes ARE kept in your browser sandbox, but not synced to the actual source.`
-    e.preventDefault()
-    // @ts-ignore
-    e.returnValue = msg
-    return msg
-  }
-}
 
 function openCommandPalette() {
   commandPaletteRef.value?.open()
@@ -457,55 +370,15 @@ function openSharedSessions(mode: 'shared-with-me' | 'shared-by-me') {
 }
 
 async function selectFile(path: string) {
-  if (!project.value) return
-  
-  try {
-    fileLoading.value = true
-    currentFile.value = path
-    
-    // 1. Initial load from provider
-    const providerContent = await currentProvider.value.readFile(project.value, path)
-    
-    // 2. Check for local draft
-    const draftKey = `draft:${activeProviderId.value}:${project.value}:${path}`
-    const localDraft = await storage.getItem(draftKey) as string | null
-    
-    if (localDraft && localDraft !== providerContent) {
-        if (confirm('A more recent local version exists. Load the draft?')) {
-            fileContent.value = localDraft
-        } else {
-            fileContent.value = providerContent
-        }
-    } else {
-        fileContent.value = providerContent
-    }
-    
-    lastLocalSaveContent = fileContent.value
-    lastProviderContent.value = providerContent
-    originalFileContent.value = providerContent
-    addToRecent(path)
-  } catch (error: any) {
-    // Check for auth errors
-    const msg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
-    if (msg.includes('authenticated') || msg.includes('expired')) {
-        authError.value = true
-        fileContent.value = '' // Clear content to prevent confusion
-        // Don't log as error in console to avoid noise, just warn
-        console.warn('Authentication required for file load')
-    } else {
-        console.error('Failed to load file:', error)
-        fileContent.value = `# Error loading file\n\nFailed to load ${path}:\n${error instanceof Error ? error.message : 'Unknown error'}`
-    }
-  } finally {
-    fileLoading.value = false
-  }
+  await workspaceNavigation.selectDocument(path)
+  await documentBuffer.loadActiveDocument()
+  originalFileContent.value = documentBuffer.state.content
 }
 
 async function handleReauth() {
     try {
-        if (currentProvider.value.login) {
+        if (currentProvider.value?.login) {
             await currentProvider.value.login()
-            authError.value = false
             // Retry file load
             if (currentFile.value) {
                 await selectFile(currentFile.value)
@@ -517,27 +390,25 @@ async function handleReauth() {
 }
 
 async function handleCreateFile(parentPath: string) {
-  if (!project.value) return
+  if (!workspaceSession.state.activeWorkspace) return
   
   const fileName = window.prompt('Enter new file name:', 'new-file.qmd')
   if (!fileName) return
   
   const fullPath = parentPath ? `${parentPath}/${fileName}` : fileName
   try {
-    await currentProvider.value.writeFile(project.value, fullPath, '---\ntitle: "New Document"\n---\n\n')
-    selectFile(fullPath)
-    window.location.reload()
+    await workspaceNavigation.createEntry(fullPath, 'file', '---\ntitle: "New Document"\n---\n\n')
+    await selectFile(fullPath)
   } catch (error) {
     alert(`Failed to create file: ${error}`)
   }
 }
 
 async function handleCreateFolder(_parentPath: string) {
-  if (currentProvider.value.createFolder && project.value) {
+  if (currentProvider.value && workspaceSession.state.activeHandle && workspaceSession.state.providerCapabilities?.supportsFolders) {
     const folderName = window.prompt('Enter folder name:')
     if (folderName) {
-      await currentProvider.value.createFolder(project.value, folderName)
-      window.location.reload()
+      await workspaceNavigation.createEntry(folderName, 'folder')
     }
   } else {
     alert('This storage source does not support explicit folder creation. Create a file with a path like "folder/file.md" instead.')
@@ -545,7 +416,7 @@ async function handleCreateFolder(_parentPath: string) {
 }
 
 async function handleRenameFile(path: string) {
-  if (!project.value || !currentProvider.value.renameFile) return
+  if (!workspaceSession.state.activeWorkspace || !workspaceSession.state.providerCapabilities?.supportsRename) return
   
   const currentName = path.split('/').pop() || path
   const newName = window.prompt('Enter new name:', currentName)
@@ -555,68 +426,70 @@ async function handleRenameFile(path: string) {
   const newPath = parentPath ? `${parentPath}/${newName}` : newName
   
   try {
-    await currentProvider.value.renameFile(project.value, path, newPath)
-    selectFile(newPath)
-    window.location.reload()
+    await workspaceNavigation.renameEntry(path, newPath)
+    if (currentFile.value === path) {
+      await selectFile(newPath)
+    }
   } catch (error) {
     alert(`Failed to rename: ${error}`)
   }
 }
 
 async function handleDeleteFile(path: string) {
-  if (!project.value) return
+  if (!workspaceSession.state.activeWorkspace) return
   
   const confirmed = window.confirm(`Delete "${path}"? This cannot be undone.`)
   if (!confirmed) return
   
   try {
-    await currentProvider.value.deleteFile(project.value, path)
-    currentFile.value = null
-    fileContent.value = ''
-    window.location.reload()
+    await workspaceNavigation.deleteEntry(path)
+    if (currentFile.value === path) {
+      await workspaceSession.setActiveDocumentPath(null)
+      documentBuffer.clear()
+    }
   } catch (error) {
     alert(`Failed to delete: ${error}`)
   }
 }
 
 async function updateFileContent(newContent: string) {
-  fileContent.value = newContent
+  documentBuffer.setContent(newContent)
 }
 
 async function saveFile() {
-  if (!currentFile.value || !project.value) return
+  if (!currentFile.value || !workspaceSession.state.activeWorkspace) return
   
-  if (currentProvider.value.capabilities.canCommit) {
+  if (workspaceSession.state.providerCapabilities?.supportsCommit) {
     commitDialogRef.value?.open()
   } else {
-    // Direct save for local/disk providers
-    try {
-      await currentProvider.value.writeFile(project.value, currentFile.value, fileContent.value)
-      lastProviderContent.value = fileContent.value
-      toastRef.value?.success(`File saved to ${currentProvider.value.name}`)
-    } catch (error) {
-       toastRef.value?.error(`Failed to save: ${error}`)
+    const result = await documentSave.save()
+    if (result) {
+      originalFileContent.value = documentBuffer.state.content
+      toastRef.value?.success(`File saved to ${currentProvider.value?.name || 'provider'}`)
+    } else {
+      toastRef.value?.error(documentSave.error.value || 'Failed to save')
     }
   }
 }
 
 async function handleCommit(message: string) {
-  if (!currentFile.value || !project.value) return
-  
-  try {
-    // Use githubService directly or provider
-    await currentProvider.value.writeFile(project.value, currentFile.value, fileContent.value, message)
-    lastProviderContent.value = fileContent.value
+  if (!currentFile.value || !workspaceSession.state.activeWorkspace) return
+
+  const result = await documentSave.save(message)
+  if (result) {
+    originalFileContent.value = documentBuffer.state.content
     toastRef.value?.success('Committed successfully')
-  } catch (error) {
-    toastRef.value?.error(`Commit failed: ${error}`)
+  } else {
+    toastRef.value?.error(documentSave.error.value || 'Commit failed')
   }
 }
 
 function handleRepoSelect(selectedRepo: { full_name: string }) {
-  storageManager.setSource('github', selectedRepo.full_name)
-  currentFile.value = null
-  fileContent.value = ''
+  workspaceNavigation.openWorkspace({
+    providerId: 'github',
+    workspaceId: selectedRepo.full_name,
+    displayName: selectedRepo.full_name,
+  })
 }
 
 function handleOpenSourceSelector(providerId: string) {
@@ -629,7 +502,7 @@ function handleOpenSourceSelector(providerId: string) {
 
   // Handle Cloud Providers (Google Drive, Nextcloud)
   if (providerId === 'gdrive' || providerId === 'nextcloud') {
-    const provider = storageManager.allProviders.find(p => p.id === providerId)
+    const provider = workspaceProviderRegistry.get(providerId)
     if (provider) {
         targetCloudProvider.value = provider
         showCloudSelector.value = true
@@ -640,25 +513,22 @@ function handleOpenSourceSelector(providerId: string) {
 
 async function handleLocalProjectSelect(projectId: string) {
     if (projectId) {
-        storageManager.setSource('local', projectId)
-        // Force refresh
-        project.value = projectId
-        activeProviderId.value = 'local'
-        currentFile.value = null
-        fileContent.value = ''
-        await currentProvider.value.listFiles(projectId)
+        await workspaceNavigation.openWorkspace({
+          providerId: 'local',
+          workspaceId: projectId,
+          displayName: projectId.split(':').pop() || projectId,
+        })
     }
     showLocalSelector.value = false
 }
 
 async function handleCloudProjectSelect(projectId: string) {
     if (projectId && targetCloudProvider.value) {
-        storageManager.setSource(targetCloudProvider.value.id, projectId)
-        // Force refresh
-        project.value = projectId
-        activeProviderId.value = targetCloudProvider.value.id
-        currentFile.value = null
-        fileContent.value = ''
+        await workspaceNavigation.openWorkspace({
+          providerId: targetCloudProvider.value.id,
+          workspaceId: projectId,
+          displayName: projectId === 'root' ? targetCloudProvider.value.name : projectId,
+        })
         targetCloudProvider.value = null
     }
     showCloudSelector.value = false
@@ -698,6 +568,6 @@ function handlePaletteAction(action: string) {
 
 function handleJoined() {
   // Redirect to app (cleans URL and loads session state)
-  window.location.href = '/app'
+  router.push('/app')
 }
 </script>

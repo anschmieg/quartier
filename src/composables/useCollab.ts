@@ -5,6 +5,7 @@ import YPartyKitProvider from 'y-partykit/provider'
 import { updateAwarenessState, clearAwarenessState } from '@/composables/useAwareness'
 // @ts-ignore
 import { watchEffect } from 'vue'
+import { useWorkspaceSession } from './useWorkspaceSession'
 
 // Always register the plugin - it does nothing until connected
 export const getCollabPlugins = () => [collab]
@@ -16,12 +17,18 @@ export function useCollab(
     initialContent: string,
     isCollabEnabled: () => boolean
 ) {
+    const workspaceSession = useWorkspaceSession()
     // Reset awareness on unmount is handled by provider destruction
 
     // Use watchEffect to handle setup/teardown based on enabled state
     watchEffect((onCleanup) => {
         // 1. Check if we should be connected
         if (!isCollabEnabled()) {
+            workspaceSession.setConnectionState({
+                transport: 'none',
+                status: 'disconnected',
+                lastError: null,
+            })
             return
         }
 
@@ -30,6 +37,11 @@ export function useCollab(
         if (!editor || !roomId) return
 
         console.log('[Collab] Initializing for room:', roomId)
+        workspaceSession.setConnectionState({
+            transport: 'partykit',
+            status: 'bootstrap',
+            lastError: null,
+        })
 
         // 2. Create Yjs Doc and Provider
         const ydoc = new Y.Doc()
@@ -65,6 +77,17 @@ export function useCollab(
             )
         }
         partyProvider.awareness.on('change', awarenessHandler)
+        partyProvider.on('status', (event: { status: string }) => {
+            workspaceSession.setConnectionState({
+                transport: 'partykit',
+                status: event.status === 'connected'
+                    ? 'connected'
+                    : event.status === 'connecting'
+                        ? 'connect'
+                        : 'reconnecting',
+                lastError: null,
+            })
+        })
 
         // Initial update
         updateAwarenessState(
@@ -81,16 +104,28 @@ export function useCollab(
                     .setAwareness(partyProvider.awareness)
                     .connect()
 
-                // Apply initial content as template
-                // This ensures Yjs doc starts with file content
-                collabService.applyTemplate(initialContent)
+                // Only seed the shared document when it is empty.
+                const fragment = ydoc.getXmlFragment('default')
+                if (fragment.length === 0 && initialContent) {
+                    collabService.applyTemplate(initialContent)
+                }
 
                 // Connect to server
+                workspaceSession.setConnectionState({
+                    transport: 'partykit',
+                    status: 'connect',
+                    lastError: null,
+                })
                 partyProvider.connect()
                 console.log('[Collab] Connected to PartyKit:', host)
             })
         } catch (error) {
             console.error('[Collab] Connection failed:', error)
+            workspaceSession.setConnectionState({
+                transport: 'partykit',
+                status: 'failed',
+                lastError: error instanceof Error ? error.message : 'Connection failed',
+            })
         }
 
         // 5. Cleanup function
@@ -101,6 +136,11 @@ export function useCollab(
             partyProvider.destroy()
             ydoc.destroy()
             clearAwarenessState()
+            workspaceSession.setConnectionState({
+                transport: 'partykit',
+                status: 'disconnected',
+                lastError: null,
+            })
         })
     })
 }

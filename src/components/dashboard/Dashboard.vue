@@ -101,11 +101,13 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { historyService, type RecentProject } from '@/services/history'
-import { storageManager } from '@/services/storageManager'
+import { workspaceProviderRegistry } from '@/core/workspace/providerRegistry'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Clock, PlusCircle, Monitor, Github, Cloud } from 'lucide-vue-next'
 import { useTimeAgo } from '@vueuse/core'
+import { useWorkspaceNavigation } from '@/composables/useWorkspaceNavigation'
+import { useWorkspaceSession } from '@/composables/useWorkspaceSession'
 
 // Modals
 import LocalProjectSelector from '@/components/layout/LocalProjectSelector.vue'
@@ -113,6 +115,8 @@ import RepoSelector from '@/components/github/RepoSelector.vue'
 import CloudProjectSelector from '@/components/layout/CloudProjectSelector.vue'
 
 const router = useRouter()
+const workspaceNavigation = useWorkspaceNavigation()
+const workspaceSession = useWorkspaceSession()
 const recentProjects = computed(() => historyService.getProjects())
 
 // Modal State
@@ -147,8 +151,7 @@ function formatDate(ts: number) {
 
 // Navigation
 function openProject(project: RecentProject) {
-  storageManager.setSource(project.providerId, project.projectId)
-  router.push('/app')
+  workspaceNavigation.openRecentProject(project.providerId, project.projectId, project.name)
 }
 
 // Actions
@@ -161,7 +164,7 @@ function handleOpenGitHub() {
 }
 
 function handleOpenCloud(providerId: string) {
-  const provider = storageManager.allProviders.find(p => p.id === providerId)
+  const provider = workspaceProviderRegistry.get(providerId)
   if (provider) {
     targetCloudProvider.value = provider
     showCloudSelector.value = true
@@ -170,19 +173,31 @@ function handleOpenCloud(providerId: string) {
 
 // Selection Handlers (Same logic as AppLayout effectively)
 async function handleLocalSelect(projectId: string) {
-    storageManager.setSource('local', projectId)
-    router.push('/app')
+    await workspaceNavigation.openWorkspace({
+      providerId: 'local',
+      workspaceId: projectId,
+      displayName: projectId.split(':').pop() || projectId,
+    })
 }
 
 function handleRepoSelect(repo: { full_name: string }) {
-    storageManager.setSource('github', repo.full_name)
-    router.push('/app')
+    workspaceNavigation.openWorkspace({
+      providerId: 'github',
+      workspaceId: repo.full_name,
+      displayName: repo.full_name,
+    })
 }
 
 function handleCloudSelect(projectId: string) {
     if (targetCloudProvider.value) {
-        storageManager.setSource(targetCloudProvider.value.id, projectId)
-        router.push('/app')
+        workspaceNavigation.openWorkspace({
+          providerId: targetCloudProvider.value.id,
+          workspaceId: projectId,
+          displayName: projectId === 'root' ? targetCloudProvider.value.name : projectId,
+        })
     }
 }
+
+workspaceSession.initialize()
+historyService.initialize()
 </script>

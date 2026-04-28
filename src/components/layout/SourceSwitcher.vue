@@ -72,10 +72,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { storageManager } from '@/services/storageManager'
+import { useWorkspaceSession } from '@/composables/useWorkspaceSession'
 
-const activeProviderId = computed(() => storageManager.activeProvider.id)
-const activeProject = computed(() => storageManager.activeProject)
+const workspaceSession = useWorkspaceSession()
+const activeProviderId = computed(() => workspaceSession.state.activeWorkspace?.providerId || 'github')
+const activeProject = computed(() => workspaceSession.state.activeWorkspace?.displayName || null)
 
 const sourceLabel = computed(() => {
   if (activeProviderId.value === 'github') return activeProject.value || 'Select Repo...'
