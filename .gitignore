@@ -36,3 +36,9 @@ wrangler.toml
 .partykit
 playwright-report/
 test-results/
+
+# Generated source-adjacent JS artifacts from local transpilation
+src/**/*.js
+src/**/*.js.map
+functions/**/*.js
+functions/**/*.js.map
