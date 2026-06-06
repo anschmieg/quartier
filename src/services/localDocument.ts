@@ -229,7 +229,7 @@ export class LocalStorageDocumentAdapter implements DocumentStorageAdapter {
     }
     if (input.expectedRevision
       && input.expectedRevision !== createDocumentRevision(existing)) {
-      throw new DocumentRevisionConflictError(documentId)
+      throw new DocumentRevisionConflictError(documentId, withDocumentRevision(existing))
     }
 
     const updated: LocalDocument = {

@@ -103,10 +103,12 @@ describe.each([
       expectedRevision: created.revision,
     })
 
-    await expect(Promise.resolve().then(() => adapter.update(created.id, {
+    const conflict = await Promise.resolve().then(() => adapter.update(created.id, {
       source: '# Three',
       expectedRevision: created.revision,
-    }))).rejects.toBeInstanceOf(DocumentRevisionConflictError)
+    })).catch(error => error)
+    expect(conflict).toBeInstanceOf(DocumentRevisionConflictError)
+    expect((conflict as DocumentRevisionConflictError).remoteDocument).toEqual(updated)
     expect(await adapter.get(created.id)).toEqual(updated)
   })
 })

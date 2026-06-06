@@ -72,22 +72,39 @@ editing locally.
 
 ## M4C: Conflict handling and recovery
 
-- Detect conflicts when the expected remote revision differs or both local and
-  remote content changed since the last synced base.
+**Status: conflict/recovery scaffold implemented; live UI and provider sync deferred**
+
+Implemented in the provider-neutral scaffold:
+
+- Normalize stale expected-revision failures into conflict metadata when the
+  last synced base and current remote document are available.
 - Preserve three immutable inputs for resolution: last synced base, current
   local source, and current remote source/revision.
-- Provide explicit actions: keep local as a new remote commit, accept remote
-  after saving a local recovery copy, or manually resolve from a three-way
-  comparison. Never resolve silently.
-- Persist pending conflict metadata locally so reload/offline transitions do
-  not lose the recovery path.
+- Persist validated pending conflict metadata locally so reloads do not lose
+  the recovery path.
+- Produce explicit data-only requests to keep local as a new remote commit,
+  accept remote after creating a local recovery copy, or begin a manual
+  resolution draft. These helpers do not mutate storage or call a network.
+- Keep the local source unchanged when adapter writes fail or conflict.
+- Cover stale revisions, local preservation, recovery-copy creation, each
+  resolution request, and reload-safe conflict persistence with unit tests.
+
+Deferred until live provider synchronization exists:
+
+- Present a three-way conflict UI and apply only the action explicitly selected
+  by the user.
+- Detect simultaneous edits through live provider reads and sync orchestration.
 - Make retries idempotent where possible and show whether a failure occurred
   before or after a remote commit was accepted.
-- Add tests for stale revisions, simultaneous edits, interrupted writes,
-  reload during conflict, and recovery-copy creation.
+- Add live-provider tests for simultaneous edits, interrupted writes, and
+  successful resolution back to `clean`.
 
-**Exit gate:** every conflict path preserves both user versions and returns to
-`clean` only after an explicit successful resolution.
+**Scaffolding exit gate:** stale conflicts preserve the base, local, and remote
+inputs across reloads, and every recovery action is represented as explicit
+data without side effects.
+
+**Live integration exit gate:** every conflict path preserves both user
+versions and returns to `clean` only after an explicit successful resolution.
 
 ## M4D: Provider hardening
 

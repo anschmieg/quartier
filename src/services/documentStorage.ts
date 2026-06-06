@@ -41,9 +41,14 @@ export class DocumentNotFoundError extends Error {
 }
 
 export class DocumentRevisionConflictError extends Error {
-  constructor(documentId: string) {
+  readonly remoteDocument?: Readonly<StoredDocument>
+
+  constructor(documentId: string, remoteDocument?: StoredDocument) {
     super(`Document "${documentId}" has changed since it was read.`)
     this.name = 'DocumentRevisionConflictError'
+    this.remoteDocument = remoteDocument
+      ? Object.freeze({ ...remoteDocument })
+      : undefined
   }
 }
 
@@ -116,7 +121,7 @@ export class InMemoryDocumentStorageAdapter implements DocumentStorageAdapter {
     }
     if (input.expectedRevision
       && input.expectedRevision !== createDocumentRevision(existing)) {
-      throw new DocumentRevisionConflictError(documentId)
+      throw new DocumentRevisionConflictError(documentId, withDocumentRevision(existing))
     }
 
     const updated: StorageDocument = {

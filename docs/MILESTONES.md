@@ -52,7 +52,7 @@ avoid making later storage or editor choices irreversible.
 
 ## Milestone 4: Authentication and remote storage
 
-**Status: M4A and M4B scaffolding implemented; live OAuth and M4C-M4D deferred**
+**Status: M4A-M4C scaffolding implemented; live OAuth/provider sync and M4D deferred**
 
 - Follow the staged
   [auth and remote storage implementation plan](plans/auth-remote-storage-plan.md).
@@ -69,8 +69,13 @@ avoid making later storage or editor choices irreversible.
   without activating the legacy auth or `/api/github/*` routes.
 - M4B next substep, deferred: implement live GitHub OAuth/API access with
   server-held credentials only after explicit user consent.
-- Implement conflict recovery and provider hardening before broadening remote
-  availability.
+- M4C: persist provider-neutral stale-revision conflict details containing the
+  last synced base and immutable local/remote snapshots.
+- M4C: produce pure keep-local, accept-remote-with-recovery-copy, and manual
+  resolution requests without mutating local storage or calling a provider.
+- M4C next substep, deferred: add live conflict UI and apply explicit recovery
+  requests after provider sync is implemented.
+- Implement provider hardening before broadening remote availability.
 
 ## Milestone 5: Collaboration, WYSIWYG, and executable cells
 

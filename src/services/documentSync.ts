@@ -3,6 +3,12 @@ import type {
   StorageDocument,
   StoredDocument,
 } from '@/services/documentStorage'
+import { DocumentRevisionConflictError } from '@/services/documentStorage'
+import {
+  createDocumentConflict,
+  parseDocumentConflict,
+  type DocumentConflict,
+} from '@/services/documentConflict'
 
 export const DOCUMENT_SYNC_METADATA_KEY = 'quartier.document-sync-metadata.v1'
 
@@ -23,6 +29,7 @@ export interface DocumentSyncMetadata {
   lastSyncedRevision?: string
   lastSyncedSource?: string
   lastSyncedTitle?: string
+  conflict?: Readonly<DocumentConflict>
   errorMessage?: string
   updatedAt: string
 }
@@ -55,9 +62,12 @@ function isMetadata(value: unknown): value is DocumentSyncMetadata {
   }
 
   const metadata = value as Partial<DocumentSyncMetadata>
+  const hasValidConflict = metadata.conflict === undefined
+    || parseDocumentConflict(metadata.conflict) !== undefined
   return typeof metadata.documentId === 'string'
     && isSyncState(metadata.state)
     && typeof metadata.updatedAt === 'string'
+    && hasValidConflict
 }
 
 export class DocumentSyncMetadataStore {
@@ -166,12 +176,23 @@ export class DocumentSyncMetadataStore {
       lastSyncedRevision: document.revision,
       lastSyncedSource: document.source,
       lastSyncedTitle: document.title,
+      conflict: undefined,
       errorMessage: undefined,
     })
   }
 
-  markConflict(documentId: string, message?: string): DocumentSyncMetadata {
-    return this.set(documentId, { state: 'conflict', errorMessage: message })
+  markConflict(
+    documentId: string,
+    conflictOrMessage?: Readonly<DocumentConflict> | string,
+    message?: string,
+  ): DocumentSyncMetadata {
+    const conflict = typeof conflictOrMessage === 'string'
+      ? undefined
+      : conflictOrMessage
+    const errorMessage = typeof conflictOrMessage === 'string'
+      ? conflictOrMessage
+      : message
+    return this.set(documentId, { state: 'conflict', conflict, errorMessage })
   }
 
   markOffline(documentId: string, message?: string): DocumentSyncMetadata {
@@ -197,9 +218,17 @@ export class DocumentSyncMetadataStore {
         return {}
       }
 
-      return Object.fromEntries(
-        Object.entries(parsed).filter(([, value]) => isMetadata(value)),
-      )
+      return Object.fromEntries(Object.entries(parsed)
+        .filter(([, value]) => isMetadata(value))
+        .map(([documentId, value]) => {
+          const metadata = value as DocumentSyncMetadata
+          return [documentId, {
+            ...metadata,
+            conflict: metadata.conflict
+              ? parseDocumentConflict(metadata.conflict)
+              : undefined,
+          }]
+        }))
     } catch {
       return {}
     }
@@ -239,6 +268,47 @@ export async function writeDocumentToAdapter(
     )
     return stored
   } catch (error) {
+    if (error instanceof DocumentRevisionConflictError) {
+      let remoteDocument = error.remoteDocument
+      if (!remoteDocument) {
+        try {
+          remoteDocument = await adapter.get(remoteLocator) ?? undefined
+        } catch {
+          metadataStore.markError(localDocument.id, error)
+          throw error
+        }
+      }
+
+      if (remoteDocument
+        && metadata.lastSyncedRevision
+        && metadata.lastSyncedSource !== undefined
+        && metadata.lastSyncedTitle !== undefined) {
+        const conflict = createDocumentConflict({
+          documentId: localDocument.id,
+          providerId: adapter.id,
+          remoteLocator,
+          base: {
+            title: metadata.lastSyncedTitle,
+            source: metadata.lastSyncedSource,
+            revision: metadata.lastSyncedRevision,
+          },
+          local: {
+            id: localDocument.id,
+            title: localDocument.title,
+            source: localDocument.source,
+          },
+          remote: {
+            id: remoteDocument.id,
+            title: remoteDocument.title,
+            source: remoteDocument.source,
+            revision: remoteDocument.revision,
+          },
+        })
+        metadataStore.markConflict(localDocument.id, conflict, error.message)
+        throw error
+      }
+    }
+
     metadataStore.markError(localDocument.id, error)
     throw error
   }
