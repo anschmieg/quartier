@@ -5,15 +5,23 @@
         <p class="eyebrow">Local-first Quarto editor</p>
         <h1>Quartier</h1>
       </div>
-      <div class="actions">
+      <div class="header-actions">
         <button
           type="button"
           class="secondary"
-          data-testid="reset-document"
-          @click="handleReset"
+          data-testid="import-document"
+          @click="fileInput?.click()"
         >
-          Reset
+          Import
         </button>
+        <input
+          ref="fileInput"
+          class="sr-only"
+          type="file"
+          accept=".qmd,.md,.markdown,.txt"
+          data-testid="file-input"
+          @change="handleImport"
+        >
         <button
           type="button"
           class="primary"
@@ -25,55 +33,204 @@
       </div>
     </header>
 
-    <main class="editor-panel">
-      <div class="editor-heading">
-        <div>
-          <h2>quartier-document.qmd</h2>
-          <p>Edit Quarto Markdown source directly. No account or server is required.</p>
+    <main class="workspace">
+      <aside class="document-panel" aria-label="Local documents">
+        <div class="document-panel-heading">
+          <div>
+            <h2>Documents</h2>
+            <p>{{ collection.documents.length }} stored locally</p>
+          </div>
+          <button
+            type="button"
+            class="secondary compact"
+            data-testid="create-document"
+            @click="handleCreate"
+          >
+            New
+          </button>
         </div>
-        <span class="save-status" aria-live="polite">{{ saveStatus }}</span>
-      </div>
 
-      <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
-      <textarea
-        id="quarto-source"
-        v-model="source"
-        data-testid="source-editor"
-        spellcheck="true"
-        @input="persist"
-      />
+        <div class="document-list">
+          <button
+            v-for="document in collection.documents"
+            :key="document.id"
+            type="button"
+            class="document-item"
+            :class="{ active: document.id === activeDocument.id }"
+            :data-document-id="document.id"
+            @click="handleSwitch(document.id)"
+          >
+            <strong>{{ document.title }}</strong>
+            <span>{{ document.id === activeDocument.id ? 'Active' : 'Open' }}</span>
+          </button>
+        </div>
 
-      <p class="storage-note">
-        Your draft stays in this browser's local storage until you reset it or clear site data.
-      </p>
+        <p class="storage-note">
+          Documents stay in this browser until you delete them or clear site data.
+        </p>
+      </aside>
+
+      <section class="editor-panel">
+        <div class="editor-heading">
+          <div class="title-field">
+            <label for="document-title">Document title</label>
+            <input
+              id="document-title"
+              v-model="title"
+              data-testid="document-title"
+              type="text"
+              @change="handleRename"
+            >
+          </div>
+          <span class="save-status" aria-live="polite">{{ saveStatus }}</span>
+        </div>
+
+        <div class="document-actions">
+          <button
+            type="button"
+            class="secondary compact"
+            data-testid="duplicate-document"
+            @click="handleDuplicate"
+          >
+            Duplicate
+          </button>
+          <button
+            type="button"
+            class="secondary compact"
+            data-testid="reset-document"
+            @click="handleReset"
+          >
+            Reset content
+          </button>
+          <button
+            type="button"
+            class="danger compact"
+            data-testid="delete-document"
+            @click="handleDelete"
+          >
+            Delete
+          </button>
+        </div>
+
+        <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
+        <textarea
+          id="quarto-source"
+          v-model="source"
+          data-testid="source-editor"
+          spellcheck="true"
+          @input="persist"
+        />
+
+        <p v-if="message" class="message" :class="{ error: messageIsError }" role="status">
+          {{ message }}
+        </p>
+      </section>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import {
+  addImportedDocument,
+  createDocument,
   createDocumentExport,
-  loadDocument,
+  deleteDocument,
+  duplicateDocument,
+  getActiveDocument,
+  importDocumentFile,
+  loadDocumentCollection,
+  renameDocument,
   resetDocument,
-  saveDocument,
+  saveDocumentSource,
+  switchDocument,
+  type LocalDocumentCollection,
 } from '@/services/localDocument'
 
-const source = ref(loadDocument())
+const collection = ref<LocalDocumentCollection>(loadDocumentCollection())
+const activeDocument = computed(() => getActiveDocument(collection.value))
+const source = ref(activeDocument.value.source)
+const title = ref(activeDocument.value.title)
 const saveStatus = ref('Saved locally')
+const message = ref('')
+const messageIsError = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+
+function syncActiveDocument(status: string): void {
+  source.value = activeDocument.value.source
+  title.value = activeDocument.value.title
+  saveStatus.value = status
+}
+
+function clearMessage(): void {
+  message.value = ''
+  messageIsError.value = false
+}
 
 function persist(): void {
-  saveDocument(source.value)
+  collection.value = saveDocumentSource(activeDocument.value.id, source.value)
   saveStatus.value = 'Saved locally'
 }
 
+function handleCreate(): void {
+  collection.value = createDocument()
+  syncActiveDocument('New document saved locally')
+  clearMessage()
+}
+
+function handleSwitch(documentId: string): void {
+  collection.value = switchDocument(documentId)
+  syncActiveDocument('Saved locally')
+  clearMessage()
+}
+
+function handleRename(): void {
+  collection.value = renameDocument(activeDocument.value.id, title.value)
+  syncActiveDocument('Title saved locally')
+}
+
+function handleDuplicate(): void {
+  collection.value = duplicateDocument(activeDocument.value.id)
+  syncActiveDocument('Duplicate saved locally')
+  clearMessage()
+}
+
 function handleReset(): void {
-  source.value = resetDocument()
-  saveStatus.value = 'Reset and saved locally'
+  collection.value = resetDocument(activeDocument.value.id)
+  syncActiveDocument('Content reset and saved locally')
+  clearMessage()
+}
+
+function handleDelete(): void {
+  collection.value = deleteDocument(activeDocument.value.id)
+  syncActiveDocument('Document deleted locally')
+  clearMessage()
+}
+
+async function handleImport(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  try {
+    const imported = await importDocumentFile(file)
+    collection.value = addImportedDocument(imported)
+    syncActiveDocument('Imported and saved locally')
+    message.value = `Imported ${file.name}`
+    messageIsError.value = false
+  } catch (error) {
+    message.value = error instanceof Error ? error.message : 'Unable to import this file.'
+    messageIsError.value = true
+  } finally {
+    input.value = ''
+  }
 }
 
 function handleExport(): void {
-  const exported = createDocumentExport(source.value)
+  const exported = createDocumentExport(activeDocument.value)
   const url = URL.createObjectURL(exported.blob)
   const link = document.createElement('a')
 
@@ -94,8 +251,8 @@ function handleExport(): void {
 }
 
 .mvp-header,
-.editor-panel {
-  width: min(100%, 72rem);
+.workspace {
+  width: min(100%, 80rem);
   margin-inline: auto;
 }
 
@@ -129,8 +286,15 @@ h1 {
   line-height: 1;
 }
 
-.actions {
+h2 {
+  margin-bottom: 0.2rem;
+  font-size: 1rem;
+}
+
+.header-actions,
+.document-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
@@ -154,31 +318,118 @@ button.primary {
   border-color: hsl(var(--primary));
 }
 
+button.danger {
+  color: hsl(var(--destructive));
+  background: hsl(var(--card));
+  border-color: hsl(var(--destructive));
+}
+
+button.compact {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.document-panel,
 .editor-panel {
-  padding: clamp(1rem, 3vw, 2rem);
   border: 1px solid hsl(var(--border));
   border-radius: calc(var(--radius) * 2);
   background: hsl(var(--card));
-  box-shadow: 0 1.5rem 4rem rgba(38, 38, 38, 0.08);
+  box-shadow: 0 1.5rem 4rem rgba(38, 38, 38, 0.06);
 }
 
+.document-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.document-panel-heading,
 .editor-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
-.editor-heading h2 {
-  margin-bottom: 0.3rem;
-  font-size: 1rem;
-}
-
-.editor-heading p,
-.storage-note {
+.document-panel-heading p,
+.storage-note,
+.title-field label {
   color: hsl(var(--muted-foreground));
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+}
+
+.document-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-block: 1rem;
+}
+
+.document-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  text-align: left;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+}
+
+.document-item strong {
+  overflow: hidden;
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-item span {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.72rem;
+}
+
+.document-item.active {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--secondary));
+}
+
+.storage-note {
+  margin: auto 0 0;
+}
+
+.editor-panel {
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.editor-heading {
+  margin-bottom: 0.75rem;
+}
+
+.title-field {
+  flex: 1;
+}
+
+.title-field label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-weight: 600;
+}
+
+.title-field input {
+  width: min(100%, 32rem);
+  padding: 0.55rem 0.7rem;
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius);
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  font: inherit;
+  font-weight: 600;
 }
 
 .save-status {
@@ -188,10 +439,14 @@ button.primary {
   font-weight: 600;
 }
 
+.document-actions {
+  margin-bottom: 1rem;
+}
+
 textarea {
   display: block;
   width: 100%;
-  min-height: 62vh;
+  min-height: 58vh;
   resize: vertical;
   padding: 1.25rem;
   border: 1px solid hsl(var(--input));
@@ -202,8 +457,14 @@ textarea {
   tab-size: 2;
 }
 
-.storage-note {
+.message {
   margin: 0.9rem 0 0;
+  color: hsl(var(--primary));
+  font-size: 0.85rem;
+}
+
+.message.error {
+  color: hsl(var(--destructive));
 }
 
 .sr-only {
@@ -218,7 +479,7 @@ textarea {
   border: 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   .mvp-shell {
     padding: 1rem;
   }
@@ -229,7 +490,11 @@ textarea {
     flex-direction: column;
   }
 
-  .actions button {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions button {
     flex: 1;
   }
 }

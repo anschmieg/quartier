@@ -1,9 +1,9 @@
 # Quartier
 
 Quartier is a local-first editor for Quarto Markdown documents. The current
-Milestone 1 app deliberately starts small: edit one `.qmd` document in source
-form, save it automatically in the browser, reset it, and download it without
-an account or backend.
+Milestone 2 app manages multiple browser-local source documents without an
+account or backend. Create, switch, rename, duplicate, delete, import, edit,
+and download documents directly in the browser.
 
 The default `/` route is the local editor. Existing experimental modules for
 authentication, remote storage, WYSIWYG editing, executable cells, and
@@ -11,17 +11,20 @@ collaboration are preserved for later milestones but are not required by the
 MVP. See [docs/MILESTONES.md](docs/MILESTONES.md) for the planned sequence and
 deferred scope.
 
-## Current MVP
+## Current Local Editor
 
 - Quarto Markdown source textarea
-- Automatic browser `localStorage` persistence
-- Starter-document reset
-- `.qmd` download/export
+- Multiple documents persisted automatically in browser `localStorage`
+- Create, switch, rename, duplicate, delete, and reset local documents
+- Import local `.qmd`, `.md`, `.markdown`, and `.txt` files
+- Download the active document as `.qmd` using a sanitized document title
+- Automatic migration of the Milestone 1 `quartier.local-document.v1` draft
 - No authentication
 - No remote storage or server dependency
 
-Browser storage is local to the current origin and browser profile. Download
-important work as a `.qmd` file before clearing site data.
+Imported files are copied into browser storage; Quartier does not modify the
+original file. Browser storage is local to the current origin and browser
+profile. Download important work as a `.qmd` file before clearing site data.
 
 ## Development
 
@@ -45,7 +48,7 @@ The broader legacy development command also starts Wrangler and PartyKit:
 npm run dev
 ```
 
-Those backend processes are not needed for the Milestone 1 editor.
+Those backend processes are not needed for the Milestone 2 local editor.
 
 ## Test
 

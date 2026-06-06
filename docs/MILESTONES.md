@@ -17,12 +17,15 @@ avoid making later storage or editor choices irreversible.
 
 ## Milestone 2: Document management and import/export
 
-**Status: planned**
+**Status: implemented**
 
 - Create, rename, duplicate, and delete multiple local documents.
-- Import `.qmd` and Markdown files from the user's device.
-- Improve export naming and document metadata.
-- Define a migration path from the Milestone 1 storage key.
+- Switch between documents stored in the current browser profile.
+- Import `.qmd`, `.md`, `.markdown`, and `.txt` files from the user's device.
+- Export the active document as `.qmd` with a sanitized title-based filename.
+- Migrate the Milestone 1 `quartier.local-document.v1` draft into the versioned
+  multi-document collection on first load.
+- Keep all document management, import, and export behavior local-only.
 
 ## Milestone 3: Preview and rendering improvements
 
