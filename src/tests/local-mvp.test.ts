@@ -355,6 +355,18 @@ describe('LocalMvpEditor', () => {
     expect(getActiveDocument(loadDocumentCollection()).source).toBe(DEFAULT_DOCUMENT)
   })
 
+  it('updates active document word and character counts while editing', async () => {
+    const wrapper = mount(LocalMvpEditor)
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('one two\nthree')
+
+    expect(wrapper.get('[data-testid="document-stats"]').text()).toBe('3 words · 13 characters')
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('')
+
+    expect(wrapper.get('[data-testid="document-stats"]').text()).toBe('0 words · 0 characters')
+  })
+
   it('toggles between source, split, and preview views', async () => {
     const wrapper = mount(LocalMvpEditor)
 

@@ -233,6 +233,10 @@
           </div>
         </div>
 
+        <p class="document-stats" data-testid="document-stats" aria-live="polite">
+          {{ documentStats.words }} words · {{ documentStats.characters }} characters
+        </p>
+
         <ul
           v-if="diagnostics.length"
           class="diagnostics"
@@ -337,6 +341,13 @@ const filteredDocuments = computed(() => {
     document.title.toLowerCase().includes(query)
     || document.source.toLowerCase().includes(query),
   )
+})
+const documentStats = computed(() => {
+  const trimmedSource = source.value.trim()
+  return {
+    characters: source.value.length,
+    words: trimmedSource ? trimmedSource.split(/\s+/).length : 0,
+  }
 })
 
 function syncActiveDocument(status: string): void {
@@ -757,7 +768,13 @@ button.compact {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.document-stats {
+  margin: 0 0 1rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
 }
 
 .view-switcher {

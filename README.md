@@ -3,8 +3,8 @@
 Quartier is a local-first editor for Quarto Markdown documents. The current MVP
 manages, searches, previews, backs up, and restores multiple browser-local
 source documents without an account or backend. Create, switch, rename,
-duplicate, delete, filter, import, edit, preview, and download documents
-directly in the browser.
+duplicate, delete, filter, import, edit, preview, inspect basic document stats,
+and download documents directly in the browser.
 
 The default `/` route is the local editor. Milestone 4A adds a provider-neutral
 document storage boundary and persisted per-document sync metadata while
@@ -34,6 +34,7 @@ broader sequence.
 - Lightweight diagnostics for empty documents and frontmatter fence problems
 - Multiple documents persisted automatically in browser `localStorage`
 - Case-insensitive local library search by document title or source
+- Live word and character counts for the active source document
 - Provider-neutral list/get/create/update/delete storage adapter operations
 - Stable document IDs and revisions derived from document title and source
 - Separate local sync metadata for local-only, clean, changed, syncing,

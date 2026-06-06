@@ -56,6 +56,7 @@ avoid making later storage or editor choices irreversible.
 
 - Add browser-local document search to filter the local library by title or
   source without contacting a provider.
+- Add live word and character counts for the active source document.
 - Keep the active document unchanged when the filter hides it.
 - Show an empty state and clear-filter action when no stored documents match.
 - Track post-M4 continuation in the
