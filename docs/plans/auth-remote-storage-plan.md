@@ -7,6 +7,8 @@ provider.
 
 ## M4A: Storage adapter boundary and sync state
 
+**Status: implemented**
+
 - Introduce a document storage adapter owned by the local MVP domain, separate
   from the legacy `StorageManager` and file-browser providers.
 - Define provider-neutral document operations: list/get/create/update/delete,
@@ -25,6 +27,8 @@ provider.
 adapter, and deterministic tests cover state transitions and failed writes.
 
 ## M4B: Explicit GitHub OAuth/API integration
+
+**Status: deferred**
 
 - Add a "Connect GitHub" action in a remote-storage settings surface. Keep it
   absent from the initial local editing path and never auto-select GitHub.

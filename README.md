@@ -5,13 +5,14 @@ manages, previews, backs up, and restores multiple browser-local source
 documents without an account or backend. Create, switch, rename, duplicate,
 delete, import, edit, preview, and download documents directly in the browser.
 
-The default `/` route is the local editor. Existing experimental modules for
+The default `/` route is the local editor. Milestone 4A adds a provider-neutral
+document storage boundary and persisted per-document sync metadata while
+keeping `localStorage` as the active adapter. Existing experimental modules for
 authentication, remote storage, WYSIWYG editing, executable cells, and
 collaboration are preserved for later milestones but are not required by the
-MVP. Authentication and remote storage are next, following the staged
-[auth and remote storage plan](docs/plans/auth-remote-storage-plan.md). See
-[docs/MILESTONES.md](docs/MILESTONES.md) for the broader sequence and deferred
-scope.
+MVP. GitHub OAuth and remote API access remain deferred to Milestone 4B in the
+staged [auth and remote storage plan](docs/plans/auth-remote-storage-plan.md).
+See [docs/MILESTONES.md](docs/MILESTONES.md) for the broader sequence.
 
 ## Current Local Editor
 
@@ -20,6 +21,10 @@ scope.
 - Safe local rendering of common Markdown and YAML frontmatter metadata
 - Lightweight diagnostics for empty documents and frontmatter fence problems
 - Multiple documents persisted automatically in browser `localStorage`
+- Provider-neutral list/get/create/update/delete storage adapter operations
+- Stable document IDs and revisions derived from document title and source
+- Separate local sync metadata for local-only, clean, changed, syncing,
+  conflict, offline, and error states
 - Create, switch, rename, duplicate, delete, and reset local documents
 - Import local `.qmd`, `.md`, `.markdown`, and `.txt` files
 - Download the active document as `.qmd` using a sanitized document title
@@ -33,6 +38,9 @@ Imported files are copied into browser storage; Quartier does not modify the
 original file. Browser storage is local to the current origin and browser
 profile. Back up the library before clearing site data. Restoring a backup
 replaces the current local library after the full file has been validated.
+The local editor remains behaviorally unchanged, but its document persistence
+now runs through the local storage adapter. No OAuth flow, network provider,
+auth UI, or legacy provider is activated by Milestone 4A.
 
 ## Development
 

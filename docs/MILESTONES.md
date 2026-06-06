@@ -52,12 +52,19 @@ avoid making later storage or editor choices irreversible.
 
 ## Milestone 4: Authentication and remote storage
 
-**Status: next, planned**
+**Status: M4A implemented; M4B-M4D deferred**
 
 - Follow the staged
   [auth and remote storage implementation plan](plans/auth-remote-storage-plan.md).
-- Establish the storage adapter and sync-state boundary before enabling auth.
-- Add GitHub OAuth/API access only through an explicit user opt-in.
+- M4A: route the local MVP document collection through a provider-neutral
+  list/get/create/update/delete adapter with content/title revision tokens.
+- M4A: persist per-document provider metadata and explicit sync states
+  separately from document content.
+- M4A: preserve local source when a provider adapter write fails, with contract
+  and state-transition coverage for local and in-memory adapters.
+- Keep `localStorage` as the default adapter and the editor behavior unchanged.
+- M4B, deferred: add GitHub OAuth/API access only through an explicit user
+  opt-in.
 - Implement conflict recovery and provider hardening before broadening remote
   availability.
 

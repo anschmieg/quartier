@@ -1,3 +1,15 @@
+import {
+  DocumentNotFoundError,
+  DocumentRevisionConflictError,
+  createDocumentRevision,
+  withDocumentRevision,
+  type CreateDocumentInput,
+  type DocumentStorageAdapter,
+  type StoredDocument,
+  type UpdateDocumentInput,
+} from '@/services/documentStorage'
+import { documentSyncMetadata } from '@/services/documentSync'
+
 export const LEGACY_LOCAL_DOCUMENT_KEY = 'quartier.local-document.v1'
 export const LOCAL_DOCUMENTS_KEY = 'quartier.local-documents.v2'
 export const LOCAL_LIBRARY_BACKUP_FORMAT = 'quartier-local-library'
@@ -142,32 +154,140 @@ function isLocalLibraryBackup(value: unknown): value is LocalLibraryBackup {
     && documentIds.includes(backup.activeDocumentId)
 }
 
+export class LocalStorageDocumentAdapter implements DocumentStorageAdapter {
+  readonly id = 'local'
+  private readonly storage: Storage
+
+  constructor(storage: Storage = localStorage) {
+    this.storage = storage
+  }
+
+  loadCollection(): LocalDocumentCollection {
+    const storedCollection = this.storage.getItem(LOCAL_DOCUMENTS_KEY)
+
+    if (storedCollection) {
+      try {
+        const parsed: unknown = JSON.parse(storedCollection)
+        if (isLocalDocumentCollection(parsed)) {
+          return parsed
+        }
+      } catch {
+        // Replace invalid local data with a usable starter collection.
+      }
+    }
+
+    const legacySource = this.storage.getItem(LEGACY_LOCAL_DOCUMENT_KEY)
+    const collection = this.saveCollection(
+      createInitialCollection(legacySource ?? DEFAULT_DOCUMENT),
+    )
+
+    if (legacySource !== null) {
+      this.storage.removeItem(LEGACY_LOCAL_DOCUMENT_KEY)
+    }
+
+    return collection
+  }
+
+  saveCollection(collection: LocalDocumentCollection): LocalDocumentCollection {
+    this.storage.setItem(LOCAL_DOCUMENTS_KEY, JSON.stringify(collection))
+    return collection
+  }
+
+  list(): StoredDocument[] {
+    return this.loadCollection().documents.map(withDocumentRevision)
+  }
+
+  get(documentId: string): StoredDocument | null {
+    const document = this.loadCollection().documents.find(item => item.id === documentId)
+    return document ? withDocumentRevision(document) : null
+  }
+
+  create(input: CreateDocumentInput): StoredDocument {
+    const collection = this.loadCollection()
+    const document = createLocalDocument(input.title, input.source)
+    if (input.id) {
+      document.id = input.id
+    }
+
+    if (collection.documents.some(item => item.id === document.id)) {
+      throw new Error(`Document "${document.id}" already exists.`)
+    }
+
+    this.saveCollection({
+      ...collection,
+      activeDocumentId: document.id,
+      documents: [...collection.documents, document],
+    })
+    return withDocumentRevision(document)
+  }
+
+  update(documentId: string, input: UpdateDocumentInput): StoredDocument {
+    const collection = this.loadCollection()
+    const existing = collection.documents.find(document => document.id === documentId)
+    if (!existing) {
+      throw new DocumentNotFoundError(documentId)
+    }
+    if (input.expectedRevision
+      && input.expectedRevision !== createDocumentRevision(existing)) {
+      throw new DocumentRevisionConflictError(documentId)
+    }
+
+    const updated: LocalDocument = {
+      ...existing,
+      title: input.title ?? existing.title,
+      source: input.source ?? existing.source,
+      updatedAt: createTimestamp(),
+    }
+    this.saveCollection({
+      ...collection,
+      documents: collection.documents.map(document => document.id === documentId
+        ? updated
+        : document),
+    })
+    return withDocumentRevision(updated)
+  }
+
+  delete(documentId: string): void {
+    const collection = this.loadCollection()
+    const documentIndex = collection.documents.findIndex(document => document.id === documentId)
+    if (documentIndex === -1) {
+      return
+    }
+
+    const remainingDocuments = collection.documents.filter(
+      document => document.id !== documentId,
+    )
+    if (remainingDocuments.length === 0) {
+      const replacement = createLocalDocument()
+      this.saveCollection({
+        version: 2,
+        activeDocumentId: replacement.id,
+        documents: [replacement],
+      })
+      return
+    }
+
+    const activeDocumentId = collection.activeDocumentId === documentId
+      ? remainingDocuments[Math.min(documentIndex, remainingDocuments.length - 1)]!.id
+      : collection.activeDocumentId
+
+    this.saveCollection({
+      ...collection,
+      activeDocumentId,
+      documents: remainingDocuments,
+    })
+  }
+}
+
+export const localDocumentAdapter = new LocalStorageDocumentAdapter()
+
 function saveCollection(collection: LocalDocumentCollection): LocalDocumentCollection {
-  localStorage.setItem(LOCAL_DOCUMENTS_KEY, JSON.stringify(collection))
-  return collection
+  return localDocumentAdapter.saveCollection(collection)
 }
 
 export function loadDocumentCollection(): LocalDocumentCollection {
-  const storedCollection = localStorage.getItem(LOCAL_DOCUMENTS_KEY)
-
-  if (storedCollection) {
-    try {
-      const parsed: unknown = JSON.parse(storedCollection)
-      if (isLocalDocumentCollection(parsed)) {
-        return parsed
-      }
-    } catch {
-      // Replace invalid local data with a usable starter collection.
-    }
-  }
-
-  const legacySource = localStorage.getItem(LEGACY_LOCAL_DOCUMENT_KEY)
-  const collection = saveCollection(createInitialCollection(legacySource ?? DEFAULT_DOCUMENT))
-
-  if (legacySource !== null) {
-    localStorage.removeItem(LEGACY_LOCAL_DOCUMENT_KEY)
-  }
-
+  const collection = localDocumentAdapter.loadCollection()
+  documentSyncMetadata.reconcileDocuments(collection.documents.map(document => document.id))
   return collection
 }
 
@@ -180,14 +300,11 @@ export function getActiveDocument(collection: LocalDocumentCollection): LocalDoc
 }
 
 export function createDocument(): LocalDocumentCollection {
-  const collection = loadDocumentCollection()
-  const document = createLocalDocument()
-
-  return saveCollection({
-    ...collection,
-    activeDocumentId: document.id,
-    documents: [...collection.documents, document],
+  localDocumentAdapter.create({
+    title: DEFAULT_DOCUMENT_TITLE,
+    source: DEFAULT_DOCUMENT,
   })
+  return loadDocumentCollection()
 }
 
 export function switchDocument(documentId: string): LocalDocumentCollection {
@@ -204,15 +321,13 @@ export function switchDocument(documentId: string): LocalDocumentCollection {
 }
 
 export function saveDocumentSource(documentId: string, source: string): LocalDocumentCollection {
+  localDocumentAdapter.update(documentId, { source })
   const collection = loadDocumentCollection()
-  const updatedAt = createTimestamp()
-
-  return saveCollection({
-    ...collection,
-    documents: collection.documents.map(document => document.id === documentId
-      ? { ...document, source, updatedAt }
-      : document),
-  })
+  const document = collection.documents.find(item => item.id === documentId)
+  if (document) {
+    documentSyncMetadata.markLocalChange(document)
+  }
+  return collection
 }
 
 export function resetDocument(documentId: string): LocalDocumentCollection {
@@ -220,16 +335,14 @@ export function resetDocument(documentId: string): LocalDocumentCollection {
 }
 
 export function renameDocument(documentId: string, title: string): LocalDocumentCollection {
-  const collection = loadDocumentCollection()
   const normalizedTitle = title.trim() || DEFAULT_DOCUMENT_TITLE
-  const updatedAt = createTimestamp()
-
-  return saveCollection({
-    ...collection,
-    documents: collection.documents.map(document => document.id === documentId
-      ? { ...document, title: normalizedTitle, updatedAt }
-      : document),
-  })
+  localDocumentAdapter.update(documentId, { title: normalizedTitle })
+  const collection = loadDocumentCollection()
+  const document = collection.documents.find(item => item.id === documentId)
+  if (document) {
+    documentSyncMetadata.markLocalChange(document)
+  }
+  return collection
 }
 
 export function duplicateDocument(documentId: string): LocalDocumentCollection {
@@ -240,43 +353,17 @@ export function duplicateDocument(documentId: string): LocalDocumentCollection {
     return collection
   }
 
-  const duplicate = createLocalDocument(`${original.title} Copy`, original.source)
-
-  return saveCollection({
-    ...collection,
-    activeDocumentId: duplicate.id,
-    documents: [...collection.documents, duplicate],
+  localDocumentAdapter.create({
+    title: `${original.title} Copy`,
+    source: original.source,
   })
+  return loadDocumentCollection()
 }
 
 export function deleteDocument(documentId: string): LocalDocumentCollection {
-  const collection = loadDocumentCollection()
-  const documentIndex = collection.documents.findIndex(document => document.id === documentId)
-
-  if (documentIndex === -1) {
-    return collection
-  }
-
-  const remainingDocuments = collection.documents.filter(document => document.id !== documentId)
-
-  if (remainingDocuments.length === 0) {
-    const replacement = createLocalDocument()
-    return saveCollection({
-      version: 2,
-      activeDocumentId: replacement.id,
-      documents: [replacement],
-    })
-  }
-
-  const activeDocumentId = collection.activeDocumentId === documentId
-    ? remainingDocuments[Math.min(documentIndex, remainingDocuments.length - 1)]!.id
-    : collection.activeDocumentId
-
-  return saveCollection({
-    ...collection,
-    activeDocumentId,
-    documents: remainingDocuments,
-  })
+  localDocumentAdapter.delete(documentId)
+  documentSyncMetadata.remove(documentId)
+  return loadDocumentCollection()
 }
 
 export async function importDocumentFile(file: Pick<File, 'name' | 'text'>): Promise<ImportedDocument> {
@@ -295,14 +382,11 @@ export async function importDocumentFile(file: Pick<File, 'name' | 'text'>): Pro
 }
 
 export function addImportedDocument(imported: ImportedDocument): LocalDocumentCollection {
-  const collection = loadDocumentCollection()
-  const document = createLocalDocument(imported.title, imported.source)
-
-  return saveCollection({
-    ...collection,
-    activeDocumentId: document.id,
-    documents: [...collection.documents, document],
+  localDocumentAdapter.create({
+    title: imported.title,
+    source: imported.source,
   })
+  return loadDocumentCollection()
 }
 
 export function sanitizeFilename(title: string): string {
@@ -383,7 +467,9 @@ export async function restoreLibraryBackupFile(
   }
 
   try {
-    return saveCollection(collection)
+    const saved = saveCollection(collection)
+    documentSyncMetadata.resetDocuments(saved.documents.map(document => document.id))
+    return saved
   } catch {
     throw new Error('Quartier could not save the restored library in this browser.')
   }
