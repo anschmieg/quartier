@@ -273,6 +273,60 @@ describe('LocalMvpEditor', () => {
       .toBe(DEFAULT_DOCUMENT)
   })
 
+  it('filters local documents by title and source without changing the active document', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const firstId = loadDocumentCollection().activeDocumentId
+    const titleInput = wrapper.get('[data-testid="document-title"]')
+    const sourceInput = wrapper.get('[data-testid="source-editor"]')
+
+    await titleInput.setValue('Alpha outline')
+    await titleInput.trigger('change')
+    await sourceInput.setValue('# Alpha\nLocal planning notes')
+    await wrapper.get('[data-testid="create-document"]').trigger('click')
+    await wrapper.get('[data-testid="document-title"]').setValue('Beta draft')
+    await wrapper.get('[data-testid="document-title"]').trigger('change')
+    await wrapper.get('[data-testid="source-editor"]').setValue('# Beta\nContains pineapple keyword')
+
+    expect(getActiveDocument(loadDocumentCollection()).title).toBe('Beta draft')
+
+    await wrapper.get('[data-testid="document-search"]').setValue('alpha')
+
+    expect(wrapper.findAll('.document-item')).toHaveLength(1)
+    expect(wrapper.get('.document-item').text()).toContain('Alpha outline')
+    expect((wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement).value)
+      .toContain('pineapple keyword')
+    expect(getActiveDocument(loadDocumentCollection()).title).toBe('Beta draft')
+
+    await wrapper.get('[data-testid="document-search"]').setValue('pineapple')
+
+    expect(wrapper.findAll('.document-item')).toHaveLength(1)
+    expect(wrapper.get('.document-item').text()).toContain('Beta draft')
+
+    await wrapper.get('[data-testid="clear-document-search"]').trigger('click')
+    await wrapper.get(`[data-document-id="${firstId}"]`).trigger('click')
+    expect(getActiveDocument(loadDocumentCollection()).title).toBe('Alpha outline')
+  })
+
+  it('shows an empty search state and clears the document filter', async () => {
+    const wrapper = mount(LocalMvpEditor)
+
+    await wrapper.get('[data-testid="create-document"]').trigger('click')
+    expect(wrapper.findAll('.document-item')).toHaveLength(2)
+
+    await wrapper.get('[data-testid="document-search"]').setValue('no matching local document')
+
+    expect(wrapper.findAll('.document-item')).toHaveLength(0)
+    expect(wrapper.get('[data-testid="document-search-empty"]').text())
+      .toContain('no matching local document')
+
+    await wrapper.get('[data-testid="clear-document-search"]').trigger('click')
+
+    expect((wrapper.get('[data-testid="document-search"]').element as HTMLInputElement).value)
+      .toBe('')
+    expect(wrapper.findAll('.document-item')).toHaveLength(2)
+    expect(wrapper.find('[data-testid="document-search-empty"]').exists()).toBe(false)
+  })
+
   it('renames, duplicates, and deletes the active document', async () => {
     const wrapper = mount(LocalMvpEditor)
     const titleInput = wrapper.get('[data-testid="document-title"]')

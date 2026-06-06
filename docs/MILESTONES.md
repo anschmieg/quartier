@@ -50,6 +50,17 @@ avoid making later storage or editor choices irreversible.
   the current library.
 - Keep backup and restore independent of authentication and remote providers.
 
+## Milestone 3P: Local library usability polish
+
+**Status: implemented**
+
+- Add browser-local document search to filter the local library by title or
+  source without contacting a provider.
+- Keep the active document unchanged when the filter hides it.
+- Show an empty state and clear-filter action when no stored documents match.
+- Track post-M4 continuation in the
+  [post-M4 roadmap](plans/post-m4-roadmap.md).
+
 ## Milestone 4: Authentication and remote storage
 
 **Status: M4A-M4D scaffolding implemented; live OAuth/provider sync deferred**
@@ -87,6 +98,8 @@ avoid making later storage or editor choices irreversible.
 
 **Status: deferred**
 
+- Follow the [post-M4 roadmap](plans/post-m4-roadmap.md) before activating live
+  GitHub OAuth, remote import/link, conflict UI, WYSIWYG, or executable cells.
 - Real-time multi-user collaboration and shared sessions.
 - WYSIWYG editing and robust source/visual round trips.
 - Executable Python/R cells, kernels, and rich output handling.

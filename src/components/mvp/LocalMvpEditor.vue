@@ -74,9 +74,29 @@
           </button>
         </div>
 
+        <div class="document-search">
+          <label for="document-search">Search local documents</label>
+          <input
+            id="document-search"
+            v-model="documentSearch"
+            type="search"
+            data-testid="document-search"
+            placeholder="Search title or source"
+          >
+          <button
+            v-if="documentSearch"
+            type="button"
+            class="secondary compact"
+            data-testid="clear-document-search"
+            @click="documentSearch = ''"
+          >
+            Clear
+          </button>
+        </div>
+
         <div class="document-list">
           <button
-            v-for="document in collection.documents"
+            v-for="document in filteredDocuments"
             :key="document.id"
             type="button"
             class="document-item"
@@ -87,6 +107,13 @@
             <strong>{{ document.title }}</strong>
             <span>{{ document.id === activeDocument.id ? 'Active' : 'Open' }}</span>
           </button>
+          <p
+            v-if="filteredDocuments.length === 0"
+            class="document-empty-state"
+            data-testid="document-search-empty"
+          >
+            No local documents match “{{ normalizedDocumentSearch }}”.
+          </p>
         </div>
 
         <p class="storage-note">
@@ -289,6 +316,7 @@ const activeDocument = computed(() => getActiveDocument(collection.value))
 const source = ref(activeDocument.value.source)
 const diagnostics = computed(() => getSourceDiagnostics(source.value))
 const title = ref(activeDocument.value.title)
+const documentSearch = ref('')
 const viewMode = ref<ViewMode>('split')
 const saveStatus = ref('Saved locally')
 const message = ref('')
@@ -298,6 +326,18 @@ const backupFileInput = ref<HTMLInputElement | null>(null)
 const remoteStorageOpen = ref(false)
 const githubConnection = ref(createDisconnectedConnection(githubRemoteProvider))
 const remoteMessage = ref('')
+const normalizedDocumentSearch = computed(() => documentSearch.value.trim())
+const filteredDocuments = computed(() => {
+  const query = normalizedDocumentSearch.value.toLowerCase()
+  if (!query) {
+    return collection.value.documents
+  }
+
+  return collection.value.documents.filter(document =>
+    document.title.toLowerCase().includes(query)
+    || document.source.toLowerCase().includes(query),
+  )
+})
 
 function syncActiveDocument(status: string): void {
   source.value = activeDocument.value.source
@@ -549,6 +589,39 @@ button.compact {
   display: grid;
   gap: 0.5rem;
   margin-block: 1rem;
+}
+
+.document-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.document-search label {
+  grid-column: 1 / -1;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.document-search input {
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius);
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  font: inherit;
+}
+
+.document-empty-state {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: var(--radius);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.82rem;
 }
 
 .document-item {

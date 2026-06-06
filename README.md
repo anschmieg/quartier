@@ -1,9 +1,10 @@
 # Quartier
 
 Quartier is a local-first editor for Quarto Markdown documents. The current MVP
-manages, previews, backs up, and restores multiple browser-local source
-documents without an account or backend. Create, switch, rename, duplicate,
-delete, import, edit, preview, and download documents directly in the browser.
+manages, searches, previews, backs up, and restores multiple browser-local
+source documents without an account or backend. Create, switch, rename,
+duplicate, delete, filter, import, edit, preview, and download documents
+directly in the browser.
 
 The default `/` route is the local editor. Milestone 4A adds a provider-neutral
 document storage boundary and persisted per-document sync metadata while
@@ -19,8 +20,11 @@ modules for authentication, remote storage, WYSIWYG editing,
 executable cells, and collaboration are preserved for later milestones but
 are not required by the MVP. Live GitHub OAuth and remote API access remain
 deferred in the staged
-[auth and remote storage plan](docs/plans/auth-remote-storage-plan.md). See
-[docs/MILESTONES.md](docs/MILESTONES.md) for the broader sequence.
+[auth and remote storage plan](docs/plans/auth-remote-storage-plan.md). The
+[post-M4 roadmap](docs/plans/post-m4-roadmap.md) tracks the next activation
+steps for live GitHub OAuth, remote import/link, conflict UI, WYSIWYG, and
+executable-cell spikes. See [docs/MILESTONES.md](docs/MILESTONES.md) for the
+broader sequence.
 
 ## Current Local Editor
 
@@ -29,6 +33,7 @@ deferred in the staged
 - Safe local rendering of common Markdown and YAML frontmatter metadata
 - Lightweight diagnostics for empty documents and frontmatter fence problems
 - Multiple documents persisted automatically in browser `localStorage`
+- Case-insensitive local library search by document title or source
 - Provider-neutral list/get/create/update/delete storage adapter operations
 - Stable document IDs and revisions derived from document title and source
 - Separate local sync metadata for local-only, clean, changed, syncing,
@@ -134,6 +139,7 @@ npm run preview
 
 - [Milestones](docs/MILESTONES.md)
 - [Auth and remote storage plan](docs/plans/auth-remote-storage-plan.md)
+- [Post-M4 roadmap](docs/plans/post-m4-roadmap.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Contributing](docs/CONTRIBUTING.md)
 - [Environment variables](docs/ENVIRONMENT.md)
