@@ -86,40 +86,83 @@
         </div>
 
         <div class="document-actions">
-          <button
-            type="button"
-            class="secondary compact"
-            data-testid="duplicate-document"
-            @click="handleDuplicate"
-          >
-            Duplicate
-          </button>
-          <button
-            type="button"
-            class="secondary compact"
-            data-testid="reset-document"
-            @click="handleReset"
-          >
-            Reset content
-          </button>
-          <button
-            type="button"
-            class="danger compact"
-            data-testid="delete-document"
-            @click="handleDelete"
-          >
-            Delete
-          </button>
+          <div class="document-management-actions">
+            <button
+              type="button"
+              class="secondary compact"
+              data-testid="duplicate-document"
+              @click="handleDuplicate"
+            >
+              Duplicate
+            </button>
+            <button
+              type="button"
+              class="secondary compact"
+              data-testid="reset-document"
+              @click="handleReset"
+            >
+              Reset content
+            </button>
+            <button
+              type="button"
+              class="danger compact"
+              data-testid="delete-document"
+              @click="handleDelete"
+            >
+              Delete
+            </button>
+          </div>
+
+          <div class="view-switcher" aria-label="Editor view">
+            <button
+              v-for="option in viewOptions"
+              :key="option.value"
+              type="button"
+              class="secondary compact"
+              :class="{ selected: viewMode === option.value }"
+              :aria-pressed="viewMode === option.value"
+              :data-testid="`${option.value}-view`"
+              @click="viewMode = option.value"
+            >
+              {{ option.label }}
+            </button>
+          </div>
         </div>
 
-        <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
-        <textarea
-          id="quarto-source"
-          v-model="source"
-          data-testid="source-editor"
-          spellcheck="true"
-          @input="persist"
-        />
+        <ul
+          v-if="diagnostics.length"
+          class="diagnostics"
+          aria-label="Source diagnostics"
+          data-testid="source-diagnostics"
+        >
+          <li
+            v-for="diagnostic in diagnostics"
+            :key="diagnostic.message"
+            :class="diagnostic.severity"
+          >
+            <strong>{{ diagnostic.severity === 'error' ? 'Error' : 'Notice' }}:</strong>
+            {{ diagnostic.message }}
+          </li>
+        </ul>
+
+        <div class="editing-surface" :class="`mode-${viewMode}`">
+          <div v-if="viewMode !== 'preview'" class="source-pane">
+            <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
+            <textarea
+              id="quarto-source"
+              v-model="source"
+              data-testid="source-editor"
+              spellcheck="true"
+              @input="persist"
+            />
+          </div>
+
+          <LocalMarkdownPreview
+            v-if="viewMode !== 'source'"
+            class="preview-pane"
+            :source="source"
+          />
+        </div>
 
         <p v-if="message" class="message" :class="{ error: messageIsError }" role="status">
           {{ message }}
@@ -131,6 +174,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import LocalMarkdownPreview from '@/components/mvp/LocalMarkdownPreview.vue'
 import {
   addImportedDocument,
   createDocument,
@@ -146,11 +190,22 @@ import {
   switchDocument,
   type LocalDocumentCollection,
 } from '@/services/localDocument'
+import { getSourceDiagnostics } from '@/services/localPreview'
+
+type ViewMode = 'source' | 'split' | 'preview'
+
+const viewOptions: { label: string, value: ViewMode }[] = [
+  { label: 'Source', value: 'source' },
+  { label: 'Split', value: 'split' },
+  { label: 'Preview', value: 'preview' },
+]
 
 const collection = ref<LocalDocumentCollection>(loadDocumentCollection())
 const activeDocument = computed(() => getActiveDocument(collection.value))
 const source = ref(activeDocument.value.source)
+const diagnostics = computed(() => getSourceDiagnostics(source.value))
 const title = ref(activeDocument.value.title)
+const viewMode = ref<ViewMode>('split')
 const saveStatus = ref('Saved locally')
 const message = ref('')
 const messageIsError = ref(false)
@@ -292,7 +347,8 @@ h2 {
 }
 
 .header-actions,
-.document-actions {
+.document-management-actions,
+.view-switcher {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -440,10 +496,68 @@ button.compact {
 }
 
 .document-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1rem;
 }
 
-textarea {
+.view-switcher {
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--background));
+}
+
+.view-switcher button {
+  border-color: transparent;
+}
+
+.view-switcher button.selected {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--secondary));
+}
+
+.diagnostics {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.diagnostics li {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--secondary));
+}
+
+.diagnostics li.error {
+  color: hsl(var(--destructive));
+  border-color: hsl(var(--destructive));
+}
+
+.editing-surface {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.editing-surface.mode-split {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.source-pane,
+.preview-pane {
+  min-width: 0;
+}
+
+.source-pane textarea {
   display: block;
   width: 100%;
   min-height: 58vh;
@@ -491,6 +605,15 @@ textarea {
   }
 
   .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .document-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .editing-surface.mode-split {
     grid-template-columns: 1fr;
   }
 

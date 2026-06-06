@@ -1,9 +1,9 @@
 # Quartier
 
 Quartier is a local-first editor for Quarto Markdown documents. The current
-Milestone 2 app manages multiple browser-local source documents without an
-account or backend. Create, switch, rename, duplicate, delete, import, edit,
-and download documents directly in the browser.
+Milestone 3 app manages and previews multiple browser-local source documents
+without an account or backend. Create, switch, rename, duplicate, delete,
+import, edit, preview, and download documents directly in the browser.
 
 The default `/` route is the local editor. Existing experimental modules for
 authentication, remote storage, WYSIWYG editing, executable cells, and
@@ -14,6 +14,9 @@ deferred scope.
 ## Current Local Editor
 
 - Quarto Markdown source textarea
+- Source, split, and preview views for the active document
+- Safe local rendering of common Markdown and YAML frontmatter metadata
+- Lightweight diagnostics for empty documents and frontmatter fence problems
 - Multiple documents persisted automatically in browser `localStorage`
 - Create, switch, rename, duplicate, delete, and reset local documents
 - Import local `.qmd`, `.md`, `.markdown`, and `.txt` files
@@ -48,7 +51,8 @@ The broader legacy development command also starts Wrangler and PartyKit:
 npm run dev
 ```
 
-Those backend processes are not needed for the Milestone 2 local editor.
+Those backend processes are not needed for the Milestone 3 local editor and
+preview.
 
 ## Test
 

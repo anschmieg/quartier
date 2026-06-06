@@ -29,11 +29,14 @@ avoid making later storage or editor choices irreversible.
 
 ## Milestone 3: Preview and rendering improvements
 
-**Status: planned**
+**Status: implemented**
 
-- Add a useful Markdown/Quarto preview alongside source editing.
-- Improve Quarto syntax feedback and error reporting.
-- Explore local or optional rendering without coupling editing to a hosted
+- Add a deterministic local Markdown/Quarto-style preview alongside source
+  editing, with source, split, and preview views.
+- Render common Markdown and YAML frontmatter metadata without executing raw
+  HTML or unsafe link protocols.
+- Report empty documents and obvious unbalanced frontmatter fences.
+- Keep preview generation entirely in the browser without a hosted rendering
   service.
 
 ## Milestone 4: Authentication and remote storage

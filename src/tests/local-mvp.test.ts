@@ -201,6 +201,25 @@ describe('LocalMvpEditor', () => {
     expect(getActiveDocument(loadDocumentCollection()).source).toBe(DEFAULT_DOCUMENT)
   })
 
+  it('toggles between source, split, and preview views', async () => {
+    const wrapper = mount(LocalMvpEditor)
+
+    expect(wrapper.find('[data-testid="source-editor"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="preview-panel"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="source-view"]').trigger('click')
+    expect(wrapper.find('[data-testid="source-editor"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="preview-panel"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="preview-view"]').trigger('click')
+    expect(wrapper.find('[data-testid="source-editor"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="preview-panel"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="split-view"]').trigger('click')
+    expect(wrapper.find('[data-testid="source-editor"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="preview-panel"]').exists()).toBe(true)
+  })
+
   it('downloads the current source using the sanitized title', async () => {
     const createObjectURL = vi.fn(() => 'blob:quartier-export')
     const revokeObjectURL = vi.fn()
