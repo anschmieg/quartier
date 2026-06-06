@@ -39,15 +39,27 @@ avoid making later storage or editor choices irreversible.
 - Keep preview generation entirely in the browser without a hosted rendering
   service.
 
+## Milestone 3H: Local library backup and restore
+
+**Status: implemented**
+
+- Export every local document, the active document selection, and timestamps in
+  a versioned Quartier JSON backup.
+- Validate the complete backup before replacing the browser-local library.
+- Reject malformed or unsupported backups with safe messages while preserving
+  the current library.
+- Keep backup and restore independent of authentication and remote providers.
+
 ## Milestone 4: Authentication and remote storage
 
-**Status: deferred**
+**Status: next, planned**
 
-- Add authentication only when remote workflows require it.
-- Reintroduce GitHub and other remote storage providers behind explicit user
-  choices.
-- Define sync, conflict, recovery, and ownership behavior before making remote
-  storage a default.
+- Follow the staged
+  [auth and remote storage implementation plan](plans/auth-remote-storage-plan.md).
+- Establish the storage adapter and sync-state boundary before enabling auth.
+- Add GitHub OAuth/API access only through an explicit user opt-in.
+- Implement conflict recovery and provider hardening before broadening remote
+  availability.
 
 ## Milestone 5: Collaboration, WYSIWYG, and executable cells
 

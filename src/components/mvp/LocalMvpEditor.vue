@@ -9,6 +9,30 @@
         <button
           type="button"
           class="secondary"
+          data-testid="backup-library"
+          @click="handleBackup"
+        >
+          Backup library
+        </button>
+        <button
+          type="button"
+          class="secondary"
+          data-testid="restore-library"
+          @click="backupFileInput?.click()"
+        >
+          Restore backup
+        </button>
+        <input
+          ref="backupFileInput"
+          class="sr-only"
+          type="file"
+          accept=".json,application/json"
+          data-testid="backup-file-input"
+          @change="handleRestore"
+        >
+        <button
+          type="button"
+          class="secondary"
           data-testid="import-document"
           @click="fileInput?.click()"
         >
@@ -67,6 +91,7 @@
 
         <p class="storage-note">
           Documents stay in this browser until you delete them or clear site data.
+          Restoring a backup replaces this local library.
         </p>
       </aside>
 
@@ -177,6 +202,7 @@ import { computed, ref } from 'vue'
 import LocalMarkdownPreview from '@/components/mvp/LocalMarkdownPreview.vue'
 import {
   addImportedDocument,
+  createLibraryBackupExport,
   createDocument,
   createDocumentExport,
   deleteDocument,
@@ -186,6 +212,7 @@ import {
   loadDocumentCollection,
   renameDocument,
   resetDocument,
+  restoreLibraryBackupFile,
   saveDocumentSource,
   switchDocument,
   type LocalDocumentCollection,
@@ -210,6 +237,7 @@ const saveStatus = ref('Saved locally')
 const message = ref('')
 const messageIsError = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+const backupFileInput = ref<HTMLInputElement | null>(null)
 
 function syncActiveDocument(status: string): void {
   source.value = activeDocument.value.source
@@ -284,8 +312,7 @@ async function handleImport(event: Event): Promise<void> {
   }
 }
 
-function handleExport(): void {
-  const exported = createDocumentExport(activeDocument.value)
+function downloadExport(exported: { filename: string, blob: Blob }): void {
   const url = URL.createObjectURL(exported.blob)
   const link = document.createElement('a')
 
@@ -293,6 +320,39 @@ function handleExport(): void {
   link.download = exported.filename
   link.click()
   URL.revokeObjectURL(url)
+}
+
+function handleExport(): void {
+  downloadExport(createDocumentExport(activeDocument.value))
+}
+
+function handleBackup(): void {
+  downloadExport(createLibraryBackupExport(collection.value))
+  message.value = `Backed up ${collection.value.documents.length} document${collection.value.documents.length === 1 ? '' : 's'}`
+  messageIsError.value = false
+}
+
+async function handleRestore(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  try {
+    collection.value = await restoreLibraryBackupFile(file)
+    syncActiveDocument('Library restored locally')
+    message.value = `Restored ${collection.value.documents.length} document${collection.value.documents.length === 1 ? '' : 's'} from ${file.name}`
+    messageIsError.value = false
+  } catch (error) {
+    message.value = error instanceof Error
+      ? error.message
+      : 'Quartier could not restore this backup.'
+    messageIsError.value = true
+  } finally {
+    input.value = ''
+  }
 }
 </script>
 

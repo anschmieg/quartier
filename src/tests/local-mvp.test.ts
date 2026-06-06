@@ -7,6 +7,8 @@ import {
   LEGACY_LOCAL_DOCUMENT_KEY,
   LOCAL_DOCUMENTS_KEY,
   addImportedDocument,
+  createLibraryBackup,
+  createLibraryBackupExport,
   createDocument,
   createDocumentExport,
   deleteDocument,
@@ -15,6 +17,7 @@ import {
   importDocumentFile,
   loadDocumentCollection,
   renameDocument,
+  restoreLibraryBackupFile,
   sanitizeFilename,
   saveDocumentSource,
   switchDocument,
@@ -112,6 +115,10 @@ describe('local document persistence', () => {
 })
 
 describe('local document import and export helpers', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   it('prepares supported local files for import', async () => {
     const imported = await importDocumentFile({
       name: 'Field Notes.Markdown',
@@ -149,6 +156,99 @@ describe('local document import and export helpers', () => {
     expect(exported.filename).toBe('quarterly-results-draft.qmd')
     expect(exported.blob.type).toBe('text/markdown;charset=utf-8')
     expect(exported.blob.size).toBe(new Blob(['# Export me']).size)
+  })
+
+  it('creates a versioned backup containing the complete local library', () => {
+    const first = getActiveDocument(loadDocumentCollection())
+    renameDocument(first.id, 'First draft')
+    saveDocumentSource(first.id, '# First')
+    const collection = createDocument()
+    const second = getActiveDocument(collection)
+    renameDocument(second.id, 'Second draft')
+    saveDocumentSource(second.id, '# Second')
+
+    const backup = createLibraryBackup(loadDocumentCollection())
+
+    expect(backup).toMatchObject({
+      format: 'quartier-local-library',
+      version: 1,
+      activeDocumentId: second.id,
+    })
+    expect(backup.exportedAt).toEqual(expect.any(String))
+    expect(backup.documents).toHaveLength(2)
+    expect(backup.documents.map(document => ({
+      id: document.id,
+      title: document.title,
+      source: document.source,
+    }))).toEqual([
+      { id: first.id, title: 'First draft', source: '# First' },
+      { id: second.id, title: 'Second draft', source: '# Second' },
+    ])
+
+    const exported = createLibraryBackupExport(loadDocumentCollection())
+    expect(exported.filename).toMatch(/^quartier-library-backup-\d{4}-\d{2}-\d{2}\.json$/)
+    expect(exported.blob.type).toBe('application/json;charset=utf-8')
+  })
+
+  it('validates and restores a complete library backup', async () => {
+    const existing = getActiveDocument(loadDocumentCollection())
+    const backup = {
+      format: 'quartier-local-library',
+      version: 1,
+      exportedAt: '2026-06-06T12:00:00.000Z',
+      activeDocumentId: 'restored-2',
+      documents: [
+        {
+          id: 'restored-1',
+          title: 'Restored one',
+          source: '# One',
+          createdAt: '2026-06-01T12:00:00.000Z',
+          updatedAt: '2026-06-02T12:00:00.000Z',
+        },
+        {
+          id: 'restored-2',
+          title: 'Restored two',
+          source: '# Two',
+          createdAt: '2026-06-03T12:00:00.000Z',
+          updatedAt: '2026-06-04T12:00:00.000Z',
+        },
+      ],
+    }
+
+    const restored = await restoreLibraryBackupFile({
+      name: 'quartier-backup.json',
+      text: async () => JSON.stringify(backup),
+    })
+
+    expect(restored).toMatchObject({
+      version: 2,
+      activeDocumentId: 'restored-2',
+    })
+    expect(restored.documents).toHaveLength(2)
+    expect(getActiveDocument(restored).title).toBe('Restored two')
+    expect(restored.documents.some(document => document.id === existing.id)).toBe(false)
+    expect(loadDocumentCollection()).toEqual(restored)
+  })
+
+  it.each([
+    ['not-json', 'This file is not valid JSON.'],
+    [JSON.stringify({ format: 'quartier-local-library', version: 99 }), 'This backup version is not supported.'],
+    [JSON.stringify({
+      format: 'quartier-local-library',
+      version: 1,
+      exportedAt: '2026-06-06T12:00:00.000Z',
+      activeDocumentId: 'missing',
+      documents: [],
+    }), 'This backup does not contain a valid Quartier document library.'],
+  ])('rejects invalid restore content without replacing local documents', async (content, message) => {
+    const before = loadDocumentCollection()
+
+    await expect(restoreLibraryBackupFile({
+      name: 'quartier-backup.json',
+      text: async () => content,
+    })).rejects.toThrow(message)
+
+    expect(loadDocumentCollection()).toEqual(before)
   })
 })
 
@@ -254,5 +354,58 @@ describe('LocalMvpEditor', () => {
     vi.unstubAllGlobals()
     createElement.mockRestore()
     click.mockRestore()
+  })
+
+  it('restores a backup file and refreshes the active document', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const backup = {
+      format: 'quartier-local-library',
+      version: 1,
+      exportedAt: '2026-06-06T12:00:00.000Z',
+      activeDocumentId: 'restored-active',
+      documents: [{
+        id: 'restored-active',
+        title: 'Recovered project',
+        source: '# Recovered',
+        createdAt: '2026-06-01T12:00:00.000Z',
+        updatedAt: '2026-06-05T12:00:00.000Z',
+      }],
+    }
+    const input = wrapper.get('[data-testid="backup-file-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [{
+        name: 'quartier-library-backup.json',
+        text: async () => JSON.stringify(backup),
+      }],
+      configurable: true,
+    })
+
+    await input.trigger('change')
+
+    expect((wrapper.get('[data-testid="document-title"]').element as HTMLInputElement).value)
+      .toBe('Recovered project')
+    expect((wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement).value)
+      .toBe('# Recovered')
+    expect(wrapper.get('[role="status"]').text()).toContain('Restored 1 document')
+    expect(getActiveDocument(loadDocumentCollection()).id).toBe('restored-active')
+  })
+
+  it('shows a safe error when a backup cannot be restored', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const before = loadDocumentCollection()
+    const input = wrapper.get('[data-testid="backup-file-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [{
+        name: 'broken.json',
+        text: async () => '{broken',
+      }],
+      configurable: true,
+    })
+
+    await input.trigger('change')
+
+    expect(wrapper.get('[role="status"]').text()).toBe('This file is not valid JSON.')
+    expect(wrapper.get('[role="status"]').classes()).toContain('error')
+    expect(loadDocumentCollection()).toEqual(before)
   })
 })

@@ -1,15 +1,17 @@
 # Quartier
 
-Quartier is a local-first editor for Quarto Markdown documents. The current
-Milestone 3 app manages and previews multiple browser-local source documents
-without an account or backend. Create, switch, rename, duplicate, delete,
-import, edit, preview, and download documents directly in the browser.
+Quartier is a local-first editor for Quarto Markdown documents. The current MVP
+manages, previews, backs up, and restores multiple browser-local source
+documents without an account or backend. Create, switch, rename, duplicate,
+delete, import, edit, preview, and download documents directly in the browser.
 
 The default `/` route is the local editor. Existing experimental modules for
 authentication, remote storage, WYSIWYG editing, executable cells, and
 collaboration are preserved for later milestones but are not required by the
-MVP. See [docs/MILESTONES.md](docs/MILESTONES.md) for the planned sequence and
-deferred scope.
+MVP. Authentication and remote storage are next, following the staged
+[auth and remote storage plan](docs/plans/auth-remote-storage-plan.md). See
+[docs/MILESTONES.md](docs/MILESTONES.md) for the broader sequence and deferred
+scope.
 
 ## Current Local Editor
 
@@ -21,13 +23,16 @@ deferred scope.
 - Create, switch, rename, duplicate, delete, and reset local documents
 - Import local `.qmd`, `.md`, `.markdown`, and `.txt` files
 - Download the active document as `.qmd` using a sanitized document title
+- Back up the complete local document library as versioned JSON
+- Validate and restore a complete library backup without partial replacement
 - Automatic migration of the Milestone 1 `quartier.local-document.v1` draft
 - No authentication
 - No remote storage or server dependency
 
 Imported files are copied into browser storage; Quartier does not modify the
 original file. Browser storage is local to the current origin and browser
-profile. Download important work as a `.qmd` file before clearing site data.
+profile. Back up the library before clearing site data. Restoring a backup
+replaces the current local library after the full file has been validated.
 
 ## Development
 
@@ -51,8 +56,8 @@ The broader legacy development command also starts Wrangler and PartyKit:
 npm run dev
 ```
 
-Those backend processes are not needed for the Milestone 3 local editor and
-preview.
+Those backend processes are not needed for the local editor, preview, or
+library backup and restore.
 
 ## Test
 
@@ -91,6 +96,7 @@ npm run preview
 ## Documentation
 
 - [Milestones](docs/MILESTONES.md)
+- [Auth and remote storage plan](docs/plans/auth-remote-storage-plan.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Contributing](docs/CONTRIBUTING.md)
 - [Environment variables](docs/ENVIRONMENT.md)

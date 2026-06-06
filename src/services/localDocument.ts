@@ -1,5 +1,7 @@
 export const LEGACY_LOCAL_DOCUMENT_KEY = 'quartier.local-document.v1'
 export const LOCAL_DOCUMENTS_KEY = 'quartier.local-documents.v2'
+export const LOCAL_LIBRARY_BACKUP_FORMAT = 'quartier-local-library'
+export const LOCAL_LIBRARY_BACKUP_VERSION = 1
 
 export const DEFAULT_DOCUMENT_TITLE = 'Untitled Quartier Document'
 export const DEFAULT_DOCUMENT = `---
@@ -31,6 +33,14 @@ export interface LocalDocumentCollection {
 export interface DocumentExport {
   filename: string
   blob: Blob
+}
+
+export interface LocalLibraryBackup {
+  format: typeof LOCAL_LIBRARY_BACKUP_FORMAT
+  version: typeof LOCAL_LIBRARY_BACKUP_VERSION
+  exportedAt: string
+  activeDocumentId: string
+  documents: LocalDocument[]
 }
 
 export interface ImportedDocument {
@@ -85,6 +95,10 @@ function isLocalDocument(value: unknown): value is LocalDocument {
     && typeof document.updatedAt === 'string'
 }
 
+function isValidTimestamp(value: string): boolean {
+  return !Number.isNaN(Date.parse(value))
+}
+
 function isLocalDocumentCollection(value: unknown): value is LocalDocumentCollection {
   if (!value || typeof value !== 'object') {
     return false
@@ -97,6 +111,35 @@ function isLocalDocumentCollection(value: unknown): value is LocalDocumentCollec
     && collection.documents.length > 0
     && collection.documents.every(isLocalDocument)
     && collection.documents.some(document => document.id === collection.activeDocumentId)
+}
+
+function isValidBackupDocument(value: unknown): value is LocalDocument {
+  return isLocalDocument(value)
+    && value.id.length > 0
+    && isValidTimestamp(value.createdAt)
+    && isValidTimestamp(value.updatedAt)
+}
+
+function isLocalLibraryBackup(value: unknown): value is LocalLibraryBackup {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const backup = value as Partial<LocalLibraryBackup>
+  if (backup.format !== LOCAL_LIBRARY_BACKUP_FORMAT
+    || backup.version !== LOCAL_LIBRARY_BACKUP_VERSION
+    || typeof backup.exportedAt !== 'string'
+    || !isValidTimestamp(backup.exportedAt)
+    || typeof backup.activeDocumentId !== 'string'
+    || !Array.isArray(backup.documents)
+    || backup.documents.length === 0
+    || !backup.documents.every(isValidBackupDocument)) {
+    return false
+  }
+
+  const documentIds = backup.documents.map(document => document.id)
+  return new Set(documentIds).size === documentIds.length
+    && documentIds.includes(backup.activeDocumentId)
 }
 
 function saveCollection(collection: LocalDocumentCollection): LocalDocumentCollection {
@@ -278,5 +321,70 @@ export function createDocumentExport(document: Pick<LocalDocument, 'title' | 'so
   return {
     filename: `${sanitizeFilename(document.title)}.qmd`,
     blob: new Blob([document.source], { type: 'text/markdown;charset=utf-8' }),
+  }
+}
+
+export function createLibraryBackup(
+  collection: LocalDocumentCollection = loadDocumentCollection(),
+): LocalLibraryBackup {
+  return {
+    format: LOCAL_LIBRARY_BACKUP_FORMAT,
+    version: LOCAL_LIBRARY_BACKUP_VERSION,
+    exportedAt: createTimestamp(),
+    activeDocumentId: collection.activeDocumentId,
+    documents: collection.documents.map(document => ({ ...document })),
+  }
+}
+
+export function createLibraryBackupExport(
+  collection: LocalDocumentCollection = loadDocumentCollection(),
+): DocumentExport {
+  const backup = createLibraryBackup(collection)
+  const date = backup.exportedAt.slice(0, 10)
+
+  return {
+    filename: `quartier-library-backup-${date}.json`,
+    blob: new Blob(
+      [`${JSON.stringify(backup, null, 2)}\n`],
+      { type: 'application/json;charset=utf-8' },
+    ),
+  }
+}
+
+export async function restoreLibraryBackupFile(
+  file: Pick<File, 'name' | 'text'>,
+): Promise<LocalDocumentCollection> {
+  if (!file.name.toLowerCase().endsWith('.json')) {
+    throw new Error('Choose a Quartier library backup JSON file.')
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(await file.text())
+  } catch {
+    throw new Error('This file is not valid JSON.')
+  }
+
+  if (parsed
+    && typeof parsed === 'object'
+    && (parsed as { format?: unknown }).format === LOCAL_LIBRARY_BACKUP_FORMAT
+    && (parsed as { version?: unknown }).version !== LOCAL_LIBRARY_BACKUP_VERSION) {
+    throw new Error('This backup version is not supported.')
+  }
+
+  if (!isLocalLibraryBackup(parsed)) {
+    throw new Error('This backup does not contain a valid Quartier document library.')
+  }
+
+  const collection: LocalDocumentCollection = {
+    version: 2,
+    activeDocumentId: parsed.activeDocumentId,
+    documents: parsed.documents.map(document => ({ ...document })),
+  }
+
+  try {
+    return saveCollection(collection)
+  } catch {
+    throw new Error('Quartier could not save the restored library in this browser.')
   }
 }
