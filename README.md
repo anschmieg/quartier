@@ -12,11 +12,13 @@ opt-in Remote Storage panel plus provider-neutral connection descriptors,
 strict input validation, and an inert typed GitHub client scaffold. Milestone
 4C adds a provider-neutral conflict/recovery domain that persists
 the last synced base plus local and remote snapshots and produces explicit,
-data-only resolution requests. Existing experimental modules for
-authentication, remote storage, WYSIWYG editing,
+data-only resolution requests. Milestone 4D adds inert provider-hardening
+utilities for safe errors, timeouts, response limits, retry classification,
+log redaction, and CSRF/OAuth state-token primitives. Existing experimental
+modules for authentication, remote storage, WYSIWYG editing,
 executable cells, and collaboration are preserved for later milestones but
 are not required by the MVP. Live GitHub OAuth and remote API access remain
-deferred to the next M4B substep in the staged
+deferred in the staged
 [auth and remote storage plan](docs/plans/auth-remote-storage-plan.md). See
 [docs/MILESTONES.md](docs/MILESTONES.md) for the broader sequence.
 
@@ -41,6 +43,10 @@ deferred to the next M4B substep in the staged
 - Inert GitHub connect/import/sync/disconnect scaffold with no automatic
   network calls
 - Same-origin return-path and GitHub owner/repository/`.qmd` path validation
+- Typed provider errors with safe user-facing normalization
+- Explicit request timeout, response-size, and rate-limit/retry utilities
+- Sensitive log-value redaction, including document source and credentials
+- Secure random CSRF/OAuth state-token creation and validation primitives
 - Create, switch, rename, duplicate, delete, and reset local documents
 - Import local `.qmd`, `.md`, `.markdown`, and `.txt` files
 - Download the active document as `.qmd` using a sanitized document title
@@ -61,7 +67,9 @@ panel or loading its GitHub descriptor does not contact the network. M4B is a
 safe UI/API boundary only: no OAuth flow, network provider, legacy auth module,
 or existing `/api/github/*` route is activated in the local MVP. M4C similarly
 provides conflict metadata and recovery requests only; applying those requests
-through a live provider and presenting conflict UI remain deferred.
+through a live provider and presenting conflict UI remain deferred. M4D is also
+a reusable hardening scaffold only: it does not wire API routes, start OAuth,
+or make GitHub network calls.
 
 ## Development
 

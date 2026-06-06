@@ -52,7 +52,7 @@ avoid making later storage or editor choices irreversible.
 
 ## Milestone 4: Authentication and remote storage
 
-**Status: M4A-M4C scaffolding implemented; live OAuth/provider sync and M4D deferred**
+**Status: M4A-M4D scaffolding implemented; live OAuth/provider sync deferred**
 
 - Follow the staged
   [auth and remote storage implementation plan](plans/auth-remote-storage-plan.md).
@@ -75,7 +75,13 @@ avoid making later storage or editor choices irreversible.
   resolution requests without mutating local storage or calling a provider.
 - M4C next substep, deferred: add live conflict UI and apply explicit recovery
   requests after provider sync is implemented.
-- Implement provider hardening before broadening remote availability.
+- M4D: add reusable typed provider errors, safe error normalization, timeout
+  wrapping, response-size guards, and rate-limit/retry classification.
+- M4D: add sensitive log redaction plus secure random CSRF/OAuth state-token
+  creation, comparison, and validation primitives.
+- M4D live integration, deferred: apply the scaffold to future API routes,
+  security headers, OAuth/session lifecycle, and provider network clients
+  before broadening remote availability.
 
 ## Milestone 5: Collaboration, WYSIWYG, and executable cells
 

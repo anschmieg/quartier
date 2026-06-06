@@ -108,12 +108,31 @@ versions and returns to `clean` only after an explicit successful resolution.
 
 ## M4D: Provider hardening
 
-- Add API schema validation, response size limits, request timeouts, rate-limit
-  handling, retry/backoff rules, and stable user-safe error codes.
-- Apply CSRF protection to state-changing API routes and validate repository,
-  branch, and path inputs server-side.
-- Add security headers, redact sensitive logs, document token revocation, and
-  test logout/session expiry behavior.
+**Status: reusable hardening scaffold implemented; live route/provider integration deferred**
+
+Implemented in the provider-neutral scaffold:
+
+- Add typed provider error codes and stable user-safe normalization that does
+  not expose upstream messages.
+- Add an explicit request-timeout wrapper, incremental/declared response-size
+  guards, and HTTP rate-limit/retry classification with `Retry-After` parsing.
+- Add recursive sensitive-value redaction for operational logs, including
+  authorization, cookies, token-like fields/URLs, and document source/content.
+- Add secure random CSRF/OAuth state-token creation, browser/Node-compatible
+  comparison, and field-safe validation results for future API routes.
+- Cover normalization, timeout/size/rate-limit behavior, redaction boundaries,
+  and state-token validation with deterministic unit tests.
+- Keep all helpers network-inert. No live OAuth flow, GitHub request, secret,
+  or automatic provider call is introduced by this scaffold.
+
+Deferred until live provider integration:
+
+- Apply API schema validation, response limits, request timeouts, rate-limit
+  handling, and retry/backoff policy to concrete provider routes and clients.
+- Apply CSRF/state protection to state-changing API and OAuth routes and
+  validate repository, branch, and path inputs server-side.
+- Add security headers, document token revocation, and test logout/session
+  expiry behavior.
 - Add telemetry limited to operational metadata with no document source or
   credentials; make any analytics separately opt-in.
 - Run browser tests against a disposable GitHub repository in a protected CI
@@ -121,9 +140,12 @@ versions and returns to `clean` only after an explicit successful resolution.
 - Review and either adapt or remove legacy GitHub/storage modules once the new
   path reaches parity; do not maintain two active sync implementations.
 
-**Exit gate:** security review items are closed, provider failures are
-recoverable, and the opt-in GitHub path has contract, integration, and browser
-coverage.
+**Scaffolding exit gate:** hardening and state-token helpers are reusable,
+network-inert, deterministic, and covered against sensitive data leakage.
+
+**Live integration exit gate:** security review items are closed, provider
+failures are recoverable, and the opt-in GitHub path has contract, integration,
+and browser coverage.
 
 ## Deferred
 
@@ -144,16 +166,17 @@ npm test -- --run
 npm run build
 ```
 
-During M4A-M4C, also run focused suites as they are added:
+During M4A-M4D, also run focused suites as they are added:
 
 ```bash
 npm test -- --run src/tests/local-mvp.test.ts
 npm test -- --run src/tests/storage-adapter.test.ts
 npm test -- --run src/tests/sync-state.test.ts
 npm test -- --run src/tests/github-remote.test.ts
+npm test -- --run src/tests/provider-hardening.test.ts
 ```
 
-Before completing M4D:
+Before completing live M4D integration:
 
 ```bash
 npm run test:e2e
