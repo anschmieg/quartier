@@ -1,56 +1,95 @@
 # Quartier
 
-> **A home for your research.**
+Quartier is a local-first editor for Quarto Markdown documents. The current
+Milestone 1 app deliberately starts small: edit one `.qmd` document in source
+form, save it automatically in the browser, reset it, and download it without
+an account or backend.
 
-Quartier is a collaborative, web-based editor for Quarto documents. It combines the power of markdown editing with real-time collaboration, making it easy to work on research papers, reports, and documentation.
+The default `/` route is the local editor. Existing experimental modules for
+authentication, remote storage, WYSIWYG editing, executable cells, and
+collaboration are preserved for later milestones but are not required by the
+MVP. See [docs/MILESTONES.md](docs/MILESTONES.md) for the planned sequence and
+deferred scope.
+
+## Current MVP
+
+- Quarto Markdown source textarea
+- Automatic browser `localStorage` persistence
+- Starter-document reset
+- `.qmd` download/export
+- No authentication
+- No remote storage or server dependency
+
+Browser storage is local to the current origin and browser profile. Download
+important work as a `.qmd` file before clearing site data.
+
+## Development
+
+Prerequisites:
+
+- Node.js 20 or newer
+- npm
+
+Install dependencies and start the frontend:
+
+```bash
+npm install
+npm run dev:frontend
+```
+
+Vite prints the local URL, usually `http://localhost:5173`.
+
+The broader legacy development command also starts Wrangler and PartyKit:
+
+```bash
+npm run dev
+```
+
+Those backend processes are not needed for the Milestone 1 editor.
+
+## Test
+
+Run the complete Vitest suite once:
+
+```bash
+npm test -- --run
+```
+
+Run Vitest in watch mode:
+
+```bash
+npm test
+```
+
+End-to-end tests for the broader experimental app remain available separately:
+
+```bash
+npm run test:e2e
+```
+
+## Build
+
+Type-check and create a production build:
+
+```bash
+npm run build
+```
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
 
 ## Documentation
 
-### Core Documentation
-- **[Architecture & System Design](docs/ARCHITECTURE.md)**: Detailed overview of Dual Auth modes (Host/Guest), Backend Proxy, and Collaboration logic.
-- **[KV Schema](docs/KV_SCHEMA.md)**: Database structure for sessions, tokens, and verification.
-- **[Contributing](docs/CONTRIBUTING.md)**: Development setup and deployment guide.
+- [Milestones](docs/MILESTONES.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Contributing](docs/CONTRIBUTING.md)
+- [Environment variables](docs/ENVIRONMENT.md)
 
-### Additional Resources
-- **[API Documentation](docs/API.md)**: Complete API reference with endpoints, request/response formats, and examples.
-- **[Environment Variables](docs/ENVIRONMENT.md)**: Configuration guide for all environment variables and deployment settings.
-- **[Security Best Practices](docs/SECURITY.md)**: Security guidelines, authentication, authorization, and incident response.
-
-## Features
-
-- **Markdown & Quarto Editor**: WYSIWYG editor with full markdown support.
-- **GitHub Integration**:
-  - File CRUD and Branch Management
-  - Direct Commits from the browser
-  - Repository browsing
-- **Real-time Collaboration**:
-  - **Host Mode**: Full GitHub access for repository owners.
-  - **Guest Mode**: Secure, session-based access for collaborators via Cloudflare Access (Google/email compatible).
-  - Live cursor and selection tracking.
-- **Command Palette**: Quick access to actions with `Ctrl+K` / `Cmd+K`.
-
-## Tech Stack
-
-- **Frontend**: Vue 3 + TypeScript + Vite
-- **Editor**: Milkdown (WYSIWYG) + CodeMirror (Source)
-- **Backend**: Cloudflare Pages Functions
-- **Database**: Cloudflare KV (Sessions/Cache)
-- **Auth**: GitHub OAuth + Cloudflare Access
-
-## Getting Started
-
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for detailed setup instructions.
-
-```bash
-# Install dependencies
-bun install
-
-# Start development server
-bun run dev
-
-# Build for production
-bun run build
-```
+Documentation outside the milestone plan may describe experimental future
+functionality that is not active in the local-first MVP.
 
 ## License
 

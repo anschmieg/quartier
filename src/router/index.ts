@@ -1,24 +1,22 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LandingPage from '@/components/landing/LandingPage.vue'
-import Dashboard from '@/components/dashboard/Dashboard.vue'
-import AppLayout from '@/components/layout/AppLayout.vue'
-import { historyService } from '@/services/history'
+import LocalMvpEditor from '@/components/mvp/LocalMvpEditor.vue'
+
+const LandingPage = () => import('@/components/landing/LandingPage.vue')
+const Dashboard = () => import('@/components/dashboard/Dashboard.vue')
+const AppLayout = () => import('@/components/layout/AppLayout.vue')
 
 const routes = [
     {
         path: '/',
+        name: 'local-editor',
+        component: LocalMvpEditor,
+        meta: { public: true }
+    },
+    {
+        path: '/welcome',
         name: 'landing',
         component: LandingPage,
-        meta: { public: true },
-        beforeEnter: (to: any, _from: any, next: any) => {
-            // If we have history, go to dashboard instead of landing
-            // But allow explicit access via query param ?landing=true if needed
-            if (historyService.getProjects().length > 0 && !to.query.landing) {
-                next('/dashboard')
-            } else {
-                next()
-            }
-        }
+        meta: { public: true }
     },
     {
         path: '/dashboard',
