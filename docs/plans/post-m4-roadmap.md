@@ -9,10 +9,18 @@ activate those foundations one narrow, reversible step at a time.
 **Goal:** prepare the first live provider path without exposing credentials or
 turning remote storage on by default.
 
+**Status:** credential-free route contract primitives implemented; route
+handlers, sessions, provider requests, and manual OAuth preflight deferred.
+
 - Decide the GitHub OAuth app registration, callback URL, and minimum scopes.
 - Add server route contracts for `connect`, `callback`, `me`, and `disconnect`.
+  The typed contract uses `POST /api/github/oauth/connect`,
+  `GET /api/github/oauth/callback`, `GET /api/github/oauth/me`, and
+  `POST /api/github/oauth/disconnect`.
 - Bind OAuth state to a same-origin return path with short-lived, single-use
-  server-side state storage.
+  server-side state storage. The contract creates ten-minute records, caps
+  custom lifetimes at fifteen minutes, and requires atomic destructive `take`
+  semantics from the future state store.
 - Store provider tokens only in server-held session/cookie state; never expose
   tokens to client JavaScript.
 - Apply M4D CSRF, safe error, timeout, response-size, retry, and redaction
@@ -20,6 +28,10 @@ turning remote storage on by default.
 - Keep the existing Remote Storage panel opt-in and disconnected by default.
 
 **Needs:** GitHub OAuth app client ID/secret and deployment callback URL.
+
+The implemented contract module and unit tests need none of these credentials.
+The legacy `/api/oauth/*` handlers remain disconnected from the local MVP and
+do not implement this contract.
 
 **Exit gate:** route contract tests pass, local editing still performs zero
 provider network calls, and a manual OAuth preflight can complete in a disposable

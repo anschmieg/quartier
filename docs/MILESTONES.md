@@ -95,12 +95,19 @@ avoid making later storage or editor choices irreversible.
   security headers, OAuth/session lifecycle, and provider network clients
   before broadening remote availability.
 
-## Milestone 5: Collaboration, WYSIWYG, and executable cells
+## Milestone 5: Provider activation, collaboration, WYSIWYG, and executable cells
 
-**Status: deferred**
+**Status: M5A route contract preflight started; live provider access deferred**
 
 - Follow the [post-M4 roadmap](plans/post-m4-roadmap.md) before activating live
   GitHub OAuth, remote import/link, conflict UI, WYSIWYG, or executable cells.
+- M5A: define credential-free typed contracts for explicit GitHub OAuth
+  connect, callback, me, and disconnect routes.
+- M5A: validate same-origin return paths and short-lived state records through
+  M4D safe-error and state-token primitives, with a single-use server-side
+  state-store interface.
+- M5A next substep, deferred: implement the contracted routes, server-held
+  sessions, GitHub requests, and deployment-specific callback configuration.
 - Real-time multi-user collaboration and shared sessions.
 - WYSIWYG editing and robust source/visual round trips.
 - Executable Python/R cells, kernels, and rich output handling.

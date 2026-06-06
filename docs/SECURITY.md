@@ -17,13 +17,19 @@ This document outlines security considerations and best practices for Quartier.
 
 ### GitHub OAuth Security
 
+The M5A contract uses `/api/github/oauth/connect`,
+`/api/github/oauth/callback`, `/api/github/oauth/me`, and
+`/api/github/oauth/disconnect`. These handlers are not implemented yet. The
+older `/api/oauth/*` functions are experimental and remain disconnected from
+the local MVP.
+
 **Best Practices**:
 
 1. **Use separate OAuth Apps for dev and production**
 
    ```
-   Dev:  http://localhost:8788/api/oauth/callback
-   Prod: https://your-domain.com/api/oauth/callback
+   Dev:  http://localhost:8788/api/github/oauth/callback
+   Prod: https://your-domain.com/api/github/oauth/callback
    ```
 
 2. **Rotate OAuth secrets regularly** (every 90 days)
@@ -36,8 +42,11 @@ This document outlines security considerations and best practices for Quartier.
    - Never request `admin` or `delete_repo` scopes
 
 4. **Validate OAuth state parameter**
-   - Prevents CSRF attacks during OAuth flow
-   - State is generated and verified server-side
+   - Generate state with the M4D secure random token primitive
+   - Bind it to a validated same-origin return path
+   - Store it server-side for ten minutes or less
+   - Atomically remove it on callback before validation so it is single-use
+   - Return normalized errors without provider descriptions, OAuth codes, or tokens
 
 ### Cloudflare Access
 

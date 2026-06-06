@@ -2,6 +2,10 @@
 
 This document describes the Quartier API endpoints exposed through Cloudflare Pages Functions.
 
+The local-first MVP does not call these endpoints. Existing `/api/oauth/*` and
+`/api/github/*` handlers are legacy experimental surfaces and are not the
+production M5A provider contract.
+
 ## Authentication
 
 Quartier supports two authentication modes:
@@ -41,6 +45,29 @@ Get the current authenticated user information.
 ---
 
 ## OAuth Endpoints
+
+### Planned M5A GitHub OAuth contract
+
+The credential-free contract is defined in
+`src/services/githubOAuthContract.ts`; route handlers are not implemented yet.
+
+| Operation | Method | Path |
+| --- | --- | --- |
+| Connect | `POST` | `/api/github/oauth/connect` |
+| Callback | `GET` | `/api/github/oauth/callback` |
+| Current account | `GET` | `/api/github/oauth/me` |
+| Disconnect | `POST` | `/api/github/oauth/disconnect` |
+
+`connect` accepts a validated same-origin `returnTo` path. The future server
+handler must store a random state record for at most ten minutes by default.
+The state store must atomically remove records when read so callbacks cannot
+reuse them. Errors use the M4D safe provider error envelope. Tokens must remain
+server-held and must never appear in these response bodies.
+
+Until handlers and server-side sessions are added, GitHub remains disconnected
+and the Remote Storage panel performs no provider network requests.
+
+### Legacy experimental OAuth endpoints
 
 ### GET /api/oauth/login
 

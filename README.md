@@ -18,8 +18,10 @@ utilities for safe errors, timeouts, response limits, retry classification,
 log redaction, and CSRF/OAuth state-token primitives. Existing experimental
 modules for authentication, remote storage, WYSIWYG editing,
 executable cells, and collaboration are preserved for later milestones but
-are not required by the MVP. Live GitHub OAuth and remote API access remain
-deferred in the staged
+are not required by the MVP. M5A now defines credential-free typed contracts
+for future GitHub OAuth connect, callback, account, disconnect, and single-use
+state storage behavior. Route handlers, live GitHub OAuth, and remote API
+access remain deferred in the staged
 [auth and remote storage plan](docs/plans/auth-remote-storage-plan.md). The
 [post-M4 roadmap](docs/plans/post-m4-roadmap.md) tracks the next activation
 steps for live GitHub OAuth, remote import/link, conflict UI, WYSIWYG, and
@@ -53,6 +55,7 @@ broader sequence.
 - Explicit request timeout, response-size, and rate-limit/retry utilities
 - Sensitive log-value redaction, including document source and credentials
 - Secure random CSRF/OAuth state-token creation and validation primitives
+- Inactive typed M5A GitHub OAuth route and single-use state-store contracts
 - Create, switch, rename, duplicate, delete, and reset local documents
 - Import local `.qmd`, `.md`, `.markdown`, and `.txt` files
 - Download the active document as `.qmd` using a sanitized document title
@@ -74,8 +77,9 @@ safe UI/API boundary only: no OAuth flow, network provider, legacy auth module,
 or existing `/api/github/*` route is activated in the local MVP. M4C similarly
 provides conflict metadata and recovery requests only; applying those requests
 through a live provider and presenting conflict UI remain deferred. M4D is also
-a reusable hardening scaffold only: it does not wire API routes, start OAuth,
-or make GitHub network calls.
+a reusable hardening scaffold only. M5A applies those helpers to an inactive
+route contract, but it does not wire handlers, start OAuth, or make GitHub
+network calls.
 
 ## Development
 
