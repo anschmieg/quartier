@@ -93,6 +93,58 @@
           Documents stay in this browser until you delete them or clear site data.
           Restoring a backup replaces this local library.
         </p>
+
+        <section class="remote-storage" aria-labelledby="remote-storage-heading">
+          <button
+            type="button"
+            class="remote-storage-toggle"
+            data-testid="remote-storage-toggle"
+            :aria-expanded="remoteStorageOpen"
+            aria-controls="remote-storage-panel"
+            @click="remoteStorageOpen = !remoteStorageOpen"
+          >
+            <span>
+              <strong id="remote-storage-heading">Remote Storage</strong>
+              <small>Optional. Local editing works without connecting.</small>
+            </span>
+            <span aria-hidden="true">{{ remoteStorageOpen ? '-' : '+' }}</span>
+          </button>
+
+          <div
+            v-if="remoteStorageOpen"
+            id="remote-storage-panel"
+            class="remote-storage-panel"
+            data-testid="remote-storage-panel"
+          >
+            <div class="remote-provider-heading">
+              <div>
+                <strong>{{ githubRemoteProvider.name }}</strong>
+                <p>{{ githubRemoteProvider.description }}</p>
+              </div>
+              <span class="connection-status">{{ githubConnection.status }}</span>
+            </div>
+            <p>
+              Connecting is opt-in. M4B defines the safe UI/API boundary only;
+              live GitHub OAuth and sync are not enabled yet.
+            </p>
+            <button
+              type="button"
+              class="secondary compact"
+              data-testid="connect-github"
+              @click="handleGitHubConnect"
+            >
+              Connect GitHub
+            </button>
+            <p
+              v-if="remoteMessage"
+              class="remote-message"
+              data-testid="remote-storage-message"
+              role="status"
+            >
+              {{ remoteMessage }}
+            </p>
+          </div>
+        </section>
       </aside>
 
       <section class="editor-panel">
@@ -201,6 +253,10 @@
 import { computed, ref } from 'vue'
 import LocalMarkdownPreview from '@/components/mvp/LocalMarkdownPreview.vue'
 import {
+  githubRemoteClient,
+  githubRemoteProvider,
+} from '@/services/githubRemote'
+import {
   addImportedDocument,
   createLibraryBackupExport,
   createDocument,
@@ -218,6 +274,7 @@ import {
   type LocalDocumentCollection,
 } from '@/services/localDocument'
 import { getSourceDiagnostics } from '@/services/localPreview'
+import { createDisconnectedConnection } from '@/services/remoteConnection'
 
 type ViewMode = 'source' | 'split' | 'preview'
 
@@ -238,6 +295,9 @@ const message = ref('')
 const messageIsError = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const backupFileInput = ref<HTMLInputElement | null>(null)
+const remoteStorageOpen = ref(false)
+const githubConnection = ref(createDisconnectedConnection(githubRemoteProvider))
+const remoteMessage = ref('')
 
 function syncActiveDocument(status: string): void {
   source.value = activeDocument.value.source
@@ -353,6 +413,11 @@ async function handleRestore(event: Event): Promise<void> {
   } finally {
     input.value = ''
   }
+}
+
+async function handleGitHubConnect(): Promise<void> {
+  const result = await githubRemoteClient.connect({ returnPath: '/' })
+  remoteMessage.value = result.message ?? 'GitHub connection is not available yet.'
 }
 </script>
 
@@ -516,7 +581,66 @@ button.compact {
 }
 
 .storage-note {
-  margin: auto 0 0;
+  margin: auto 0 1rem;
+}
+
+.remote-storage {
+  border-top: 1px solid hsl(var(--border));
+  padding-top: 0.75rem;
+}
+
+.remote-storage-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.65rem 0;
+  border: 0;
+  text-align: left;
+  color: hsl(var(--foreground));
+  background: transparent;
+}
+
+.remote-storage-toggle span:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.remote-storage-toggle small,
+.remote-storage-panel p {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.remote-storage-panel {
+  padding: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--background));
+}
+
+.remote-provider-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.remote-provider-heading p,
+.remote-storage-panel > p {
+  margin-bottom: 0.75rem;
+}
+
+.connection-status {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.7rem;
+  text-transform: capitalize;
+}
+
+.remote-message {
+  margin: 0.75rem 0 0;
 }
 
 .editor-panel {

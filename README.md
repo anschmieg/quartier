@@ -7,12 +7,15 @@ delete, import, edit, preview, and download documents directly in the browser.
 
 The default `/` route is the local editor. Milestone 4A adds a provider-neutral
 document storage boundary and persisted per-document sync metadata while
-keeping `localStorage` as the active adapter. Existing experimental modules for
-authentication, remote storage, WYSIWYG editing, executable cells, and
-collaboration are preserved for later milestones but are not required by the
-MVP. GitHub OAuth and remote API access remain deferred to Milestone 4B in the
-staged [auth and remote storage plan](docs/plans/auth-remote-storage-plan.md).
-See [docs/MILESTONES.md](docs/MILESTONES.md) for the broader sequence.
+keeping `localStorage` as the active adapter. Milestone 4B adds a collapsed,
+opt-in Remote Storage panel plus provider-neutral connection descriptors,
+strict input validation, and an inert typed GitHub client scaffold. Existing
+experimental modules for authentication, remote storage, WYSIWYG editing,
+executable cells, and collaboration are preserved for later milestones but
+are not required by the MVP. Live GitHub OAuth and remote API access remain
+deferred to the next M4B substep in the staged
+[auth and remote storage plan](docs/plans/auth-remote-storage-plan.md). See
+[docs/MILESTONES.md](docs/MILESTONES.md) for the broader sequence.
 
 ## Current Local Editor
 
@@ -25,22 +28,30 @@ See [docs/MILESTONES.md](docs/MILESTONES.md) for the broader sequence.
 - Stable document IDs and revisions derived from document title and source
 - Separate local sync metadata for local-only, clean, changed, syncing,
   conflict, offline, and error states
+- Collapsed Remote Storage panel that states local editing requires no
+  connection
+- Provider-neutral remote descriptors and connection status
+- Inert GitHub connect/import/sync/disconnect scaffold with no automatic
+  network calls
+- Same-origin return-path and GitHub owner/repository/`.qmd` path validation
 - Create, switch, rename, duplicate, delete, and reset local documents
 - Import local `.qmd`, `.md`, `.markdown`, and `.txt` files
 - Download the active document as `.qmd` using a sanitized document title
 - Back up the complete local document library as versioned JSON
 - Validate and restore a complete library backup without partial replacement
 - Automatic migration of the Milestone 1 `quartier.local-document.v1` draft
-- No authentication
-- No remote storage or server dependency
+- No live authentication
+- No active remote storage or server dependency
 
 Imported files are copied into browser storage; Quartier does not modify the
 original file. Browser storage is local to the current origin and browser
 profile. Back up the library before clearing site data. Restoring a backup
 replaces the current local library after the full file has been validated.
 The local editor remains behaviorally unchanged, but its document persistence
-now runs through the local storage adapter. No OAuth flow, network provider,
-auth UI, or legacy provider is activated by Milestone 4A.
+now runs through the local storage adapter. Opening the optional Remote Storage
+panel or loading its GitHub descriptor does not contact the network. M4B is a
+safe UI/API boundary only: no OAuth flow, network provider, legacy auth module,
+or existing `/api/github/*` route is activated in the local MVP.
 
 ## Development
 

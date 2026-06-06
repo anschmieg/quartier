@@ -52,7 +52,7 @@ avoid making later storage or editor choices irreversible.
 
 ## Milestone 4: Authentication and remote storage
 
-**Status: M4A implemented; M4B-M4D deferred**
+**Status: M4A and M4B scaffolding implemented; live OAuth and M4C-M4D deferred**
 
 - Follow the staged
   [auth and remote storage implementation plan](plans/auth-remote-storage-plan.md).
@@ -63,8 +63,12 @@ avoid making later storage or editor choices irreversible.
 - M4A: preserve local source when a provider adapter write fails, with contract
   and state-transition coverage for local and in-memory adapters.
 - Keep `localStorage` as the default adapter and the editor behavior unchanged.
-- M4B, deferred: add GitHub OAuth/API access only through an explicit user
-  opt-in.
+- M4B: add provider descriptors, connection status, strict GitHub/return-path
+  validation, and a collapsed opt-in Remote Storage panel.
+- M4B: define inert typed GitHub connect/import/sync/disconnect scaffolds
+  without activating the legacy auth or `/api/github/*` routes.
+- M4B next substep, deferred: implement live GitHub OAuth/API access with
+  server-held credentials only after explicit user consent.
 - Implement conflict recovery and provider hardening before broadening remote
   availability.
 

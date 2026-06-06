@@ -320,6 +320,48 @@ describe('LocalMvpEditor', () => {
     expect(wrapper.find('[data-testid="preview-panel"]').exists()).toBe(true)
   })
 
+  it('keeps remote storage collapsed and network-inert until explicit opt-in', async () => {
+    const fetch = vi.fn()
+    vi.stubGlobal('fetch', fetch)
+    const wrapper = mount(LocalMvpEditor)
+
+    expect(wrapper.get('[data-testid="remote-storage-toggle"]').text())
+      .toContain('Local editing works without connecting.')
+    expect(wrapper.get('[data-testid="remote-storage-toggle"]').attributes('aria-expanded'))
+      .toBe('false')
+    expect(wrapper.find('[data-testid="remote-storage-panel"]').exists()).toBe(false)
+    expect(fetch).not.toHaveBeenCalled()
+
+    await wrapper.get('[data-testid="remote-storage-toggle"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="remote-storage-toggle"]').attributes('aria-expanded'))
+      .toBe('true')
+    expect(wrapper.get('[data-testid="remote-storage-panel"]').text())
+      .toContain('live GitHub OAuth and sync are not enabled yet')
+    expect(wrapper.get('[data-testid="remote-storage-panel"]').text())
+      .toContain('disconnected')
+    expect(fetch).not.toHaveBeenCalled()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('reports the deferred GitHub scaffold only after connect is invoked', async () => {
+    const fetch = vi.fn()
+    vi.stubGlobal('fetch', fetch)
+    const wrapper = mount(LocalMvpEditor)
+
+    await wrapper.get('[data-testid="remote-storage-toggle"]').trigger('click')
+    expect(wrapper.find('[data-testid="remote-storage-message"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="connect-github"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="remote-storage-message"]').text())
+      .toContain('live OAuth and API access are deferred')
+    expect(fetch).not.toHaveBeenCalled()
+
+    vi.unstubAllGlobals()
+  })
+
   it('downloads the current source using the sanitized title', async () => {
     const createObjectURL = vi.fn(() => 'blob:quartier-export')
     const revokeObjectURL = vi.fn()

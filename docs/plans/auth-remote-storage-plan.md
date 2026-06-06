@@ -26,12 +26,27 @@ provider.
 **Exit gate:** the editor behaves exactly as it does today through the local
 adapter, and deterministic tests cover state transitions and failed writes.
 
-## M4B: Explicit GitHub OAuth/API integration
+## M4B: Opt-in GitHub remote boundary
 
-**Status: deferred**
+**Status: scaffolding implemented; live OAuth/API integration deferred**
 
-- Add a "Connect GitHub" action in a remote-storage settings surface. Keep it
-  absent from the initial local editing path and never auto-select GitHub.
+Implemented in the safe scaffolding substep:
+
+- Add a collapsed Remote Storage settings surface with a "Connect GitHub"
+  action. Keep it out of the initial editing path, state clearly that local
+  editing works without connecting, and never auto-select GitHub.
+- Define provider-neutral descriptors, connection status, and typed remote
+  client operations for connect/import/sync/disconnect.
+- Add a GitHub descriptor and inert client scaffold. No scaffold import,
+  component mount, or panel expansion may issue a network request.
+- Validate allowlisted same-origin return paths and narrow GitHub owner,
+  repository, and relative `.qmd` path inputs before future OAuth/API work.
+- Leave existing experimental auth functions and `/api/github/*` routes
+  disconnected from the local MVP. M4B is currently a safe UI/API boundary,
+  not a claim that those routes are production-ready.
+
+Deferred to the next M4B substep:
+
 - Replace the prototype OAuth flow with a server-generated, short-lived,
   single-use state nonce bound to an allowlisted same-origin return path.
 - Keep the access token in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie.
@@ -46,8 +61,14 @@ adapter, and deterministic tests cover state transitions and failed writes.
 - Add disconnect behavior that removes remote credentials and metadata while
   retaining all local documents.
 
-**Exit gate:** an opted-in user can connect, import/link one GitHub `.qmd` file,
-sync an unchanged revision, disconnect, and continue editing locally.
+**Scaffolding exit gate:** local editing remains network-free, the remote panel
+is collapsed by default, validation and descriptors have deterministic tests,
+and every GitHub operation returns a deferred result without contacting the
+network.
+
+**Live integration exit gate:** an opted-in user can connect, import/link one
+GitHub `.qmd` file, sync an unchanged revision, disconnect, and continue
+editing locally.
 
 ## M4C: Conflict handling and recovery
 
