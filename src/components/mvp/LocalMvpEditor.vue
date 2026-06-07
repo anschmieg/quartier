@@ -321,7 +321,7 @@
               </button>
             </div>
             <p id="editor-help" class="editor-help" data-testid="editor-help">
-              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+Enter code cell, Tab indents, Enter continues lists.
+              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+Enter code cell, Tab indents, Enter continues bullet and numbered lists.
             </p>
             <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
             <textarea
@@ -528,7 +528,7 @@ function handleMarkdownListEnter(): boolean {
   const cursor = editor.selectionStart
   const lineStart = source.value.lastIndexOf('\n', Math.max(0, cursor - 1)) + 1
   const lineBeforeCursor = source.value.slice(lineStart, cursor)
-  const emptyListMatch = lineBeforeCursor.match(/^(\s*)([-*+] )$/)
+  const emptyListMatch = lineBeforeCursor.match(/^(\s*)(?:[-*+] |\d+[.)] )$/)
 
   if (emptyListMatch) {
     const nextSource = `${source.value.slice(0, lineStart)}${source.value.slice(cursor)}`
@@ -536,12 +536,22 @@ function handleMarkdownListEnter(): boolean {
     return true
   }
 
-  const listMatch = lineBeforeCursor.match(/^(\s*)([-*+] )\S.*$/)
-  if (!listMatch) {
+  const unorderedListMatch = lineBeforeCursor.match(/^(\s*)([-*+] )\S.*$/)
+  if (unorderedListMatch) {
+    const nextLinePrefix = `\n${unorderedListMatch[1]}${unorderedListMatch[2]}`
+    const nextSource = `${source.value.slice(0, cursor)}${nextLinePrefix}${source.value.slice(cursor)}`
+    const nextCursor = cursor + nextLinePrefix.length
+    void replaceSource(nextSource, nextCursor, nextCursor)
+    return true
+  }
+
+  const orderedListMatch = lineBeforeCursor.match(/^(\s*)(\d+)([.)] )\S.*$/)
+  if (!orderedListMatch) {
     return false
   }
 
-  const nextLinePrefix = `\n${listMatch[1]}${listMatch[2]}`
+  const nextNumber = Number.parseInt(orderedListMatch[2]!, 10) + 1
+  const nextLinePrefix = `\n${orderedListMatch[1]}${nextNumber}${orderedListMatch[3]!}`
   const nextSource = `${source.value.slice(0, cursor)}${nextLinePrefix}${source.value.slice(cursor)}`
   const nextCursor = cursor + nextLinePrefix.length
   void replaceSource(nextSource, nextCursor, nextCursor)
