@@ -440,6 +440,27 @@ describe('LocalMvpEditor', () => {
     expect(getActiveDocument(loadDocumentCollection()).source).toBe(editor.value)
   })
 
+  it('wraps selected text as a markdown link from the toolbar and Ctrl/Cmd+K', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('Read the docs')
+    editor.setSelectionRange(9, 13)
+    await wrapper.get('[data-testid="format-link"]').trigger('click')
+
+    expect(editor.value).toBe('Read the [docs](url)')
+    expect(editor.selectionStart).toBe(16)
+    expect(editor.selectionEnd).toBe(19)
+
+    editor.setSelectionRange(0, 4)
+    await wrapper.get('[data-testid="source-editor"]').trigger('keydown', { key: 'k', ctrlKey: true })
+
+    expect(editor.value).toBe('[Read](url) the [docs](url)')
+    expect(editor.selectionStart).toBe(7)
+    expect(editor.selectionEnd).toBe(10)
+    expect(getActiveDocument(loadDocumentCollection()).source).toBe(editor.value)
+  })
+
   it('inserts a Quarto code cell with Ctrl/Cmd+Enter', async () => {
     const wrapper = mount(LocalMvpEditor)
     const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement

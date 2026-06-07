@@ -286,6 +286,15 @@
               <button
                 type="button"
                 class="secondary compact"
+                data-testid="format-link"
+                title="Link (Ctrl/Cmd+K)"
+                @click="insertMarkdownLink"
+              >
+                Link
+              </button>
+              <button
+                type="button"
+                class="secondary compact"
                 data-testid="format-list"
                 title="Bullet list"
                 @click="applyLinePrefix('- ')"
@@ -321,7 +330,7 @@
               </button>
             </div>
             <p id="editor-help" class="editor-help" data-testid="editor-help">
-              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+Enter code cell, Tab indents, Enter continues bullet and numbered lists.
+              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+K link, Ctrl/Cmd+Enter code cell, Tab indents, Enter continues bullet and numbered lists.
             </p>
             <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
             <textarea
@@ -466,6 +475,22 @@ async function wrapSelection(prefix: string, suffix: string, placeholder: string
   await replaceSource(nextSource, nextSelectionStart, nextSelectionEnd)
 }
 
+async function insertMarkdownLink(): Promise<void> {
+  const editor = sourceEditor.value
+  if (!editor) {
+    return
+  }
+
+  const start = editor.selectionStart
+  const end = editor.selectionEnd
+  const selected = source.value.slice(start, end) || 'link text'
+  const nextSource = `${source.value.slice(0, start)}[${selected}](url)${source.value.slice(end)}`
+  const urlStart = start + selected.length + 3
+  const urlEnd = urlStart + 3
+
+  await replaceSource(nextSource, urlStart, urlEnd)
+}
+
 async function insertSnippet(snippet: string): Promise<void> {
   const editor = sourceEditor.value
   if (!editor) {
@@ -582,6 +607,9 @@ function handleEditorKeydown(event: KeyboardEvent): void {
   } else if (event.key.toLowerCase() === 'i') {
     event.preventDefault()
     void wrapSelection('_', '_', 'emphasis')
+  } else if (event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    void insertMarkdownLink()
   } else if (event.key === 'Enter') {
     event.preventDefault()
     void insertSnippet('\n```{python}\n# code\n```\n')
