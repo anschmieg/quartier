@@ -255,13 +255,58 @@
 
         <div class="editing-surface" :class="`mode-${viewMode}`">
           <div v-if="viewMode !== 'preview'" class="source-pane">
+            <div class="editor-toolbar" aria-label="Markdown formatting toolbar">
+              <button
+                type="button"
+                class="secondary compact"
+                data-testid="format-heading"
+                title="Heading"
+                @click="applyLinePrefix('## ')"
+              >
+                Heading
+              </button>
+              <button
+                type="button"
+                class="secondary compact"
+                data-testid="format-bold"
+                title="Bold (Ctrl/Cmd+B)"
+                @click="wrapSelection('**', '**', 'strong text')"
+              >
+                Bold
+              </button>
+              <button
+                type="button"
+                class="secondary compact"
+                data-testid="format-italic"
+                title="Italic (Ctrl/Cmd+I)"
+                @click="wrapSelection('_', '_', 'emphasis')"
+              >
+                Italic
+              </button>
+              <button
+                type="button"
+                class="secondary compact"
+                data-testid="insert-code-cell"
+                title="Insert Quarto code cell"
+                @click="insertSnippet('\n```{python}\n# code\n```\n')"
+              >
+                Code cell
+              </button>
+            </div>
+            <p id="editor-help" class="editor-help" data-testid="editor-help">
+              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Tab indents with two spaces.
+            </p>
             <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
             <textarea
               id="quarto-source"
+              ref="sourceEditor"
               v-model="source"
               data-testid="source-editor"
+              aria-describedby="editor-help"
+              placeholder="Start writing in Quarto Markdown…"
               spellcheck="true"
               @input="persist"
+              @keydown="handleEditorKeydown"
             />
           </div>
 
@@ -281,7 +326,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import LocalMarkdownPreview from '@/components/mvp/LocalMarkdownPreview.vue'
 import {
   githubRemoteClient,
@@ -327,6 +372,7 @@ const message = ref('')
 const messageIsError = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const backupFileInput = ref<HTMLInputElement | null>(null)
+const sourceEditor = ref<HTMLTextAreaElement | null>(null)
 const remoteStorageOpen = ref(false)
 const githubConnection = ref(createDisconnectedConnection(githubRemoteProvider))
 const remoteMessage = ref('')
@@ -364,6 +410,106 @@ function clearMessage(): void {
 function persist(): void {
   collection.value = saveDocumentSource(activeDocument.value.id, source.value)
   saveStatus.value = 'Saved locally'
+}
+
+async function replaceSource(nextSource: string, selectionStart?: number, selectionEnd = selectionStart): Promise<void> {
+  source.value = nextSource
+  persist()
+  await nextTick()
+
+  if (sourceEditor.value && selectionStart !== undefined && selectionEnd !== undefined) {
+    sourceEditor.value.focus()
+    sourceEditor.value.setSelectionRange(selectionStart, selectionEnd)
+  }
+}
+
+async function wrapSelection(prefix: string, suffix: string, placeholder: string): Promise<void> {
+  const editor = sourceEditor.value
+  if (!editor) {
+    return
+  }
+
+  const start = editor.selectionStart
+  const end = editor.selectionEnd
+  const selected = source.value.slice(start, end) || placeholder
+  const nextSource = `${source.value.slice(0, start)}${prefix}${selected}${suffix}${source.value.slice(end)}`
+  const nextSelectionStart = start + prefix.length
+  const nextSelectionEnd = nextSelectionStart + selected.length
+
+  await replaceSource(nextSource, nextSelectionStart, nextSelectionEnd)
+}
+
+async function insertSnippet(snippet: string): Promise<void> {
+  const editor = sourceEditor.value
+  if (!editor) {
+    return
+  }
+
+  const start = editor.selectionStart
+  const end = editor.selectionEnd
+  const needsLeadingBreak = start > 0 && !source.value.slice(0, start).endsWith('\n')
+  const normalizedSnippet = needsLeadingBreak ? snippet : snippet.replace(/^\n/, '')
+  const nextSource = `${source.value.slice(0, start)}${normalizedSnippet}${source.value.slice(end)}`
+  const cursor = start + normalizedSnippet.length
+
+  await replaceSource(nextSource, cursor, cursor)
+}
+
+async function applyLinePrefix(prefix: string): Promise<void> {
+  const editor = sourceEditor.value
+  if (!editor) {
+    return
+  }
+
+  const cursor = editor.selectionStart
+  const lineStart = source.value.lastIndexOf('\n', Math.max(0, cursor - 1)) + 1
+  const nextSource = `${source.value.slice(0, lineStart)}${prefix}${source.value.slice(lineStart)}`
+  const nextCursor = cursor + prefix.length
+
+  await replaceSource(nextSource, nextCursor, nextCursor)
+}
+
+async function indentSelection(): Promise<void> {
+  const editor = sourceEditor.value
+  if (!editor) {
+    return
+  }
+
+  const start = editor.selectionStart
+  const end = editor.selectionEnd
+  const selected = source.value.slice(start, end)
+
+  if (selected.includes('\n')) {
+    const indented = selected.split('\n').map(line => `  ${line}`).join('\n')
+    await replaceSource(
+      `${source.value.slice(0, start)}${indented}${source.value.slice(end)}`,
+      start,
+      start + indented.length,
+    )
+    return
+  }
+
+  await replaceSource(`${source.value.slice(0, start)}  ${source.value.slice(end)}`, start + 2, start + 2)
+}
+
+function handleEditorKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Tab') {
+    event.preventDefault()
+    void indentSelection()
+    return
+  }
+
+  if (!(event.ctrlKey || event.metaKey)) {
+    return
+  }
+
+  if (event.key.toLowerCase() === 'b') {
+    event.preventDefault()
+    void wrapSelection('**', '**', 'strong text')
+  } else if (event.key.toLowerCase() === 'i') {
+    event.preventDefault()
+    void wrapSelection('_', '_', 'emphasis')
+  }
 }
 
 function handleCreate(): void {
@@ -829,6 +975,27 @@ button.compact {
 .source-pane,
 .preview-pane {
   min-width: 0;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+  padding: 0.45rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--background));
+}
+
+.editor-toolbar button {
+  border-color: transparent;
+}
+
+.editor-help {
+  margin: 0 0 0.55rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.78rem;
 }
 
 .source-pane textarea {

@@ -386,6 +386,37 @@ describe('LocalMvpEditor', () => {
     expect(wrapper.find('[data-testid="preview-panel"]').exists()).toBe(true)
   })
 
+  it('applies markdown toolbar formatting to the selected source and saves it', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('# Draft\nimportant finding')
+    editor.setSelectionRange(8, 17)
+    await wrapper.get('[data-testid="format-bold"]').trigger('click')
+
+    expect(editor.value).toBe('# Draft\n**important** finding')
+    expect(getActiveDocument(loadDocumentCollection()).source).toBe('# Draft\n**important** finding')
+    expect(wrapper.get('[data-testid="editor-help"]').text())
+      .toContain('Ctrl/Cmd+B')
+  })
+
+  it('supports keyboard-first editing for bold shortcuts and tab indentation', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('plain')
+    editor.setSelectionRange(0, 5)
+    await wrapper.get('[data-testid="source-editor"]').trigger('keydown', { key: 'b', ctrlKey: true })
+
+    expect(editor.value).toBe('**plain**')
+
+    editor.setSelectionRange(0, 0)
+    await wrapper.get('[data-testid="source-editor"]').trigger('keydown', { key: 'Tab' })
+
+    expect(editor.value).toBe('  **plain**')
+    expect(getActiveDocument(loadDocumentCollection()).source).toBe('  **plain**')
+  })
+
   it('keeps remote storage collapsed and network-inert until explicit opt-in', async () => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
