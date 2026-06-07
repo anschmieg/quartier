@@ -286,15 +286,42 @@
               <button
                 type="button"
                 class="secondary compact"
+                data-testid="format-list"
+                title="Bullet list"
+                @click="applyLinePrefix('- ')"
+              >
+                List
+              </button>
+              <button
+                type="button"
+                class="secondary compact"
+                data-testid="format-quote"
+                title="Quote"
+                @click="applyLinePrefix('> ')"
+              >
+                Quote
+              </button>
+              <button
+                type="button"
+                class="secondary compact"
                 data-testid="insert-code-cell"
-                title="Insert Quarto code cell"
+                title="Insert Quarto code cell (Ctrl/Cmd+Enter)"
                 @click="insertSnippet('\n```{python}\n# code\n```\n')"
               >
                 Code cell
               </button>
+              <button
+                type="button"
+                class="secondary compact"
+                data-testid="insert-callout"
+                title="Insert Quarto note callout"
+                @click="insertSnippet('\n::: {.callout-note}\n## Note\nWrite a note here.\n:::\n')"
+              >
+                Callout
+              </button>
             </div>
             <p id="editor-help" class="editor-help" data-testid="editor-help">
-              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Tab indents with two spaces.
+              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+Enter code cell, Tab indents.
             </p>
             <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
             <textarea
@@ -509,6 +536,9 @@ function handleEditorKeydown(event: KeyboardEvent): void {
   } else if (event.key.toLowerCase() === 'i') {
     event.preventDefault()
     void wrapSelection('_', '_', 'emphasis')
+  } else if (event.key === 'Enter') {
+    event.preventDefault()
+    void insertSnippet('\n```{python}\n# code\n```\n')
   }
 }
 

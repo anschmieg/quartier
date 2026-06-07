@@ -417,6 +417,41 @@ describe('LocalMvpEditor', () => {
     expect(getActiveDocument(loadDocumentCollection()).source).toBe('  **plain**')
   })
 
+  it('adds writer-friendly list, quote, and callout snippets from the toolbar', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('first point')
+    editor.setSelectionRange(0, 5)
+    await wrapper.get('[data-testid="format-list"]').trigger('click')
+
+    expect(editor.value).toBe('- first point')
+
+    editor.setSelectionRange(2, 7)
+    await wrapper.get('[data-testid="format-quote"]').trigger('click')
+
+    expect(editor.value).toBe('> - first point')
+
+    editor.setSelectionRange(editor.value.length, editor.value.length)
+    await wrapper.get('[data-testid="insert-callout"]').trigger('click')
+
+    expect(editor.value).toContain('::: {.callout-note}')
+    expect(editor.value).toContain('## Note')
+    expect(getActiveDocument(loadDocumentCollection()).source).toBe(editor.value)
+  })
+
+  it('inserts a Quarto code cell with Ctrl/Cmd+Enter', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('# Analysis')
+    editor.setSelectionRange(editor.value.length, editor.value.length)
+    await wrapper.get('[data-testid="source-editor"]').trigger('keydown', { key: 'Enter', ctrlKey: true })
+
+    expect(editor.value).toBe('# Analysis\n```{python}\n# code\n```\n')
+    expect(getActiveDocument(loadDocumentCollection()).source).toBe(editor.value)
+  })
+
   it('keeps remote storage collapsed and network-inert until explicit opt-in', async () => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
