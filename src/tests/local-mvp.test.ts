@@ -452,6 +452,32 @@ describe('LocalMvpEditor', () => {
     expect(getActiveDocument(loadDocumentCollection()).source).toBe(editor.value)
   })
 
+  it('continues markdown bullets when pressing Enter at the end of a list item', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('- first idea')
+    editor.setSelectionRange(editor.value.length, editor.value.length)
+    await wrapper.get('[data-testid="source-editor"]').trigger('keydown', { key: 'Enter' })
+
+    expect(editor.value).toBe('- first idea\n- ')
+    expect(editor.selectionStart).toBe(editor.value.length)
+    expect(getActiveDocument(loadDocumentCollection()).source).toBe(editor.value)
+  })
+
+  it('outdents an empty markdown bullet when pressing Enter', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('- first idea\n- ')
+    editor.setSelectionRange(editor.value.length, editor.value.length)
+    await wrapper.get('[data-testid="source-editor"]').trigger('keydown', { key: 'Enter' })
+
+    expect(editor.value).toBe('- first idea\n')
+    expect(editor.selectionStart).toBe(editor.value.length)
+    expect(getActiveDocument(loadDocumentCollection()).source).toBe(editor.value)
+  })
+
   it('keeps remote storage collapsed and network-inert until explicit opt-in', async () => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)

@@ -321,7 +321,7 @@
               </button>
             </div>
             <p id="editor-help" class="editor-help" data-testid="editor-help">
-              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+Enter code cell, Tab indents.
+              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+Enter code cell, Tab indents, Enter continues lists.
             </p>
             <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
             <textarea
@@ -519,10 +519,46 @@ async function indentSelection(): Promise<void> {
   await replaceSource(`${source.value.slice(0, start)}  ${source.value.slice(end)}`, start + 2, start + 2)
 }
 
+function handleMarkdownListEnter(): boolean {
+  const editor = sourceEditor.value
+  if (!editor || editor.selectionStart !== editor.selectionEnd) {
+    return false
+  }
+
+  const cursor = editor.selectionStart
+  const lineStart = source.value.lastIndexOf('\n', Math.max(0, cursor - 1)) + 1
+  const lineBeforeCursor = source.value.slice(lineStart, cursor)
+  const emptyListMatch = lineBeforeCursor.match(/^(\s*)([-*+] )$/)
+
+  if (emptyListMatch) {
+    const nextSource = `${source.value.slice(0, lineStart)}${source.value.slice(cursor)}`
+    void replaceSource(nextSource, lineStart, lineStart)
+    return true
+  }
+
+  const listMatch = lineBeforeCursor.match(/^(\s*)([-*+] )\S.*$/)
+  if (!listMatch) {
+    return false
+  }
+
+  const nextLinePrefix = `\n${listMatch[1]}${listMatch[2]}`
+  const nextSource = `${source.value.slice(0, cursor)}${nextLinePrefix}${source.value.slice(cursor)}`
+  const nextCursor = cursor + nextLinePrefix.length
+  void replaceSource(nextSource, nextCursor, nextCursor)
+  return true
+}
+
 function handleEditorKeydown(event: KeyboardEvent): void {
   if (event.key === 'Tab') {
     event.preventDefault()
     void indentSelection()
+    return
+  }
+
+  if (event.key === 'Enter' && !(event.ctrlKey || event.metaKey)) {
+    if (handleMarkdownListEnter()) {
+      event.preventDefault()
+    }
     return
   }
 
