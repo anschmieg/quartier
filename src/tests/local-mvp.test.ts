@@ -417,6 +417,34 @@ describe('LocalMvpEditor', () => {
     expect(getActiveDocument(loadDocumentCollection()).source).toBe('  **plain**')
   })
 
+  it('outdents the current line with Shift+Tab and advertises the shortcut', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('  - nested idea')
+    editor.setSelectionRange(4, 4)
+    await wrapper.get('[data-testid="source-editor"]').trigger('keydown', { key: 'Tab', shiftKey: true })
+
+    expect(editor.value).toBe('- nested idea')
+    expect(editor.selectionStart).toBe(2)
+    expect(wrapper.get('[data-testid="editor-help"]').text()).toContain('Shift+Tab outdents')
+    expect(getActiveDocument(loadDocumentCollection()).source).toBe('- nested idea')
+  })
+
+  it('outdents every selected line with Shift+Tab', async () => {
+    const wrapper = mount(LocalMvpEditor)
+    const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement
+
+    await wrapper.get('[data-testid="source-editor"]').setValue('  alpha\n    beta\ngamma')
+    editor.setSelectionRange(0, '  alpha\n    beta'.length)
+    await wrapper.get('[data-testid="source-editor"]').trigger('keydown', { key: 'Tab', shiftKey: true })
+
+    expect(editor.value).toBe('alpha\n  beta\ngamma')
+    expect(editor.selectionStart).toBe(0)
+    expect(editor.selectionEnd).toBe('alpha\n  beta'.length)
+    expect(getActiveDocument(loadDocumentCollection()).source).toBe(editor.value)
+  })
+
   it('adds writer-friendly list, quote, and callout snippets from the toolbar', async () => {
     const wrapper = mount(LocalMvpEditor)
     const editor = wrapper.get('[data-testid="source-editor"]').element as HTMLTextAreaElement

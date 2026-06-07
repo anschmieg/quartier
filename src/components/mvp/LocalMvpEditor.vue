@@ -330,7 +330,7 @@
               </button>
             </div>
             <p id="editor-help" class="editor-help" data-testid="editor-help">
-              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+K link, Ctrl/Cmd+Enter code cell, Tab indents, Enter continues bullet and numbered lists.
+              Markdown shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+K link, Ctrl/Cmd+Enter code cell, Tab indents, Shift+Tab outdents, Enter continues bullet and numbered lists.
             </p>
             <label class="sr-only" for="quarto-source">Quarto Markdown source</label>
             <textarea
@@ -544,6 +544,63 @@ async function indentSelection(): Promise<void> {
   await replaceSource(`${source.value.slice(0, start)}  ${source.value.slice(end)}`, start + 2, start + 2)
 }
 
+function getOutdentWidth(line: string): number {
+  if (line.startsWith('\t')) {
+    return 1
+  }
+
+  if (line.startsWith('  ')) {
+    return 2
+  }
+
+  return line.startsWith(' ') ? 1 : 0
+}
+
+async function outdentSelection(): Promise<void> {
+  const editor = sourceEditor.value
+  if (!editor) {
+    return
+  }
+
+  const start = editor.selectionStart
+  const end = editor.selectionEnd
+  const selected = source.value.slice(start, end)
+  const hasMultiLineSelection = selected.includes('\n')
+  const blockStart = source.value.lastIndexOf('\n', Math.max(0, start - 1)) + 1
+  const lineEnd = source.value.indexOf('\n', hasMultiLineSelection ? Math.max(0, end - 1) : start)
+  const blockEnd = lineEnd === -1 ? source.value.length : lineEnd
+  const block = source.value.slice(blockStart, blockEnd)
+  const lines = block.split('\n')
+  const removals: { lineStart: number, width: number }[] = []
+  let lineStart = blockStart
+
+  const outdented = lines.map((line) => {
+    const width = getOutdentWidth(line)
+    removals.push({ lineStart, width })
+    lineStart += line.length + 1
+    return line.slice(width)
+  }).join('\n')
+  const removedTotal = removals.reduce((total, removal) => total + removal.width, 0)
+
+  if (removedTotal === 0) {
+    return
+  }
+
+  const translatePosition = (position: number) => position - removals.reduce((total, removal) => {
+    if (position <= removal.lineStart) {
+      return total
+    }
+
+    return total + Math.min(removal.width, position - removal.lineStart)
+  }, 0)
+
+  await replaceSource(
+    `${source.value.slice(0, blockStart)}${outdented}${source.value.slice(blockEnd)}`,
+    translatePosition(start),
+    translatePosition(end),
+  )
+}
+
 function handleMarkdownListEnter(): boolean {
   const editor = sourceEditor.value
   if (!editor || editor.selectionStart !== editor.selectionEnd) {
@@ -586,7 +643,7 @@ function handleMarkdownListEnter(): boolean {
 function handleEditorKeydown(event: KeyboardEvent): void {
   if (event.key === 'Tab') {
     event.preventDefault()
-    void indentSelection()
+    void (event.shiftKey ? outdentSelection() : indentSelection())
     return
   }
 
