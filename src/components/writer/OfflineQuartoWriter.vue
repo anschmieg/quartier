@@ -60,6 +60,30 @@
         <div class="flex items-center gap-2">
           <button
             type="button"
+            data-test="insert-callout"
+            class="rounded-full px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-950"
+            @click="insertCallout"
+          >
+            Insert callout
+          </button>
+          <button
+            type="button"
+            data-test="insert-tabset"
+            class="rounded-full px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-950"
+            @click="insertFencedDiv('tabset')"
+          >
+            Insert tabset
+          </button>
+          <button
+            type="button"
+            data-test="insert-columns"
+            class="rounded-full px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-950"
+            @click="insertFencedDiv('columns')"
+          >
+            Insert columns
+          </button>
+          <button
+            type="button"
             class="rounded-full px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-950"
             @click="showPreview = !showPreview"
           >
@@ -85,6 +109,7 @@
             </div>
             <div class="h-[calc(100%-3rem)] overflow-hidden rounded-[2rem] border border-amber-900/10 bg-[#fffdfa] shadow-sm">
               <EditorWrapper
+                ref="editorWrapper"
                 :initial-content="content"
                 mode="visual"
                 :filename="documentName"
@@ -141,6 +166,7 @@ const hasDocument = ref(false)
 const showPreview = ref(false)
 const savedAt = ref<number | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+const editorWrapper = ref<InstanceType<typeof EditorWrapper> | null>(null)
 
 const saveStateLabel = computed(() => {
   if (!savedAt.value) return 'Autosave ready'
@@ -182,6 +208,24 @@ function createBlankDocument() {
 
 function updateContent(nextContent: string) {
   content.value = nextContent
+}
+
+function insertCallout() {
+  if (editorWrapper.value?.insertCallout?.('note')) return
+  const separator = content.value.endsWith('\n') ? '\n' : '\n\n'
+  content.value = `${content.value}${separator}::: {.callout-note title="Note"}\n\n:::\n`
+}
+
+function getFencedDivSource(kind: string) {
+  if (kind === 'tabset') return '::: {.panel-tabset}\n\n## Tab 1\n\n\n## Tab 2\n\n\n:::\n'
+  if (kind === 'columns') return '::: {.columns}\n\n::: {.column width="50%"}\n\n\n:::\n\n::: {.column width="50%"}\n\n\n:::\n\n:::\n'
+  return '::: {.custom}\n\n:::\n'
+}
+
+function insertFencedDiv(kind: string) {
+  if (editorWrapper.value?.insertFencedDiv?.(kind)) return
+  const separator = content.value.endsWith('\n') ? '\n' : '\n\n'
+  content.value = `${content.value}${separator}${getFencedDivSource(kind)}`
 }
 
 function openPicker() {

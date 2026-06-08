@@ -206,7 +206,9 @@ const handleCitationSelect = async (item: CitationItem) => {
 
 // Expose so parent (AppLayout) can grab it
 defineExpose({
-  getMilkdownEditor
+  getMilkdownEditor,
+  insertCallout,
+  insertFencedDiv,
 })
 
 
@@ -258,4 +260,29 @@ watch(content, (newVal) => {
     saved.value = true
   }, 300) // 300ms debounce
 })
+
+function insertCallout(type: string = 'note') {
+  if (milkdownRef.value?.insertCallout?.(type)) return true
+
+  const title = type.charAt(0).toUpperCase() + type.slice(1)
+  const separator = content.value.endsWith('\n') ? '\n' : '\n\n'
+  content.value = `${content.value}${separator}::: {.callout-${type} title="${title}"}\n\n:::\n`
+  emit('update:content', content.value)
+  return true
+}
+
+function getFencedDivSource(kind: string = 'generic') {
+  if (kind === 'tabset') return '::: {.panel-tabset}\n\n## Tab 1\n\n\n## Tab 2\n\n\n:::\n'
+  if (kind === 'columns') return '::: {.columns}\n\n::: {.column width="50%"}\n\n\n:::\n\n::: {.column width="50%"}\n\n\n:::\n\n:::\n'
+  return '::: {.custom}\n\n:::\n'
+}
+
+function insertFencedDiv(kind: string = 'generic') {
+  if (milkdownRef.value?.insertFencedDiv?.(kind)) return true
+
+  const separator = content.value.endsWith('\n') ? '\n' : '\n\n'
+  content.value = `${content.value}${separator}${getFencedDivSource(kind)}`
+  emit('update:content', content.value)
+  return true
+}
 </script>

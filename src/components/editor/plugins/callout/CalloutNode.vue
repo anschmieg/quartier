@@ -12,6 +12,10 @@
     :data-callout-type="calloutType"
     :id="node.attrs?.id"
   >
+    <div class="callout-source-chip" contenteditable="false">
+      <span>Quarto callout</span>
+      <code>{{ sourcePreview }}</code>
+    </div>
     <!-- Header (clickable for collapse) -->
     <div 
       class="callout-header"
@@ -27,6 +31,7 @@
       <!-- Title -->
       <!-- Title (Editable) -->
       <input
+        data-test="callout-title-input"
         class="callout-title-input"
         :value="title || ''"
         :placeholder="displayDefault"
@@ -127,6 +132,7 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-vue-next'
 import type { CalloutType } from './index'
+import { serializeCalloutDirective } from './metadata'
 
 import {
   DropdownMenu,
@@ -149,6 +155,16 @@ const title = computed(() => node.value.attrs?.title || '')
 const collapse = computed(() => node.value.attrs?.collapse || '')
 const appearance = computed(() => node.value.attrs?.appearance || 'default')
 const icon = computed(() => node.value.attrs?.icon !== 'false')
+const sourcePreview = computed(() => serializeCalloutDirective({
+  type: calloutType.value,
+  id: node.value.attrs?.id || undefined,
+  title: title.value || undefined,
+  collapse: collapse.value || undefined,
+  appearance: appearance.value && appearance.value !== 'default' ? appearance.value : undefined,
+  icon: node.value.attrs?.icon === 'false' ? 'false' : undefined,
+  extraClasses: [],
+  attributes: {},
+}))
 
 // Helper to check for implicit title (first child is heading)
 const firstChildIsHeading = computed(() => {
@@ -259,7 +275,6 @@ const isCollapsibleAttr = computed({
     return val === 'true' || val === 'false'
   },
   set: (val) => {
-    console.log('Sets collapsible:', val)
     // If enabling, default to "false" (expanded). If disabling, remove attribute (null).
     updateAttr('collapse', val ? 'false' : null)
   }
@@ -268,11 +283,9 @@ const isCollapsibleAttr = computed({
 const showIconAttr = computed({
   get: () => {
      // Default is true. Only false if explicitly "false".
-     console.log('Get Icon:', icon.value)
      return icon.value
   },
   set: (val) => {
-    console.log('Sets icon:', val)
     // If true (show), remove attribute (default). If false (hide), set "false".
     updateAttr('icon', val ? null : 'false')
   }
@@ -337,6 +350,27 @@ function toggleCollapse() {
   border-radius: 0.25rem;
   border-left: 5px solid;
   overflow: hidden;
+}
+
+.callout-source-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border-bottom: 1px solid rgba(120, 113, 108, 0.16);
+  background: rgba(255, 255, 255, 0.55);
+  color: rgb(120, 113, 108);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.callout-source-chip code {
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgb(87, 83, 78);
 }
 
 /* Callout header */

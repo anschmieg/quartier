@@ -183,6 +183,11 @@ export function validateFrontmatterBoundaries(markdown: string): FrontmatterDiag
 // CALLOUT SYNTAX CONVERSION
 // ============================================================================
 
+import {
+    parseCalloutDirective,
+    serializeCalloutDirective,
+} from '@/components/editor/plugins/callout/metadata'
+
 export function convertQuartoToMilkdown(markdown: string): string {
     if (!markdown) return ''
 
@@ -193,30 +198,28 @@ export function convertQuartoToMilkdown(markdown: string): string {
 
     // 1. Standard: ::: {.callout-type ...} OR ::: {#id .callout-type ...}
     // We match generic ::: { ... } and check for .callout- inside
-    let res = markdown.replace(/^( *)::: \{(.*?)\}/gm, (match, indent, content) => {
-        // Look for .callout-type
-        const typeMatch = content.match(/\.callout-([a-z]+)/)
-        if (typeMatch) {
-            const type = typeMatch[1]
-            // Remove the .callout-type class from attributes
-            let remainingAttrs = content.replace(/\.callout-[a-z]+/, '').trim()
-            
-            // Normalize Pandoc shorthands to standard key-value
-            // #id -> id="id"
-            remainingAttrs = remainingAttrs.replace(/(^|\s)#([\w-]+)/g, '$1id="$2"')
-            // .class -> class="class"
-            remainingAttrs = remainingAttrs.replace(/(^|\s)\.([\w-]+)/g, '$1class="$2"')
-
-            const attrPart = remainingAttrs ? `{${remainingAttrs}}` : ''
-            return `${indent}:::callout-${type}${attrPart}`
+    let res = markdown.replace(/^( *)::: \{(.*?)\}/gm, (match, indent) => {
+        const metadata = parseCalloutDirective(match.trim())
+        if (metadata) {
+            const attrs: string[] = []
+            if (metadata.id) attrs.push(`id="${metadata.id}"`)
+            if (metadata.extraClasses.length) attrs.push(`class="${metadata.extraClasses.join(' ')}"`)
+            if (metadata.title) attrs.push(`title="${metadata.title}"`)
+            if (metadata.collapse) attrs.push(`collapse="${metadata.collapse}"`)
+            if (metadata.appearance) attrs.push(`appearance="${metadata.appearance}"`)
+            if (metadata.icon) attrs.push(`icon="${metadata.icon}"`)
+            Object.entries(metadata.attributes).forEach(([key, value]) => attrs.push(`${key}="${value}"`))
+            const attrPart = attrs.length ? `{${attrs.join(' ')}}` : ''
+            return `${indent}:::callout-${metadata.type}${attrPart}`
         }
         // If no callout type found, return original (it's a generic div)
         return match
     })
 
     // 2. Shorthand (::: callout-type)
-    res = res.replace(/^( *)::: callout-([a-z]+)(.*)$/gm, (_, indent, type, _rest) => {
-       return `${indent}:::callout-${type}`
+    res = res.replace(/^( *)::: callout-([a-z]+)(.*)$/gm, (_, indent, type) => {
+       const metadata = parseCalloutDirective(`::: callout-${type}`)
+       return metadata ? `${indent}:::callout-${metadata.type}` : `${indent}::: callout-${type}`
     })
     
     return res
@@ -229,12 +232,9 @@ export function convertMilkdownToQuarto(markdown: string): string {
     // Matches: :::callout-type{attrs} or :::callout-type
     const milkdownRegex = /^( *):::callout-([a-z]+)(?:\{(.*?)\})?/gm
 
-    return markdown.replace(milkdownRegex, (_, indent, type, attrs) => {
-        const cleanAttrs = attrs ? attrs.trim() : ''
-        // Construct Quarto syntax
-        // If attributes exist, prepend space
-        const attrPart = cleanAttrs ? ` ${cleanAttrs}` : ''
-        return `${indent}::: {.callout-${type}${attrPart}}`
-
+    return markdown.replace(milkdownRegex, (match, indent) => {
+        const metadata = parseCalloutDirective(match.trim())
+        if (!metadata) return match
+        return `${indent}${serializeCalloutDirective(metadata)}`
     })
 }

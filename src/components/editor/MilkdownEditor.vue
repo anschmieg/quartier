@@ -66,6 +66,7 @@ import CodeCell from './CodeCell.vue'
 import { calloutNode, calloutInputRule } from './plugins/callout'
 import CalloutNode from './plugins/callout/CalloutNode.vue'
 import { fencedDivNode } from './plugins/fenced-div'
+import FencedDivNode from './plugins/fenced-div/FencedDivNode.vue'
 import { remarkFencedDivPlugin } from './plugins/fenced-div/remark-plugin'
 import './plugins/frontmatter/style.css'
 import { useCollab, getCollabPlugins } from '@/composables/useCollab'
@@ -176,6 +177,7 @@ const { get, loading } = useEditor((root) => {
     .use($remark('remark-fenced-div', () => remarkFencedDivPlugin as any))
     .use($remark('remark-directive', () => remarkDirective))
     .use(fencedDivNode)
+    .use(fencedDivView)
     .use(calloutNode)
     .use(calloutInputRule)
     .use(calloutView)
@@ -312,6 +314,11 @@ const calloutView = $view(calloutNode.node, () => nodeViewFactory({
     as: 'div',
 }))
 
+const fencedDivView = $view(fencedDivNode.node, () => nodeViewFactory({
+    component: FencedDivNode,
+    as: 'div',
+}))
+
 // Create comment view
 const commentView = $view(commentNode.node, () => nodeViewFactory({
     component: CommentNode,
@@ -332,7 +339,9 @@ useCollab(props.roomId, props.userEmail, get, initialValue, () => props.enableCo
 // Expose the editor instance getter
 defineExpose({
   getEditor: get,
-  insertCitation
+  insertCitation,
+  insertCallout,
+  insertFencedDiv,
 })
 
 // Helper to insert citation
@@ -349,6 +358,41 @@ function insertCitation(key: string) {
         dispatch(tr.insertText(`${key}]`))
         view.focus()
     })
+}
+
+function insertCallout(type: string = 'note') {
+    const editorInstance = get()
+    if (!editorInstance) return false
+
+    editorInstance.action(ctx => {
+        const view = ctx.get(editorViewCtx)
+        const { state, dispatch } = view
+        const title = type.charAt(0).toUpperCase() + type.slice(1)
+        const prefix = state.selection.from > 1 ? '\n\n' : ''
+        dispatch(state.tr.insertText(`${prefix}::: {.callout-${type} title="${title}"}\n\n:::\n`))
+        view.focus()
+    })
+    return true
+}
+
+function getFencedDivSource(kind: string = 'generic') {
+    if (kind === 'tabset') return '::: {.panel-tabset}\n\n## Tab 1\n\n\n## Tab 2\n\n\n:::\n'
+    if (kind === 'columns') return '::: {.columns}\n\n::: {.column width="50%"}\n\n\n:::\n\n::: {.column width="50%"}\n\n\n:::\n\n:::\n'
+    return '::: {.custom}\n\n:::\n'
+}
+
+function insertFencedDiv(kind: string = 'generic') {
+    const editorInstance = get()
+    if (!editorInstance) return false
+
+    editorInstance.action(ctx => {
+        const view = ctx.get(editorViewCtx)
+        const { state, dispatch } = view
+        const prefix = state.selection.from > 1 ? '\n\n' : ''
+        dispatch(state.tr.insertText(`${prefix}${getFencedDivSource(kind)}`))
+        view.focus()
+    })
+    return true
 }
 
 // Track unmount state to prevent watcher firing during destruction

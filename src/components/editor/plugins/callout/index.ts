@@ -9,10 +9,9 @@ import { $nodeSchema, $inputRule } from '@milkdown/utils'
 import { InputRule } from '@milkdown/prose/inputrules'
 import { Selection } from '@milkdown/prose/state'
 import type { Node } from '@milkdown/prose/model'
+import { CALLOUT_TYPES, type CalloutType } from './metadata'
 
-// Callout types supported by Quarto
-export const CALLOUT_TYPES = ['note', 'warning', 'important', 'tip', 'caution'] as const
-export type CalloutType = typeof CALLOUT_TYPES[number]
+export { CALLOUT_TYPES, type CalloutType } from './metadata'
 
 // Callout node name
 export const calloutNodeName = 'callout'
@@ -153,4 +152,3 @@ export const calloutInputRule = $inputRule(() => {
     }
   )
 })
-

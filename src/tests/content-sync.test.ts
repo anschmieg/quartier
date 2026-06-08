@@ -37,6 +37,14 @@ Be careful!
             expect(result.quarto).toContain('title=')
         })
 
+        it('preserves canonical callout attributes exactly through roundtrip', () => {
+            const input = `::: {#note-id .callout-warning .custom title="Important Warning" collapse="true" appearance="simple" icon="false" data-owner="ada"}
+Be careful!
+:::`
+            const result = testRoundtrip(input)
+            expect(result.quarto).toBe(input)
+        })
+
         it('preserves all callout types', () => {
             const types = ['note', 'warning', 'tip', 'important', 'caution']
             
@@ -49,12 +57,30 @@ Content
             }
         })
 
+        it('preserves every callout type exactly when options are present', () => {
+            const types = ['note', 'warning', 'tip', 'important', 'caution']
+
+            for (const type of types) {
+                const input = `::: {#${type}-id .callout-${type} title="${type} title" collapse="false"}
+Content
+:::`
+                expect(testRoundtrip(input).quarto).toBe(input)
+            }
+        })
+
         it('handles shorthand callout syntax', () => {
             const input = `::: callout-tip
 Quick tip!
 :::`
             const result = convertQuartoToMilkdown(input)
             expect(result).toContain(':::callout-tip')
+        })
+
+        it('does not convert unsupported callout-like fenced divs', () => {
+            const input = `::: {.callout-danger}
+Danger-like custom block
+:::`
+            expect(testRoundtrip(input).quarto).toBe(input)
         })
     })
 
@@ -201,9 +227,8 @@ Content with ID
             const input = `::: {.panel-tabset}
 Content
 :::`
-            const result = convertQuartoToMilkdown(input)
-            // Generic divs should NOT be converted to callout format
-            expect(result).toBe(input)
+            const result = testRoundtrip(input)
+            expect(result.quarto).toBe(input)
         })
 
         it('preserves column divs unchanged', () => {

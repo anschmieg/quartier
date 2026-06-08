@@ -12,6 +12,7 @@ export const fencedDivNode = $nodeSchema(fencedDivNodeName, () => ({
     class: { default: '' },
     id: { default: '' },
     style: { default: '' },
+    attributes: { default: {} },
   },
   parseDOM: [
     {
@@ -20,7 +21,8 @@ export const fencedDivNode = $nodeSchema(fencedDivNodeName, () => ({
       getAttrs: (dom: HTMLElement) => ({
         class: dom.getAttribute('class') || '',
         id: dom.getAttribute('id') || '',
-        style: dom.getAttribute('style') || ''
+        style: dom.getAttribute('style') || '',
+        attributes: {},
       }),
     },
   ],
@@ -31,6 +33,7 @@ export const fencedDivNode = $nodeSchema(fencedDivNodeName, () => ({
     if (node.attrs.class) attrs.class = node.attrs.class
     if (node.attrs.id) attrs.id = node.attrs.id
     if (node.attrs.style) attrs.style = node.attrs.style
+    Object.assign(attrs, node.attrs.attributes || {})
     return ['div', attrs, 0]
   },
   parseMarkdown: {
@@ -43,7 +46,10 @@ export const fencedDivNode = $nodeSchema(fencedDivNodeName, () => ({
       const attrs = {
         class: node.attributes?.class || '',
         id: node.attributes?.id || '',
-        style: node.attributes?.style || ''
+        style: node.attributes?.style || '',
+        attributes: Object.fromEntries(
+          Object.entries(node.attributes || {}).filter(([key]) => !['class', 'id', 'style'].includes(key)),
+        ),
       }
       
       state.openNode(type, attrs)
@@ -59,7 +65,8 @@ export const fencedDivNode = $nodeSchema(fencedDivNodeName, () => ({
         attributes: {
           class: node.attrs.class,
           id: node.attrs.id,
-          style: node.attrs.style
+          style: node.attrs.style,
+          ...(node.attrs.attributes || {}),
         }
       })
       state.next(node.content)
@@ -67,4 +74,3 @@ export const fencedDivNode = $nodeSchema(fencedDivNodeName, () => ({
     },
   },
 }))
-

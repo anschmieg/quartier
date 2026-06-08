@@ -56,12 +56,72 @@ const snippetCompletions: LanguageCompletion[] = [
   {
     label: 'callout-note',
     detail: 'Quarto note callout block',
-    insertText: '::: {.callout-note}\n## Note\n\n\n:::',
+    insertText: '::: {.callout-note title="Note"}\n\n:::',
+  },
+  {
+    label: 'callout-tip',
+    detail: 'Quarto tip callout block',
+    insertText: '::: {.callout-tip title="Tip"}\n\n:::',
   },
   {
     label: 'callout-warning',
     detail: 'Quarto warning callout block',
-    insertText: '::: {.callout-warning}\n## Warning\n\n\n:::',
+    insertText: '::: {.callout-warning title="Warning"}\n\n:::',
+  },
+  {
+    label: 'callout-caution',
+    detail: 'Quarto caution callout block',
+    insertText: '::: {.callout-caution title="Caution"}\n\n:::',
+  },
+  {
+    label: 'callout-important',
+    detail: 'Quarto important callout block',
+    insertText: '::: {.callout-important title="Important"}\n\n:::',
+  },
+  {
+    label: 'callout-title',
+    detail: 'Quarto callout title option',
+    insertText: 'title=""',
+  },
+  {
+    label: 'callout-collapse',
+    detail: 'Quarto callout collapse option',
+    insertText: 'collapse="false"',
+  },
+  {
+    label: 'callout-appearance',
+    detail: 'Quarto callout appearance option',
+    insertText: 'appearance="simple"',
+  },
+  {
+    label: 'callout-icon',
+    detail: 'Quarto callout icon option',
+    insertText: 'icon="false"',
+  },
+  {
+    label: 'div-generic',
+    detail: 'Generic Pandoc fenced div',
+    insertText: '::: {.custom}\n\n:::',
+  },
+  {
+    label: 'tabset-panel',
+    detail: 'Quarto panel tabset container',
+    insertText: '::: {.panel-tabset}\n\n## Tab 1\n\n\n## Tab 2\n\n\n:::',
+  },
+  {
+    label: 'columns-layout',
+    detail: 'Quarto columns layout container',
+    insertText: '::: {.columns}\n\n::: {.column width="50%"}\n\n\n:::\n\n::: {.column width="50%"}\n\n\n:::\n\n:::',
+  },
+  {
+    label: 'div-id',
+    detail: 'Pandoc fenced div id attribute',
+    insertText: '#',
+  },
+  {
+    label: 'div-class',
+    detail: 'Pandoc fenced div class attribute',
+    insertText: '.',
   },
   {
     label: 'code-cell-python',
