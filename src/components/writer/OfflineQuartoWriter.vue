@@ -84,6 +84,7 @@
           </button>
           <button
             type="button"
+            data-test="preview-toggle"
             class="rounded-full px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-950"
             @click="showPreview = !showPreview"
           >
@@ -105,7 +106,7 @@
           <div class="mx-auto h-full max-w-4xl px-5 py-8">
             <div class="mb-4 flex items-center justify-between rounded-full border border-amber-900/10 bg-white/55 px-4 py-2 text-xs text-stone-600">
               <span>Autocomplete-first Quarto writer</span>
-              <span>Reveal source on focus · Gentle hints · Local autosave</span>
+              <span data-test="document-stats">{{ documentStats.words }} words · {{ documentStats.characters }} characters</span>
             </div>
             <div class="h-[calc(100%-3rem)] overflow-hidden rounded-[2rem] border border-amber-900/10 bg-[#fffdfa] shadow-sm">
               <EditorWrapper
@@ -121,8 +122,25 @@
 
         <aside v-if="showPreview" class="min-h-0 overflow-auto border-l border-stone-200/80 bg-white px-6 py-8">
           <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-400">On-demand preview</p>
-          <h2 class="mt-3 font-serif text-3xl tracking-[-0.03em]">Approximate writing preview</h2>
-          <pre class="mt-6 whitespace-pre-wrap rounded-3xl bg-stone-950 p-5 text-sm leading-6 text-stone-50">{{ content }}</pre>
+          <h2 class="mt-3 font-serif text-3xl tracking-[-0.03em]">Local writing preview</h2>
+          <div
+            v-if="sourceDiagnostics.length"
+            data-test="source-diagnostics"
+            class="mt-5 space-y-2"
+          >
+            <p
+              v-for="diagnostic in sourceDiagnostics"
+              :key="diagnostic.message"
+              class="rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+            >
+              {{ diagnostic.message }}
+            </p>
+          </div>
+          <article
+            data-test="rendered-preview"
+            class="prose prose-stone mt-6 max-w-none rounded-3xl border border-stone-200 bg-white p-6 shadow-sm"
+            v-html="renderedPreview"
+          />
         </aside>
       </main>
     </section>
@@ -140,6 +158,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import EditorWrapper from '@/components/editor/EditorWrapper.vue'
+import { getSourceDiagnostics, renderLocalPreview } from '@/services/localPreview'
 
 const autosaveKey = 'quartier:offline-writer-document'
 const defaultDocumentName = 'Untitled.qmd'
@@ -167,6 +186,15 @@ const showPreview = ref(false)
 const savedAt = ref<number | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const editorWrapper = ref<InstanceType<typeof EditorWrapper> | null>(null)
+const documentStats = computed(() => {
+  const trimmedContent = content.value.trim()
+  return {
+    words: trimmedContent ? trimmedContent.split(/\s+/).length : 0,
+    characters: content.value.length,
+  }
+})
+const renderedPreview = computed(() => renderLocalPreview(content.value))
+const sourceDiagnostics = computed(() => getSourceDiagnostics(content.value))
 
 const saveStateLabel = computed(() => {
   if (!savedAt.value) return 'Autosave ready'

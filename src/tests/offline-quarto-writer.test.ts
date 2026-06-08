@@ -74,6 +74,23 @@ describe('OfflineQuartoWriter', () => {
     expect(wrapper.find('[data-test="save-state"]').text()).toContain('Autosaved')
     expect(wrapper.find('[data-test="export-document"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Autocomplete-first Quarto writer')
+    expect(wrapper.find('[data-test="document-stats"]').text()).toContain('words')
+  })
+
+  it('renders a safe local preview and source diagnostics', async () => {
+    const wrapper = mount(OfflineQuartoWriter)
+
+    await wrapper.find('[data-test="new-document"]').trigger('click')
+    await wrapper.find('[data-test="editor-input"]').setValue('# Safe heading\n\n<script>alert(1)</script>')
+    await wrapper.find('[data-test="preview-toggle"]').trigger('click')
+
+    expect(wrapper.find('[data-test="rendered-preview"]').html()).toContain('<h1>Safe heading</h1>')
+    expect(wrapper.find('[data-test="rendered-preview"]').html()).toContain('&lt;script&gt;')
+    expect(wrapper.find('[data-test="rendered-preview"]').html()).not.toContain('<script>')
+
+    await wrapper.find('[data-test="editor-input"]').setValue('---\ntitle: Broken')
+
+    expect(wrapper.find('[data-test="source-diagnostics"]').text()).toContain('no closing')
   })
 
   it('inserts a canonical note callout from the writer chrome', async () => {
