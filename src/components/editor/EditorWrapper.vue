@@ -24,40 +24,38 @@
 
     <!-- Editors -->
     <div class="flex-1 overflow-hidden relative">
-      <MilkdownProvider>
-        <ProsemirrorAdapterProvider>
-          <Transition
-            enter-active-class="transition-opacity duration-150"
-            enter-from-class="opacity-0"
-            enter-to-class="opacity-100"
-            leave-active-class="transition-opacity duration-100"
-            leave-from-class="opacity-100"
-            leave-to-class="opacity-0"
-            mode="out-in"
-          >
-            <div v-if="mode === 'visual' && !reloading" key="visual" class="h-full overflow-auto">
-              <MilkdownEditor 
-                ref="milkdownRef"
-                :key="roomId"
-                v-model="content"
-                :editable="true"
-                :roomId="roomId"
-                :userEmail="userEmail"
-                :enableCollab="enableCollab"
-                :showComments="showComments"
-                @trigger-citation="handleTriggerCitation"
-                @dismiss-citation="closeCitationMenu"
-              />
-            </div>
-            <div v-else key="source" class="h-full overflow-auto">
-              <CodeEditor 
-                v-model="content"
-                :filename="filename"
-              />
-            </div>
-          </Transition>
-        </ProsemirrorAdapterProvider>
-      </MilkdownProvider>
+      <Transition
+        enter-active-class="transition-opacity duration-150"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-100"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+        mode="out-in"
+      >
+        <div v-if="activeMode === 'visual' && !reloading" key="visual" class="h-full overflow-auto">
+          <component
+            :is="VisualEditor"
+            ref="visualEditorRef"
+            :key="roomId"
+            v-model="content"
+            :editable="true"
+            :room-id="roomId"
+            :user-email="userEmail"
+            :enable-collab="enableCollab"
+            :show-comments="showComments"
+            @trigger-citation="handleTriggerCitation"
+            @dismiss-citation="closeCitationMenu"
+          />
+        </div>
+        <div v-else key="source" class="h-full overflow-auto">
+          <component
+            :is="SourceEditor"
+            v-model="content"
+            :filename="filename"
+          />
+        </div>
+      </Transition>
     </div>
 
     <!-- Citation Menu -->
@@ -73,20 +71,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
-import { MilkdownProvider } from '@milkdown/vue'
-import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/vue'
-import CodeEditor from './CodeEditor.vue'
-import MilkdownEditor from './MilkdownEditor.vue'
+import { computed, defineAsyncComponent, ref, watch, nextTick } from 'vue'
 import InlineCitationMenu from '@/components/citations/InlineCitationMenu.vue'
 import type { CitationItem } from '@/services/citations/types'
 import { bibtexService } from '@/services/citations/bibtex'
 import { useWorkspaceSession } from '@/composables/useWorkspaceSession'
+import { resolveEditorMode } from '@/config/buildFeatures'
+import {
+  buildFeatures,
+  loadSourceEditor,
+  loadVisualEditor,
+} from 'virtual:quartier-features'
 
-
-
-// Reference to the Milkdown component to access exposed methods
-const milkdownRef = ref<any>(null)
+const SourceEditor = loadSourceEditor ? defineAsyncComponent(loadSourceEditor) : undefined
+const VisualEditor = loadVisualEditor ? defineAsyncComponent(loadVisualEditor) : undefined
+const visualEditorRef = ref<{
+  getEditor?: () => unknown
+  insertCitation?: (key: string) => void
+  insertCallout?: (type?: string) => boolean
+  insertFencedDiv?: (kind?: string) => boolean
+} | null>(null)
 
 const props = defineProps<{
   initialContent: string
@@ -100,6 +104,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:content', 'save'])
 const workspaceSession = useWorkspaceSession()
+const activeMode = computed(() => resolveEditorMode(props.mode, buildFeatures))
 
 // Citation State
 const citationState = ref({
@@ -112,7 +117,7 @@ const projectBib = ref('')
 
 // Helper to get the underlying editor instance
 const getMilkdownEditor = () => {
-  return milkdownRef.value?.getEditor?.()
+  return visualEditorRef.value?.getEditor?.()
 }
 
 // Handlers
@@ -163,8 +168,8 @@ const handleCitationSelect = async (item: CitationItem) => {
    const key = bibtexService.generateKey(item)
    
    // 1. Insert into Editor
-   if (milkdownRef.value?.insertCitation) {
-       milkdownRef.value.insertCitation(key)
+   if (visualEditorRef.value?.insertCitation) {
+       visualEditorRef.value.insertCitation(key)
    }
    
    // 2. Append to references.bib if needed
@@ -262,7 +267,7 @@ watch(content, (newVal) => {
 })
 
 function insertCallout(type: string = 'note') {
-  if (milkdownRef.value?.insertCallout?.(type)) return true
+  if (visualEditorRef.value?.insertCallout?.(type)) return true
 
   const title = type.charAt(0).toUpperCase() + type.slice(1)
   const separator = content.value.endsWith('\n') ? '\n' : '\n\n'
@@ -278,7 +283,7 @@ function getFencedDivSource(kind: string = 'generic') {
 }
 
 function insertFencedDiv(kind: string = 'generic') {
-  if (milkdownRef.value?.insertFencedDiv?.(kind)) return true
+  if (visualEditorRef.value?.insertFencedDiv?.(kind)) return true
 
   const separator = content.value.endsWith('\n') ? '\n' : '\n\n'
   content.value = `${content.value}${separator}${getFencedDivSource(kind)}`

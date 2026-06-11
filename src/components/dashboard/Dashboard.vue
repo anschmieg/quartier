@@ -56,17 +56,17 @@
             <span>Local Folder</span>
           </Button>
           
-          <Button variant="outline" class="h-auto py-4 flex flex-col gap-2 items-center justify-center border-dashed" @click="handleOpenGitHub">
+          <Button v-if="buildFeatures.remoteStorage" variant="outline" class="h-auto py-4 flex flex-col gap-2 items-center justify-center border-dashed" @click="handleOpenGitHub">
             <Github class="w-6 h-6 opacity-50" />
             <span>GitHub Repo</span>
           </Button>
 
-          <Button variant="outline" class="h-auto py-4 flex flex-col gap-2 items-center justify-center border-dashed" @click="handleOpenCloud('gdrive')">
+          <Button v-if="buildFeatures.remoteStorage" variant="outline" class="h-auto py-4 flex flex-col gap-2 items-center justify-center border-dashed" @click="handleOpenCloud('gdrive')">
             <Cloud class="w-6 h-6 text-blue-500 opacity-80" />
             <span>Google Drive</span>
           </Button>
 
-           <Button variant="outline" class="h-auto py-4 flex flex-col gap-2 items-center justify-center border-dashed" @click="handleOpenCloud('nextcloud')">
+           <Button v-if="buildFeatures.remoteStorage" variant="outline" class="h-auto py-4 flex flex-col gap-2 items-center justify-center border-dashed" @click="handleOpenCloud('nextcloud')">
             <Cloud class="w-6 h-6 text-sky-600 opacity-80" />
             <span>Nextcloud</span>
           </Button>
@@ -85,11 +85,13 @@
         v-model:open="showLocalSelector" 
         @select="handleLocalSelect" 
     />
-    <RepoSelector 
+    <RepoSelector
+        v-if="buildFeatures.remoteStorage"
         v-model:open="showRepoSelector"
         @select="handleRepoSelect"
     />
     <CloudProjectSelector
+        v-if="buildFeatures.remoteStorage"
         v-model:open="showCloudSelector"
         :provider="targetCloudProvider"
         @select="handleCloudSelect"
@@ -107,6 +109,7 @@ import { Clock, PlusCircle, Monitor, Github, Cloud } from 'lucide-vue-next'
 import { useTimeAgo } from '@vueuse/core'
 import { useWorkspaceNavigation } from '@/composables/useWorkspaceNavigation'
 import { useWorkspaceSession } from '@/composables/useWorkspaceSession'
+import { buildFeatures } from 'virtual:quartier-features'
 
 // Modals
 import LocalProjectSelector from '@/components/layout/LocalProjectSelector.vue'
@@ -115,7 +118,8 @@ import CloudProjectSelector from '@/components/layout/CloudProjectSelector.vue'
 
 const workspaceNavigation = useWorkspaceNavigation()
 const workspaceSession = useWorkspaceSession()
-const recentProjects = computed(() => historyService.getProjects())
+const recentProjects = computed(() => historyService.getProjects()
+  .filter(project => workspaceProviderRegistry.get(project.providerId)))
 
 // Modal State
 const showLocalSelector = ref(false)

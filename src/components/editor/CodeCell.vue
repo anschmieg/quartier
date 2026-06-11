@@ -37,7 +37,7 @@
       <button
         type="button"
         data-test="edit-cell-options"
-        class="shrink-0 rounded-full border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:bg-white hover:text-stone-950"
+        class="min-h-9 shrink-0 rounded-full border border-stone-300 bg-white/70 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:bg-white hover:text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
         @click.stop="optionsVisible = !optionsVisible"
       >
         {{ optionsVisible ? 'Hide source options' : 'Edit source/options' }}

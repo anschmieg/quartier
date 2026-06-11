@@ -8,6 +8,15 @@ import '@fontsource/newsreader/700.css'
 import './assets/css/tailwind.css'
 import App from './App.vue'
 import router from './router'
+import { loadRemoteStorage } from 'virtual:quartier-features'
 
-createApp(App).use(router).mount('#app')
+async function startApplication() {
+  if (loadRemoteStorage) {
+    const remoteStorage = await loadRemoteStorage()
+    remoteStorage.registerRemoteStorage()
+  }
 
+  createApp(App).use(router).mount('#app')
+}
+
+void startApplication()

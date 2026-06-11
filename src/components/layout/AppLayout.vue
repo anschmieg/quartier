@@ -7,8 +7,10 @@
       :show-right-sidebar="showRightSidebar"
       :editor-mode="editorMode"
       :get-editor="getEditorInstance"
-      :can-share="!!currentFile && !!workspaceSession.state.providerCapabilities?.supportsShare"
+      :can-share="buildFeatures.collaboration && !!currentFile && !!workspaceSession.state.providerCapabilities?.supportsShare"
       :session-member-count="sessionMemberCount"
+      :source-editor-available="buildFeatures.sourceEditor"
+      :visual-editor-available="buildFeatures.visualEditor"
       @command-palette="openCommandPalette"
       @share="openShareDialog"
       @toggle-sidebar="showSidebar = !showSidebar"
@@ -17,7 +19,7 @@
 
       @update:editor-mode="(mode) => { editorMode = mode; userPreferredMode = mode }"
       :disable-visual-mode="isCodeFile"
-      :show-comments="showComments"
+      :show-comments="buildFeatures.collaboration && showComments"
       @toggle-comments="showComments = !showComments"
     />
 
@@ -33,6 +35,7 @@
         :is-dirty="isDirty"
         :is-host="isHost"
         :allowed-paths="[...allowedPaths]"
+        :collaboration-available="buildFeatures.collaboration"
         @open-source-selector="handleOpenSourceSelector"
         @select-file="selectFile"
         @open-shared="openSharedSessions"
@@ -58,7 +61,7 @@
               :mode="editorMode"
               :room-id="activeSession?.roomId"
               :user-email="accessUser?.email || user?.login"
-              :enable-collab="isShared"
+              :enable-collab="buildFeatures.collaboration && isShared"
               :filename="currentFile || undefined"
               :show-comments="showComments"
               @update:content="updateFileContent"
@@ -117,7 +120,7 @@
       <AppRightSidebar 
         :visible="showRightSidebar"
         :can-save="!!currentFile"
-        :can-share="!!currentFile && !!workspaceSession.state.providerCapabilities?.supportsShare"
+        :can-share="buildFeatures.collaboration && !!currentFile && !!workspaceSession.state.providerCapabilities?.supportsShare"
         :auto-save-status="autoSaveStatus"
         :is-dirty-to-provider="isDirtyToProvider"
         :provider-id="activeProviderId"
@@ -138,13 +141,14 @@
       @select="selectFile" 
       @action="handlePaletteAction"
     />
-    <RepoSelector v-model:open="showRepoSelector" @select="handleRepoSelect" />
+    <RepoSelector v-if="buildFeatures.remoteStorage" v-model:open="showRepoSelector" @select="handleRepoSelect" />
     <LocalProjectSelector 
         v-model:open="showLocalSelector" 
         :current-project="project"
         @select="handleLocalProjectSelect" 
     />
     <CloudProjectSelector
+        v-if="buildFeatures.remoteStorage"
         v-model:open="showCloudSelector"
         :provider="targetCloudProvider"
         @select="handleCloudProjectSelect"
@@ -156,12 +160,13 @@
       :current-content="fileContent"
       @confirm="handleCommit"
     />
-    <ShareDialog 
+    <ShareDialog
+      v-if="buildFeatures.collaboration"
       ref="shareDialogRef"
       :file-path="fullFilePath"
     />
-    <SharedSessionsDialog ref="sharedSessionsDialogRef" />
-    <JoinSessionDialog v-if="route.name === 'share'" @joined="handleJoined" />
+    <SharedSessionsDialog v-if="buildFeatures.collaboration" ref="sharedSessionsDialogRef" />
+    <JoinSessionDialog v-if="buildFeatures.collaboration && route.name === 'share'" @joined="handleJoined" />
     <Toast ref="toastRef" />
   </div>
 </template>
@@ -191,6 +196,8 @@ import { useWorkspaceNavigation } from '@/composables/useWorkspaceNavigation'
 import { useDocumentBuffer } from '@/composables/useDocumentBuffer'
 import { useDocumentSave } from '@/composables/useDocumentSave'
 import { workspaceProviderRegistry } from '@/core/workspace/providerRegistry'
+import { buildFeatures } from 'virtual:quartier-features'
+import { resolveEditorMode } from '@/config/buildFeatures'
 
 // Router
 const route = useRoute()
@@ -220,7 +227,7 @@ const showRightSidebar = computed({
   }
 })
 const editorMode = computed<'visual' | 'source'>({
-  get: () => workspaceSession.state.ui.editorMode,
+  get: () => resolveEditorMode(workspaceSession.state.ui.editorMode, buildFeatures),
   set: (value) => {
     workspaceSession.updateUiState({ editorMode: value })
   }
@@ -548,8 +555,9 @@ function handlePaletteAction(action: string) {
       break
     case 'toggle-mode': {
       const newMode = editorMode.value === 'visual' ? 'source' : 'visual'
-      editorMode.value = newMode
-      userPreferredMode.value = newMode
+      const availableMode = resolveEditorMode(newMode, buildFeatures)
+      editorMode.value = availableMode
+      userPreferredMode.value = availableMode
       break
     }
     case 'manage-source':

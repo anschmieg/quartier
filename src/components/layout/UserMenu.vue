@@ -36,11 +36,11 @@
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem @select="emit('open-shared', 'shared-with-me')">
+        <DropdownMenuItem v-if="showShared" @select="emit('open-shared', 'shared-with-me')">
           <FolderDown class="w-4 h-4 mr-2" />
           Shared with me
         </DropdownMenuItem>
-        <DropdownMenuItem @select="emit('open-shared', 'shared-by-me')">
+        <DropdownMenuItem v-if="showShared" @select="emit('open-shared', 'shared-by-me')">
           <FolderUp class="w-4 h-4 mr-2" />
           Shared by me
         </DropdownMenuItem>
@@ -102,6 +102,7 @@ import {
 import { useAuth } from '@/composables/useAuth'
 
 const { user, accessUser, isLoading, isAuthenticated, isAccessAuthenticated, login, logout } = useAuth()
+withDefaults(defineProps<{ showShared?: boolean }>(), { showShared: true })
 
 const emit = defineEmits<{
   'open-shared': [mode: 'shared-with-me' | 'shared-by-me']

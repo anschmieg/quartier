@@ -69,10 +69,14 @@ import { fencedDivNode } from './plugins/fenced-div'
 import FencedDivNode from './plugins/fenced-div/FencedDivNode.vue'
 import { remarkFencedDivPlugin } from './plugins/fenced-div/remark-plugin'
 import './plugins/frontmatter/style.css'
-import { useCollab, getCollabPlugins } from '@/composables/useCollab'
+import { collaboration } from 'virtual:quartier-features'
 import { convertQuartoToMilkdown, convertMilkdownToQuarto } from '@/utils/quarto-syntax'
 import { useCitationTriggerPlugin, citationNode, remarkCitationPlugin, remarkSimpleCitePlugin, type CitationTriggerEvent } from './plugins/citations'
 import CitationNode from './plugins/citations/CitationNode.vue'
+import {
+  editorAccessibilityAttributes,
+  handleEditorEscape,
+} from './editorAccessibility'
 
 
 // Import base styles for structure (optional, but nord helps with complex nodes)
@@ -101,13 +105,9 @@ const emit = defineEmits<{
 // Plugin to handle Escape key -> Blur
 const escapePlugin = $prose((_ctx) => {
   return keymap({
-    Escape: (_state, _dispatch, view) => {
-      if (view && view.dom) {
-        view.dom.blur()
-        return true
-      }
-      return false
-    }
+    Escape: (_state, _dispatch, view) => view
+      ? handleEditorEscape(view, { key: 'Escape' })
+      : false,
   })
 })
 
@@ -130,6 +130,10 @@ const { get, loading } = useEditor((root) => {
       configCtx.update(editorViewOptionsCtx, (prev) => ({
         ...prev,
         editable: () => props.editable ?? true,
+        attributes: {
+          ...prev.attributes,
+          ...editorAccessibilityAttributes,
+        },
       }))
       
       // Setup listener for v-model
@@ -252,7 +256,7 @@ const { get, loading } = useEditor((root) => {
     .use(citationTriggerPlugin)
 
     // Add collaboration plugins (conditionally enabled via useCollab)
-    getCollabPlugins().forEach(plugin => editor.use(plugin))
+    collaboration?.getCollabPlugins().forEach(plugin => editor.use(plugin))
     
     return editor
 })
@@ -334,7 +338,13 @@ const citationView = $view(citationNode.node, () => nodeViewFactory({
 
 // Initialize collaboration logic (conditionally enabled via useCollab)
 // This handles Yjs doc, PartyKit connection, and awareness
-useCollab(props.roomId, props.userEmail, get, initialValue, () => props.enableCollab ?? false)
+collaboration?.useCollab(
+  props.roomId,
+  props.userEmail,
+  get,
+  initialValue,
+  () => props.enableCollab ?? false,
+)
 
 // Expose the editor instance getter
 defineExpose({

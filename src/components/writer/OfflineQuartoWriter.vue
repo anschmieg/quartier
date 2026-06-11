@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-[#f7f1e7] text-stone-950">
-    <section
+  <div class="writer-surface min-h-screen bg-[#f7f1e7] text-stone-950">
+    <main
       v-if="!hasDocument"
       data-test="writer-start"
       class="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-6 py-16"
@@ -48,20 +48,24 @@
           <p class="mt-2 text-sm leading-6 text-stone-600">Autosave in the browser, export anytime, and no cloud dependency for the first writing loop.</p>
         </article>
       </div>
-    </section>
+    </main>
 
     <section v-else data-test="writer-shell" class="flex h-screen flex-col">
-      <header class="flex h-16 items-center justify-between border-b border-stone-200/80 bg-[#fbf7ef]/90 px-5 backdrop-blur">
-        <div class="min-w-0">
+      <header class="flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-stone-200/80 bg-[#fbf7ef]/95 px-5 py-2 backdrop-blur">
+        <div class="min-w-0 w-full sm:w-auto">
           <p data-test="document-title" class="truncate text-sm font-semibold text-stone-950">{{ documentName }}</p>
-          <p data-test="save-state" class="text-xs text-stone-500">{{ saveStateLabel }}</p>
+          <p data-test="save-state" class="text-xs text-stone-600" role="status" aria-live="polite">{{ saveStateLabel }}</p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <nav
+          data-test="writer-actions"
+          aria-label="Document actions"
+          class="grid w-full grid-cols-2 items-stretch gap-2 sm:flex sm:w-auto sm:items-center"
+        >
           <button
             type="button"
             data-test="insert-callout"
-            class="rounded-full px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-950"
+            class="min-h-11 rounded-full px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200/60 hover:text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
             @click="insertCallout"
           >
             Insert callout
@@ -69,7 +73,7 @@
           <button
             type="button"
             data-test="insert-tabset"
-            class="rounded-full px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-950"
+            class="min-h-11 rounded-full px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200/60 hover:text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
             @click="insertFencedDiv('tabset')"
           >
             Insert tabset
@@ -77,7 +81,7 @@
           <button
             type="button"
             data-test="insert-columns"
-            class="rounded-full px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-950"
+            class="min-h-11 rounded-full px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200/60 hover:text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
             @click="insertFencedDiv('columns')"
           >
             Insert columns
@@ -85,7 +89,7 @@
           <button
             type="button"
             data-test="preview-toggle"
-            class="rounded-full px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-950"
+            class="min-h-11 rounded-full px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200/60 hover:text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
             @click="showPreview = !showPreview"
           >
             {{ showPreview ? 'Hide preview' : 'Preview' }}
@@ -93,21 +97,24 @@
           <button
             type="button"
             data-test="export-document"
-            class="rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-stone-50 transition hover:bg-stone-800"
+            class="col-span-2 min-h-11 rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-stone-50 transition hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 sm:col-auto"
             @click="exportDocument"
           >
             Export .qmd
           </button>
-        </div>
+        </nav>
       </header>
 
-      <main class="grid min-h-0 flex-1" :class="showPreview ? 'grid-cols-[minmax(0,1fr)_minmax(320px,42vw)]' : 'grid-cols-1'">
+      <main class="grid min-h-0 flex-1" :class="showPreview ? 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(320px,42vw)]' : 'grid-cols-1'">
         <div class="min-h-0 overflow-hidden">
-          <div class="mx-auto h-full max-w-4xl px-5 py-8">
+          <div class="mx-auto h-full max-w-4xl px-4 py-5 sm:px-5 sm:py-8">
             <div class="mb-4 flex items-center justify-between rounded-full border border-amber-900/10 bg-white/55 px-4 py-2 text-xs text-stone-600">
               <span>Autocomplete-first Quarto writer</span>
               <span data-test="document-stats">{{ documentStats.words }} words · {{ documentStats.characters }} characters</span>
             </div>
+            <p id="writer-editor-instructions" data-test="editor-instructions" class="sr-only">
+              Quarto document editor. Press Escape to leave the editor. Tab and Shift+Tab adjust indentation.
+            </p>
             <div class="h-[calc(100%-3rem)] overflow-hidden rounded-[2rem] border border-amber-900/10 bg-[#fffdfa] shadow-sm">
               <EditorWrapper
                 ref="editorWrapper"
@@ -281,3 +288,26 @@ function exportDocument() {
   URL.revokeObjectURL(url)
 }
 </script>
+
+<style scoped>
+.writer-surface {
+  color-scheme: light;
+  --background: 40 33% 97%;
+  --foreground: 24 10% 10%;
+  --card: 40 33% 99%;
+  --card-foreground: 24 10% 10%;
+  --popover: 40 33% 99%;
+  --popover-foreground: 24 10% 10%;
+  --primary: 152 40% 28%;
+  --primary-foreground: 40 33% 99%;
+  --secondary: 38 25% 93%;
+  --secondary-foreground: 24 10% 16%;
+  --muted: 38 18% 91%;
+  --muted-foreground: 24 8% 38%;
+  --accent: 38 24% 90%;
+  --accent-foreground: 24 10% 10%;
+  --border: 34 16% 84%;
+  --input: 34 16% 84%;
+  --ring: 152 40% 28%;
+}
+</style>

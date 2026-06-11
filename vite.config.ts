@@ -2,9 +2,30 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
+import { createVirtualFeatureModule, resolveBuildFeatures } from './src/config/buildFeatures'
 
-export default defineConfig({
-  plugins: [vue()],
+export default defineConfig(({ mode }) => {
+  const features = resolveBuildFeatures(mode === 'production' || mode === 'development' || mode === 'test'
+    ? 'full'
+    : mode)
+
+  const virtualModuleId = 'virtual:quartier-features'
+  const resolvedVirtualModuleId = `\0${virtualModuleId}`
+  const virtualFeatureModule = createVirtualFeatureModule(features)
+
+  return {
+  plugins: [
+    vue(),
+    {
+      name: 'quartier-build-features',
+      resolveId(id) {
+        return id === virtualModuleId ? resolvedVirtualModuleId : undefined
+      },
+      load(id) {
+        return id === resolvedVirtualModuleId ? virtualFeatureModule : undefined
+      },
+    },
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -49,4 +70,4 @@ export default defineConfig({
   worker: {
     format: 'es'
   }
-})
+}})

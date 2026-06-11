@@ -6,7 +6,10 @@
       <div class="w-px h-4 bg-border/50 mx-1" />
       
       <!-- Editor Mode Toggle -->
-      <div class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg shrink-0">
+      <div
+        v-if="visualEditorAvailable && sourceEditorAvailable"
+        class="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg shrink-0"
+      >
         <TooltipProvider :delay-duration="0">
           <Tooltip>
             <TooltipTrigger as-child>
@@ -220,7 +223,7 @@ const toolbarContainer = ref(null)
 const { width: toolbarWidth } = useElementSize(toolbarContainer)
 const isCondensed = computed(() => toolbarWidth.value < 650)
 
-const props = defineProps<{
+withDefaults(defineProps<{
   canSave: boolean
   canShare: boolean
   sidebarVisible: boolean
@@ -230,7 +233,14 @@ const props = defineProps<{
   getEditor: () => any
   disableVisualMode?: boolean
   showComments?: boolean
-}>()
+  sourceEditorAvailable?: boolean
+  visualEditorAvailable?: boolean
+}>(), {
+  disableVisualMode: false,
+  showComments: false,
+  sourceEditorAvailable: true,
+  visualEditorAvailable: true,
+})
 
 const emit = defineEmits<{
   'command-palette': []

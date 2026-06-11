@@ -9,8 +9,9 @@
         <span>YAML Frontmatter</span>
       </div>
       <button 
+        type="button"
         @click="toggle"
-        class="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        class="min-h-8 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {{ isExpanded ? 'Collapse' : 'Expand' }}
       </button>
@@ -20,7 +21,7 @@
       <div 
         :ref="contentRef"
         class="language-yaml font-mono text-sm p-3 bg-card min-h-16 outline-hidden"
-      ></div>
+      />
     </div>
     
     <div v-show="!isExpanded" class="p-3 text-sm text-muted-foreground italic bg-muted/20">
@@ -55,7 +56,7 @@ const previewText = computed(() => {
       return `${keys.length} keys: ${keys.join(', ')}`
     }
     return 'Invalid YAML'
-  } catch (e) {
+  } catch {
     return 'Invalid YAML'
   }
 })

@@ -5,6 +5,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import OfflineQuartoWriter from '@/components/writer/OfflineQuartoWriter.vue'
 import { historyService } from '@/services/history'
 import { initializeAuthContext, useAuthContextState } from '@/services/authContext'
+import { buildFeatures } from 'virtual:quartier-features'
 
 const routes = [
     {
@@ -41,12 +42,12 @@ const routes = [
         component: AppLayout,
         meta: { requiresAuth: true }
     },
-    {
+    ...(buildFeatures.collaboration ? [{
         path: '/s/:token',
         name: 'share',
         component: AppLayout,
         meta: { public: true }  // Public to view, auth checked when joining
-    },
+    }] : []),
     // Catch-all redirect to landing
     {
         path: '/:pathMatch(.*)*',
@@ -68,6 +69,12 @@ router.beforeEach((to, _from, next) => {
                 next(returnTo)
                 return
             }
+        }
+
+        const needsAuthContext = Boolean(to.meta.requiresAuth) || to.name === 'share'
+        if (!needsAuthContext) {
+            next()
+            return
         }
 
         await initializeAuthContext()

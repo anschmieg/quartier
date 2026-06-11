@@ -1,54 +1,66 @@
 <template>
-  <div class="landing-page">
-    <div class="hero">
+  <main class="landing-page">
+    <section class="hero" aria-labelledby="landing-title">
       <div class="hero-content">
-        <h1 class="title">Quartier</h1>
+        <h1 id="landing-title" class="title">Quartier</h1>
         <p class="tagline">A home for your research.</p>
         <p class="description">
-          Write, organize, and collaborate on your research with a beautiful 
-          Markdown editor that syncs with GitHub.
+          {{ buildFeatures.remoteStorage
+            ? 'Write, organize, and collaborate on research with a Quarto editor that connects to your projects.'
+            : 'A local-first Quarto editor for focused writing, semantic blocks, autocomplete, preview, and portable .qmd files.' }}
         </p>
         
         <div class="auth-buttons">
           <button @click="login" class="login-button primary">
             Start Writing
             <svg class="icon arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
+              <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </button>
         </div>
 
-        <p class="privacy-note">
+        <p v-if="buildFeatures.remoteStorage" class="privacy-note">
           We use Cloudflare Access for secure authentication. 
           Your data stays in your GitHub repositories.
         </p>
+        <p v-else class="privacy-note">
+          No account or cloud connection required. Your draft stays in this browser until you export it.
+        </p>
       </div>
-    </div>
+    </section>
 
-    <div class="features">
+    <section class="features" aria-label="Quartier features">
       <div class="feature">
         <div class="feature-icon">📝</div>
-        <h3>Rich Markdown Editor</h3>
-        <p>Write with a beautiful visual editor that supports GFM, math equations, and diagrams.</p>
+        <h2>Quarto-native writing</h2>
+        <p>Write prose, frontmatter, code cells, callouts, citations, and cross-references in one calm surface.</p>
       </div>
       <div class="feature">
-        <div class="feature-icon">🔄</div>
-        <h3>GitHub Sync</h3>
-        <p>Your files live in GitHub. Edit directly from your browser, commit when ready.</p>
+        <div class="feature-icon">⌨️</div>
+        <h2>Autocomplete-first</h2>
+        <p>Discover Quarto syntax through contextual suggestions instead of memorizing every option.</p>
       </div>
       <div class="feature">
-        <div class="feature-icon">☁️</div>
-        <h3>Cloud Storage</h3>
-        <p>Edits are saved instantly. Never lose your work, even without committing.</p>
+        <div class="feature-icon">{{ buildFeatures.remoteStorage ? '☁️' : '💾' }}</div>
+        <h2>{{ buildFeatures.remoteStorage ? 'Connected projects' : 'Local safety' }}</h2>
+        <p>
+          {{ buildFeatures.remoteStorage
+            ? 'Open documents from supported storage providers while keeping the editor workflow consistent.'
+            : 'Autosave locally, preview on demand, and export a portable .qmd whenever you want.' }}
+        </p>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { buildFeatures } from 'virtual:quartier-features'
+
+const router = useRouter()
+
 function login() {
-  // Redirect to /app - Cloudflare Access will intercept if not authenticated
-  window.location.href = '/app'
+  void router.push(buildFeatures.remoteStorage ? '/app' : '/writer')
 }
 </script>
 
@@ -173,7 +185,7 @@ function login() {
   margin-bottom: 1rem;
 }
 
-.feature h3 {
+.feature h2 {
   font-size: 1.25rem;
   margin: 0 0 0.75rem;
   color: #fff;

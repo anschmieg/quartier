@@ -1,25 +1,17 @@
 import { useStorage } from '@vueuse/core'
 import type { WorkspaceProvider } from '@/core/workspace/types'
-import { GitHubProvider } from './providers/GitHubProvider'
 import { LocalProvider } from './providers/LocalProvider'
-import { GoogleDriveProvider } from './providers/GoogleDriveProvider'
-import { NextcloudProvider } from './providers/NextcloudProvider'
 import { historyService } from './history'
 
 class StorageManager {
   private providers = new Map<string, WorkspaceProvider>()
   
   // Persisted state
-  private activeProviderId = useStorage<string>('quartier:activeProvider', 'github')
+  private activeProviderId = useStorage<string>('quartier:activeProvider', 'local')
   private activeProjectId = useStorage<string | null>('quartier:activeProject', null)
 
   constructor() {
-    this.registerProvider(new GitHubProvider())
     this.registerProvider(new LocalProvider())
-    this.registerProvider(new GoogleDriveProvider())
-    this.registerProvider(new NextcloudProvider())
-    
-    // Stubs
   }
 
   registerProvider(provider: WorkspaceProvider) {
@@ -27,7 +19,7 @@ class StorageManager {
   }
 
   get activeProvider(): WorkspaceProvider {
-    return this.providers.get(this.activeProviderId.value) || this.providers.get('github')!
+    return this.providers.get(this.activeProviderId.value) || this.providers.get('local')!
   }
 
   get activeProject(): string | null {

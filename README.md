@@ -7,7 +7,8 @@ Quartier is a collaborative, web-based editor for Quarto documents. It combines 
 ## Documentation
 
 ### Core Documentation
-- **[Architecture & System Design](docs/ARCHITECTURE.md)**: Detailed overview of Dual Auth modes (Host/Guest), Backend Proxy, and Collaboration logic.
+- **[Architecture & System Design](docs/ARCHITECTURE.md)**: Visual overview of the local-first core and optional editor, storage, and collaboration integrations.
+- **[Build Profiles](docs/BUILD_PROFILES.md)**: Diagnostic builds for testing major features in isolation.
 - **[KV Schema](docs/KV_SCHEMA.md)**: Database structure for sessions, tokens, and verification.
 - **[Contributing](docs/CONTRIBUTING.md)**: Development setup and deployment guide.
 
@@ -51,6 +52,36 @@ bun run dev
 # Build for production
 bun run build
 ```
+
+## Architecture
+
+Quartier keeps Quarto intelligence and document state independent from editor engines, storage providers, and collaboration transports.
+
+```mermaid
+flowchart LR
+  Core["Quarto source + language + document state"]
+  CM["CodeMirror"]
+  MD["Milkdown"]
+  Local["Local storage"]
+  Remote["Remote storage"]
+  Collab["Collaboration"]
+
+  CM --> Core
+  MD --> Core
+  Core --> Local
+  Core -. optional .-> Remote
+  MD -. optional .-> Collab
+```
+
+Development builds can exclude CodeMirror, Milkdown, remote storage, or collaboration to reveal accidental coupling:
+
+```bash
+npm run build:source-only
+npm run build:visual-only
+npm run build:local-writer
+```
+
+See [Architecture](docs/ARCHITECTURE.md) and [Build Profiles](docs/BUILD_PROFILES.md).
 
 ## License
 

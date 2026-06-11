@@ -1,69 +1,131 @@
-# Architecture & System Design
+# Quartier Architecture
 
-Quartier is a collaborative editor for Quarto documents, built on **Cloudflare ecosystem** (Pages, Functions, KV, Access).
+Quartier is a local-first Quarto authoring application with optional source editing, visual editing, remote storage, and collaboration. The architecture keeps the document model and Quarto intelligence independent from those optional integrations.
 
-## High-Level Overview
+## System Overview
 
-- **Frontend**: Vue 3 + Vite + Tailwind CSS.
-- **Backend API**: Cloudflare Pages Functions (Serverless).
-- **Database**: Cloudflare KV (Key-Value storage) for sessions and caching.
-- **Auth**: Hybrid model supporting GitHub OAuth (Hosts) and Cloudflare Access (Guests).
-- **Collaboration**: Yjs over WebSocket (Cloudflare Durable Objects planned, currently standard WS or polling/KV sync).
+```mermaid
+flowchart TB
+  UI["Vue application shell"]
+  Writer["Local-first writer"]
+  Workspace["Workspace session + document buffer"]
+  Language["Quarto language service"]
+  State["Browser state and drafts"]
 
-## Authentication Modes
+  Source["CodeMirror source editor"]
+  Visual["Milkdown visual editor"]
+  Local["Local workspace provider"]
+  Remote["GitHub / Google Drive / Nextcloud"]
+  Collab["PartyKit + Yjs collaboration"]
+  API["Cloudflare Functions API"]
 
-Quartier implements a unique dual-authentication strategy to support both repository owners (Hosts) and collaborators (Guests).
+  UI --> Writer
+  UI --> Workspace
+  Writer --> Language
+  Workspace --> State
+  Workspace --> Local
 
-### 1. Host Mode (GitHub OAuth)
-- **Identity**: Authenticated via GitHub OAuth App.
-- **Token**: `gh_token` (HttpOnly, Secure cookie).
-- **Capabilities**:
-  - Full Read/Write access to repositories.
-  - Can Commit/Push changes to GitHub.
-  - Can create Sessions and Share Links.
-- **Flow**:
-  1. User clicks "Login with GitHub".
-  2. Redirects to `/api/oauth/login`.
-  3. GitHub Callback -> sets `gh_token` and `gh_user` cookies.
+  Source -. optional .-> Writer
+  Visual -. optional .-> Writer
+  Remote -. optional .-> Workspace
+  Collab -. optional .-> Visual
+  Remote --> API
+  Collab --> API
+```
 
-### 2. Guest Mode (Cloudflare Access)
-- **Identity**: Authenticated via Cloudflare Access (Google, Email OTP, etc.).
-- **Token**: `CF_Authorization` cookie (managed by Cloudflare).
-- **Capabilities**:
-  - **Read-Only** access to GitHub Repositories (via Proxy).
-  - **Write** access to *Session Cursors* and *Live Edits* (Yjs).
-  - **Cannot Commit** to GitHub directly.
-  - Access is scoped to specific files/folders shared in the Session.
-- **Flow**:
-  1. User clicks a Share Link (`/s/:token`).
-  2. If unauthenticated, redirects to `/app` (Protected Route).
-  3. Cloudflare Access intercepts -> Login screen.
-  4. User logs in -> Redirected back to `/app` -> Router sends back to `/s/:token`.
-  5. API validates generic email identity against Session Members.
+The solid path is the baseline application. Dashed modules can be excluded at build time without replacing them with fake implementations.
 
-## Backend Proxy
+## Core Data Flow
 
-To secure GitHub tokens and implement custom access control, the frontend never talks to GitHub directly.
+```mermaid
+sequenceDiagram
+  participant Editor
+  participant Buffer as Document buffer
+  participant Language as Quarto language service
+  participant Provider as Workspace provider
+  participant Drafts as Browser draft storage
 
-- **Frontend** calls `/api/github/*`.
-- **Functions** (`functions/api/github/*`) intercept requests:
-  - Check for `gh_token`.
-  - If missing, check for `session` query param.
-  - If `session` present, validate Access Identity against Session Members.
-  - If valid, proxy request to GitHub API.
+  Provider->>Buffer: document snapshot + revision
+  Buffer->>Editor: source text
+  Editor->>Language: content + cursor context
+  Language-->>Editor: completions and diagnostics
+  Editor->>Buffer: edited source
+  Buffer->>Drafts: autosaved local draft
+  Buffer->>Provider: explicit save + base revision
+  Provider-->>Buffer: new revision or conflict
+```
 
-## Collaboration Architecture
+The `.qmd` source is authoritative. Editors are views over the same source, and storage providers communicate through the `WorkspaceProvider` interface.
 
-### Sessions
-A "Session" defines a scope of collaboration.
-- **Stored in KV**: `session:{id}`.
-- **Contains**: Owner, Member list, Allowed Paths.
+## Main Boundaries
 
-### Sharing
-- **Share Link**: Points to `/s/:token`.
-- **Token**: Maps to a Session ID + Permission Level (Read/Write).
-- **Security**: The `/share/*` API endpoint is public (bypasses Access) to allow initial metadata fetch, but *Joining* requires Access authentication.
+| Boundary | Responsibility | Key location |
+| --- | --- | --- |
+| Application shell | Routes, layout, feature visibility | `src/router`, `src/components/layout` |
+| Writer | Offline single-document authoring flow | `src/components/writer` |
+| Editors | Source and visual editing surfaces | `src/components/editor` |
+| Quarto intelligence | Completions, diagnostics, symbols | `src/core/language` |
+| Workspace | Provider-neutral files and sessions | `src/core/workspace` |
+| Document state | Drafts, dirty state, revisions | `src/core/state`, `src/composables` |
+| Storage | Local and optional remote providers | `src/services/providers` |
+| Collaboration | Optional Yjs/PartyKit binding | `src/composables/useCollab.ts` |
+| Backend | Authenticated GitHub/session APIs | `functions/api` |
 
-## File System
-- **FileBrowser**: Virtual file system combining GitHub directory listings and Session-scoped paths.
-- **Caching**: KV is used to cache file contents (ETags) to reduce GitHub API rate limits.
+## Build-Time Composition
+
+Quartier uses one small Vite virtual module, `virtual:quartier-features`, as its build boundary.
+
+```mermaid
+flowchart LR
+  Mode["Vite mode"] --> Profile["Typed build profile"]
+  Profile --> Virtual["virtual:quartier-features"]
+
+  Virtual -->|"loader exists"| Source["CodeMirror"]
+  Virtual -->|"loader exists"| Visual["Milkdown"]
+  Virtual -->|"loader exists"| Remote["Remote providers"]
+  Virtual -->|"module exists"| Collab["Collaboration"]
+
+  Virtual -->|"undefined"| Missing["Feature omitted"]
+  Missing --> UI["Related controls hidden"]
+```
+
+Application code follows a direct optional-capability pattern:
+
+```ts
+if (loadRemoteStorage) {
+  const remoteStorage = await loadRemoteStorage()
+  remoteStorage.registerRemoteStorage()
+}
+```
+
+There are no disabled adapters, plugin registry, runtime feature toggles, or no-op lifecycle objects. If a loader or module is absent, the feature is unavailable and its implementation is not imported into the bundle.
+
+See [BUILD_PROFILES.md](BUILD_PROFILES.md) for commands and the profile matrix.
+
+## Dependency Direction
+
+```mermaid
+flowchart BT
+  Integrations["Editors, providers, collaboration"]
+  Services["Language, build, document services"]
+  Core["Workspace types and state contracts"]
+
+  Integrations --> Services
+  Integrations --> Core
+  Services --> Core
+```
+
+Core types must not import Vue components, editor engines, cloud SDKs, or collaboration transports. Optional integrations may depend on core contracts, never the reverse.
+
+## Adding an Optional Feature
+
+Use the existing pattern only when a dependency should genuinely disappear from diagnostic builds:
+
+1. Keep the feature behind a focused entrypoint.
+2. Add its import to `createVirtualFeatureModule`.
+3. Export `undefined` when disabled.
+4. Check for the optional capability at the nearest composition boundary.
+5. Hide related controls and routes.
+6. Add a profile test proving the disabled import is absent.
+
+Ordinary Quarto behavior, UI components, and internal helpers should remain normal code rather than becoming configurable modules.

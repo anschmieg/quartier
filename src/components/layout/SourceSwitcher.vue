@@ -19,7 +19,7 @@
         <DropdownMenuSeparator />
         
         <!-- GitHub -->
-        <DropdownMenuItem class="text-xs" @click="handleSourceSelect('github')">
+        <DropdownMenuItem v-if="buildFeatures.remoteStorage" class="text-xs" @click="handleSourceSelect('github')">
           <Github class="w-3.5 h-3.5 mr-2" />
           <span>GitHub</span>
           <Check v-if="activeProviderId === 'github'" class="w-3 h-3 ml-auto" />
@@ -32,19 +32,18 @@
           <Check v-if="activeProviderId === 'local'" class="w-3 h-3 ml-auto" />
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel class="text-[10px] uppercase opacity-50">Cloud Sources</DropdownMenuLabel>
+        <DropdownMenuSeparator v-if="buildFeatures.remoteStorage" />
+        <DropdownMenuLabel v-if="buildFeatures.remoteStorage" class="text-[10px] uppercase opacity-50">Cloud Sources</DropdownMenuLabel>
         
         <!-- Google Drive -->
-        <DropdownMenuItem class="text-xs" @click="handleSourceSelect('gdrive')">
+        <DropdownMenuItem v-if="buildFeatures.remoteStorage" class="text-xs" @click="handleSourceSelect('gdrive')">
           <Cloud class="w-3.5 h-3.5 mr-2 text-blue-500" />
           <span>Google Drive</span>
           <Check v-if="activeProviderId === 'gdrive'" class="w-3 h-3 ml-auto" />
         </DropdownMenuItem>
         
         <!-- Nextcloud -->
-        <DropdownMenuItem class="text-xs" @click="handleSourceSelect('nextcloud')">
+        <DropdownMenuItem v-if="buildFeatures.remoteStorage" class="text-xs" @click="handleSourceSelect('nextcloud')">
           <Cloud class="w-3.5 h-3.5 mr-2" />
           <span>Nextcloud (WebDAV)</span>
           <Check v-if="activeProviderId === 'nextcloud'" class="w-3 h-3 ml-auto" />
@@ -73,6 +72,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useWorkspaceSession } from '@/composables/useWorkspaceSession'
+import { buildFeatures } from 'virtual:quartier-features'
 
 const workspaceSession = useWorkspaceSession()
 const activeProviderId = computed(() => workspaceSession.state.activeWorkspace?.providerId || 'github')

@@ -43,7 +43,7 @@
 
       <!-- User Menu -->
       <div class="p-4 border-t border-border/50">
-        <UserMenu @open-shared="emit('open-shared', $event)" />
+        <UserMenu :show-shared="collaborationAvailable" @open-shared="emit('open-shared', $event)" />
       </div>
     </div>
   </aside>
@@ -66,11 +66,13 @@ const props = withDefaults(defineProps<{
   isDirty?: boolean
   isHost?: boolean
   allowedPaths?: string[]
+  collaborationAvailable?: boolean
 }>(), {
   mode: 'persistent',
   isDirty: false,
   isHost: false,
-  allowedPaths: () => []
+  allowedPaths: () => [],
+  collaborationAvailable: true,
 })
 
 // Parse owner/repo from repo string

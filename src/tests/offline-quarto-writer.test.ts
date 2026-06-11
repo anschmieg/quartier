@@ -60,7 +60,8 @@ describe('OfflineQuartoWriter', () => {
     expect(wrapper.text()).toContain('Quarto finally flows')
     expect(wrapper.text()).toContain('Open a .qmd')
     expect(wrapper.text()).toContain('New Quarto document')
-    expect(wrapper.find('[data-test="writer-start"]').exists()).toBe(true)
+    expect(wrapper.find('main[data-test="writer-start"]').exists()).toBe(true)
+    expect(wrapper.find('.writer-surface').exists()).toBe(true)
   })
 
   it('opens a blank document with minimal chrome and export affordance', async () => {
@@ -75,6 +76,9 @@ describe('OfflineQuartoWriter', () => {
     expect(wrapper.find('[data-test="export-document"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Autocomplete-first Quarto writer')
     expect(wrapper.find('[data-test="document-stats"]').text()).toContain('words')
+    expect(wrapper.find('[data-test="writer-actions"]').classes()).toContain('grid')
+    expect(wrapper.find('[data-test="insert-callout"]').classes()).toContain('min-h-11')
+    expect(wrapper.find('[data-test="editor-instructions"]').text()).toContain('Escape')
   })
 
   it('renders a safe local preview and source diagnostics', async () => {
