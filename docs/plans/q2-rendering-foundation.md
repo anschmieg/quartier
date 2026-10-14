@@ -70,3 +70,11 @@ Distinguish and measure **four levels of incrementality**:
 Missing invalidation edges, stale output under overlapping edits, incomplete AST source attribution, cross-document renumbering, cache version drift, non-pure Lua/engines, browser-vs-native serializer differences, and Q1↔Q2 feature gaps. A successful cache hit is not sufficient evidence. No claim of total parity or completed M0 is made here.
 
 **Immediate action:** Execute [Q2-M0](q2-m0-verification.md) before committing to the first implementation slice.
+
+
+## M0 execution update (2026-10-14)
+
+The [actual M0 report](../research/q2-m0-execution-2026-10-14.md) records pinned Q2 0.32.0, source-matched Q2 0.33.0-nightly.20261013, and Q1 1.10.19/Pandoc 3.10 executable comparisons. Six native subset target renders matched clean Q2 output byte-for-byte; sibling pages can remain stale after site-wide navigation/theme changes, and Q1 output bytes differed substantially despite comparable observed content. Stage counters verify existing Pass-1 caching and Pass-2 document-level skipping; finer stage/fragment reuse remains the architectural target.
+
+[Q2-M1 first slice](q2-m1-first-slice.md) prioritizes project preview dependency correctness, avoiding duplication of merged Q2 PRs #300 (single-file static dependency closure) and #682 (Sass-import cache verification). Some strict M0 gates remain unverified (custom browser preview and local full Rust test run), as reported—not marked passed.
+
