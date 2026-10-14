@@ -1,0 +1,26 @@
+{
+  "sass": {
+    "steps": {
+      "initial": 0,
+      "subset": 0,
+      "clean": 0
+    },
+    "target_matches_clean": true,
+    "byte_differences": [
+      "about.html",
+      "index.html",
+      "posts/second.html",
+      "posts/third.html",
+      "site_libs/quarto/quarto-theme-64c9c375d689c77c.css"
+    ]
+  },
+  "missing_include": {
+    "steps": {
+      "initial": 0,
+      "subset": 1,
+      "clean": 1
+    },
+    "subset_diagnosed_missing_file": true,
+    "clean_diagnosed_missing_file": true
+  }
+}
