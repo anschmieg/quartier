@@ -114,3 +114,15 @@ avoid making later storage or editor choices irreversible.
 
 Existing experimental modules for these later capabilities remain in the
 repository where practical, but they are not part of the current MVP contract.
+
+## Strategic track: Quarto 2 rendering foundation (Q2-M0 … Q2-M5)
+
+**Status: source research and plan documented; M0 experiments not yet run.** These Q2-prefixed milestones are a separate engine/research track and do **not** renumber or supersede Quartier app Milestones 1–5. Preserve the existing local-first MVP while engine work proceeds.
+
+Quarto 2 ([quarto-dev/q2](https://github.com/quarto-dev/q2)) already has a Rust core compiled for native and browser WASM, document-profile caching, a project dependency graph, and an interactive browser preview. We will extend these components rather than refactor Quarto 1's TypeScript/Deno core. Quarto 1 remains an external compatibility oracle. The core research objective is **correct dependency invalidation and authoritative incremental rendering with clean-vs-incremental byte parity in a declared deterministic scope**.
+
+- [Q2 architectural decisions and staged roadmap](plans/q2-rendering-foundation.md)
+- [Q2-M0 research, implementation and verification protocol](plans/q2-m0-verification.md)
+- [Unposted maintainer coordination draft](plans/q2-upstream-question.md)
+
+Prioritize executable Q2-M0 evidence before a renderer refactor, while keeping the current Quartier app functional. Q2's WASM AST→React preview is **not** automatically byte-identical to native HTML serialization; test those paths separately.
