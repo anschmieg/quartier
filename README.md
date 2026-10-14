@@ -1,5 +1,7 @@
 # Quartier
 
+> **Rendering foundation update (14 October 2026):** We plan to build on the existing [Quarto 2 (Q2) Rust/WASM core](https://github.com/quarto-dev/q2), rather than refactor Quarto 1's Deno runtime. The future objective is correctness-preserving dependency-aware incremental rendering, with a separate Quarto 1 compatibility oracle. This is a **planning/research track** and does not change the current local-first MVP or claim native/browser byte parity. See the [Q2 foundation plan](docs/plans/q2-rendering-foundation.md) and [Q2-M0 verification specification](docs/plans/q2-m0-verification.md).
+
 Quartier is a local-first editor for Quarto Markdown documents. The current MVP
 manages, searches, previews, backs up, and restores multiple browser-local
 source documents without an account or backend. Create, switch, rename,
