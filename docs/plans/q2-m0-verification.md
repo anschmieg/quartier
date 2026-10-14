@@ -107,3 +107,15 @@ Implement an executable oracle runner under m0/scripts with separate fixtures an
 **Preferred initial M1 candidates:** (A) comprehensive preview/include/resource invalidation without unnecessary re-renders; (B) safe Pass 1→Pass 2 AtProfile resumption; (C) nav config propagation if still broken; (D) isolated proven-pure stage caching. Select by results, not intuition.
 
 **Explicitly out of scope for M0:** rewriting Quarto 1, replacing pampa, enabling Pyodide/webR, a Muya editor refactor, universal Q1 parity, or PDF byte-parity promises.
+
+
+## Execution record — 2026-10-14
+
+**See [executed M0 research report](../research/q2-m0-execution-2026-10-14.md)** and [first M1 implementation slice](q2-m1-first-slice.md). The runnable [native differential harness](../../research/q2-m0/run_m0.py) and two version-specific [evidence](../../research/q2-m0/evidence/oracle-nightly1-summary.json) [manifests](../../research/q2-m0/evidence/oracle-run3-summary.json) are committed.
+
+The native clean/warm/subset/Q1 compatibility tests and stage performance counters **were executed**, not just proposed. Stable Q2 0.32.0 and Oct-13 0.33.0-nightly both matched clean Q2 HTML bytes for each explicitly rendered target across six scenarios, while sibling artifacts differed after global nav, theme or separately rendered include-page changes. Three Q1-versus-Q2 standalone HTML outputs were semantically similar in inspected text and structure, **not byte-identical**.
+
+**Strict sign-off still has gaps:** The local preview API probe was blocked by the execution environment; the source-pinned Oct-13 upstream WASM/browser/native CI is green, but does not replace a bespoke nested-include live-preview test. Local full `cargo xtask verify` was not attempted because of the pinned nightly toolchain setup and approximately 11 GiB Mac free space. Dedicated concurrency/path-security experiments and several fixture categories remain unverified. Record those explicitly; do not silently check every gate.
+
+Initial M1 target: project-mode preview transitive/resource dependency invalidation, reusing merged Q2 single-file-preview closure work, followed separately by Pass-1→Pass-2 checkpoint resumption.
+
