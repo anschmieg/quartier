@@ -153,7 +153,7 @@ def main():
         q1dir=root/"q1";q2dir=root/"q2"
         if root.exists():shutil.rmtree(root)
         q1dir.mkdir(parents=True);q2dir.mkdir()
-        source="---\ntitle: M0 "+name+"\nformat: html\nexecute: false\n---\n\n"+source
+        source="---\ntitle: M0 "+name+"\nformat: html\n---\n\n"+source
         for d in [q1dir,q2dir]:put(d/"test.qmd",source)
         q1cmd=runner(q1,["render","test.qmd","--to","html"],q1dir,env,"q1-"+name,logdir,timeout=110)
         q2cmd=runner(q2,["render","test.qmd","--to","html"],q2dir,env,"q2-"+name,logdir,timeout=110)
