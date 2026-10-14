@@ -126,3 +126,7 @@ Quarto 2 ([quarto-dev/q2](https://github.com/quarto-dev/q2)) already has a Rust 
 - [Unposted maintainer coordination draft](plans/q2-upstream-question.md)
 
 Prioritize executable Q2-M0 evidence before a renderer refactor, while keeping the current Quartier app functional. Q2's WASM AST→React preview is **not** automatically byte-identical to native HTML serialization; test those paths separately.
+
+
+**Q2-M0 execution status (2026-10-14):** Native baseline, byte-differential tests, and performance counters executed; upstream WASM/E2E CI verified at the matching nightly source revision. Custom local preview probe and independent full Rust build remain unverified. See the [Q2-M0 execution report](research/q2-m0-execution-2026-10-14.md) and [Q2-M1 first implementation slice](plans/q2-m1-first-slice.md). Preserve this distinction when evaluating readiness.
+
