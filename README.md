@@ -157,3 +157,7 @@ functionality that is not active in the local-first MVP.
 ## License
 
 MIT
+
+
+**Q2 baseline research:** Native Quarto 2 clean/warm/subset differential tests have now been executed on verified Q2 0.32.0 and 0.33.0-nightly releases. See the [Q2 M0 execution report](docs/research/q2-m0-execution-2026-10-14.md), [executable harness](research/q2-m0/run_m0.py), and [M1 scope](docs/plans/q2-m1-first-slice.md). Quarto 1 byte equivalence and a dedicated local WASM/browser preview oracle are **not yet demonstrated**.
+
