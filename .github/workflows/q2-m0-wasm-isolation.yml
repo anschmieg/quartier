@@ -1,0 +1,117 @@
+name: Q2 M0 WASM isolation
+on:
+  push:
+    branches: [research/q2-m0-wasm-isolation]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: q2-m0-wasm-isolation-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  Q2_COMMIT: d110cf7e47d37f9b9771ba5cc7d92a1855934d4a
+  CARGO_INCREMENTAL: "0"
+jobs:
+  reproduce:
+    name: WASM build (Lua first = ${{ matrix.lua-first }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        lua-first: [false, true]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: quarto-dev/q2
+          ref: d110cf7e47d37f9b9771ba5cc7d92a1855934d4a
+          persist-credentials: false
+      - name: Verify exact source
+        run: test "$(git rev-parse HEAD)" = "$Q2_COMMIT"
+      - name: Free runner disk
+        uses: endersonmenezes/free-disk-space@7901478139cff6e9d44df5972fd8ab8fcade4db1
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake gcc-multilib
+          curl --fail --location --retry 3 -o tree-sitter.gz https://github.com/tree-sitter/tree-sitter/releases/download/v0.25.8/tree-sitter-linux-x86.gz
+          gunzip tree-sitter.gz
+          sudo install -m 0755 tree-sitter /usr/local/bin/tree-sitter
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2026-04-28
+          targets: wasm32-unknown-unknown
+          components: rust-src
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install JS packages
+        run: npm ci
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          cache-bin: false
+          shared-key: q2-m0-wasm-isolation-${{ matrix.lua-first }}
+      - name: Install wasm-bindgen
+        run: cargo install --locked --version 0.2.108 wasm-bindgen-cli
+      - name: Install Binaryen
+        run: npm install -g binaryen@132.0.0
+      - name: Print actual toolchain versions
+        run: |
+          rustc --version
+          cargo --version
+          node --version
+          wasm-bindgen --version
+          wasm-opt --version
+          df -h .
+      - name: Reproduce Lua pre-test if requested
+        if: ${{ matrix.lua-first == true }}
+        env:
+          CC_wasm32_unknown_unknown: clang
+        run: |
+          export CFLAGS_wasm32_unknown_unknown="-isystem $GITHUB_WORKSPACE/crates/wasm-quarto-hub-client/wasm-sysroot -fno-builtin"
+          cargo test -p pampa --test wasm_lua --target wasm32-unknown-unknown \
+            --no-default-features --features lua-filter \
+            -Zbuild-std=std,panic_unwind,panic_abort
+      - name: Build browser engine
+        id: wasm_build
+        continue-on-error: true
+        working-directory: hub-client
+        run: npm run build:wasm
+      - name: Inspect generated pre-optimization WASM
+        if: always()
+        run: |
+          mkdir -p m0-debug
+          {
+            echo "source=$Q2_COMMIT"
+            echo "lua-first=${{ matrix.lua-first }}"
+            echo "build-result=${{ steps.wasm_build.outcome }}"
+            rustc --version
+            wasm-bindgen --version
+            wasm-opt --version
+          } | tee m0-debug/toolchain.txt
+          for f in crates/wasm-quarto-hub-client/pkg/*wasm crates/wasm-quarto-hub-client/target/wasm32-unknown-unknown/release/wasm_quarto_hub_client.wasm; do
+            if [ -f "$f" ]; then
+              sha256sum "$f" | tee -a m0-debug/toolchain.txt
+              F="$f" node -e 'const fs=require("fs"); let b=fs.readFileSync(process.env.F); console.log("WebAssembly.validate("+process.env.F+")="+WebAssembly.validate(b))' | tee -a m0-debug/toolchain.txt
+            fi
+          done
+          df -h . | tee -a m0-debug/toolchain.txt
+      - name: Upload diagnostic snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: q2-wasm-isolation-${{ matrix.lua-first }}
+          path: m0-debug/
+          retention-days: 7
+      - name: Preserve build failure
+        if: ${{ steps.wasm_build.outcome != 'success' }}
+        run: |
+          echo "::error::Q2 browser WASM engine build failed; see preceding wasm-opt validator output"
+          exit 1
