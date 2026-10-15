@@ -1,0 +1,225 @@
+name: Q2 M0 · independent Rust/WASM verification
+run-name: Q2 M0 pinned ${{ github.sha }}
+on:
+  push:
+    branches: [research/q2-m0-github-actions]
+  workflow_dispatch:
+
+# This workflow only checks out public, pinned Quarto 2; no app deployments,
+# mutations of default branch, secrets, or upstream repository permissions.
+permissions:
+  contents: read
+
+concurrency:
+  group: q2-m0-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  Q2_COMMIT: d110cf7e47d37f9b9771ba5cc7d92a1855934d4a # Q2 0.33.0-nightly.20261013
+  PANDOC_VERSION: "3.11" # matches upstream Q2 test-suite.yml
+  TYPST_VERSION: "0.15.1" # matches upstream Q2 test-suite.yml
+  CARGO_TERM_COLOR: always
+  QUARTO_CI: "1"
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  native-rust:
+    name: Native Rust workspace tests (Q2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    steps:
+      - name: Checkout pinned upstream Q2
+        uses: actions/checkout@v4
+        with:
+          repository: quarto-dev/q2
+          ref: d110cf7e47d37f9b9771ba5cc7d92a1855934d4a
+          persist-credentials: false
+
+      - name: Verify source revision
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$Q2_COMMIT"
+          git status --short
+          cat rust-toolchain.toml
+          git rev-parse HEAD
+
+      # Q2 upstream CI uses the same disk cleanup; its monorepo is large.
+      - name: Free ephemeral runner disk
+        uses: endersonmenezes/free-disk-space@7901478139cff6e9d44df5972fd8ab8fcade4db1
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+
+      - name: Prune ephemeral runner Docker images
+        run: |
+          sudo docker image prune --all --force
+          sudo docker builder prune --all --force
+          df -h .
+
+      - name: Install system prerequisites
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake clang libc6-dev gcc-multilib minisign
+          curl --fail --location --retry 3 -o pandoc.deb "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-1-amd64.deb"
+          sudo dpkg -i pandoc.deb
+          curl --fail --location --retry 3 -o typst.tar.xz "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz"
+          tar -xf typst.tar.xz
+          sudo install -m 0755 typst-x86_64-unknown-linux-musl/typst /usr/local/bin/typst
+          curl --fail --location --retry 3 -o tree-sitter.gz https://github.com/tree-sitter/tree-sitter/releases/download/v0.25.8/tree-sitter-linux-x86.gz
+          gunzip tree-sitter.gz
+          sudo install -m 0755 tree-sitter /usr/local/bin/tree-sitter
+          pandoc --version | head -2
+          typst --version
+          tree-sitter --version
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2026-04-28
+          components: rust-src,rustfmt,clippy
+          targets: wasm32-unknown-unknown
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install JS workspace dependencies
+        run: npm ci
+
+      - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-insta
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          cache-bin: false
+          shared-key: q2-m0-native
+
+      - name: Record toolchain and disk
+        run: |
+          rustc --version
+          cargo --version
+          cargo nextest --version
+          node --version
+          df -h .
+
+      - name: Full Q2 native Rust test suite
+        env:
+          RUSTFLAGS: "-D warnings"
+        run: cargo nextest run --tests --cargo-profile ci
+
+      - name: Save native test metadata
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p m0-results
+          printf 'q2_commit=%s\n' "$Q2_COMMIT" > m0-results/native.txt
+          rustc --version >> m0-results/native.txt || true
+          cargo --version >> m0-results/native.txt || true
+          df -h . >> m0-results/native.txt || true
+          git status --short >> m0-results/native.txt || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: q2-m0-native-metadata
+          path: m0-results/
+          retention-days: 14
+
+  wasm:
+    name: WASM Lua tests + browser engine build (Q2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    steps:
+      - name: Checkout pinned upstream Q2
+        uses: actions/checkout@v4
+        with:
+          repository: quarto-dev/q2
+          ref: d110cf7e47d37f9b9771ba5cc7d92a1855934d4a
+          persist-credentials: false
+
+      - name: Verify source revision
+        run: test "$(git rev-parse HEAD)" = "$Q2_COMMIT"
+
+      - name: Free ephemeral runner disk
+        uses: endersonmenezes/free-disk-space@7901478139cff6e9d44df5972fd8ab8fcade4db1
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+
+      - name: Install WASM prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang gcc-multilib cmake
+          curl --fail --location --retry 3 -o tree-sitter.gz https://github.com/tree-sitter/tree-sitter/releases/download/v0.25.8/tree-sitter-linux-x86.gz
+          gunzip tree-sitter.gz
+          sudo install -m 0755 tree-sitter /usr/local/bin/tree-sitter
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2026-04-28
+          components: rust-src
+          targets: wasm32-unknown-unknown
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install JS workspace dependencies
+        run: npm ci
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          cache-bin: false
+          shared-key: q2-m0-wasm
+
+      - name: Install matching wasm-bindgen CLI
+        run: |
+          cargo install --locked --version 0.2.108 wasm-bindgen-cli
+          wasm-bindgen --version
+
+      - name: Install binaryen wasm-opt
+        run: npm install -g binaryen@132.0.0
+
+      - name: Test WASM Lua conformance
+        env:
+          CC_wasm32_unknown_unknown: clang
+        shell: bash
+        run: |
+          export CFLAGS_wasm32_unknown_unknown="-isystem $GITHUB_WORKSPACE/crates/wasm-quarto-hub-client/wasm-sysroot -fno-builtin"
+          cargo test -p pampa --test wasm_lua --target wasm32-unknown-unknown --no-default-features --features lua-filter -Zbuild-std=std,panic_unwind,panic_abort
+
+      - name: Build Q2 browser WASM engine
+        working-directory: hub-client
+        run: npm run build:wasm
+
+      - name: Run browser-side WASM unit tests
+        run: |
+          node scripts/fetch-pandoc-wasm.mjs --require
+          npm run test:wasm --workspace hub-client
+
+      - name: Save WASM verification metadata
+        if: always()
+        run: |
+          mkdir -p m0-results
+          printf 'q2_commit=%s\n' "$Q2_COMMIT" > m0-results/wasm.txt
+          rustc --version >> m0-results/wasm.txt || true
+          wasm-bindgen --version >> m0-results/wasm.txt || true
+          find crates/wasm-quarto-hub-client/pkg/ -name '*.wasm' -type f -exec sha256sum {} \; >> m0-results/wasm.txt 2>/dev/null || true
+          df -h . >> m0-results/wasm.txt || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: q2-m0-wasm-metadata
+          path: m0-results/
+          retention-days: 14
