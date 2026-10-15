@@ -86,6 +86,16 @@ jobs:
           node-version: "24"
           cache: npm
 
+      - name: Install pinned Deno for QUARTO_CI tests
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.0"
+
+      - name: Verify pinned Deno
+        run: |
+          deno --version
+          test "$(deno --version | head -1 | awk '{print $2}')" = "2.9.0"
+
       - name: Install JS workspace dependencies
         run: npm ci
 
@@ -184,7 +194,8 @@ jobs:
 
       - name: Install matching wasm-bindgen CLI
         run: |
-          cargo install --locked --version 0.2.108 wasm-bindgen-cli
+          cargo install --version 0.2.108 wasm-bindgen-cli
+          # Upstream resolves walrus 0.24.5; --locked resolved 0.24.4 and produced invalid call signatures.
           wasm-bindgen --version
 
       - name: Install binaryen wasm-opt
