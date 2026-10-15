@@ -121,7 +121,7 @@ jobs:
       - name: Full Q2 native Rust test suite
         env:
           RUSTFLAGS: "-D warnings"
-        run: cargo nextest run --tests --cargo-profile ci
+        run: cargo nextest run --tests --cargo-profile ci --no-fail-fast
 
       - name: Save native test metadata
         if: always()
@@ -212,6 +212,11 @@ jobs:
       - name: Build Q2 browser WASM engine
         working-directory: hub-client
         run: npm run build:wasm
+
+      - name: Build native parity extractor (required by CI WASM tests)
+        run: |
+          cargo build --release -p quarto-output-extract
+          test -x target/release/quarto-output-extract
 
       - name: Run browser-side WASM unit tests
         run: |
